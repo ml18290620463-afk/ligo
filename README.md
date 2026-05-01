@@ -47,8 +47,12 @@ http://localhost:3000
 
    ```bash
    OPENROUTER_API_KEY=sk-or-v1-xxxxxxxxxxxx
-   # 默认使用 meta-llama/llama-3.3-70b-instruct:free，可改为任意带 :free 后缀的模型
-   OPENROUTER_MODEL=meta-llama/llama-3.3-70b-instruct:free
+   # 默认 google/gemma-3-12b-it:free（走 Google AI Studio 路由，对全新 free key 最友好）
+   # 其它推荐：google/gemma-3-27b-it:free（质量更高）
+   # 注意：部分 :free 模型（Llama 3.3、Qwen3-Coder 等）走 Venice 路由，需要 OpenRouter
+   # 账户里的 per-key spend limit 设为非 0，否则会 402；详见
+   # https://openrouter.ai/settings/keys
+   OPENROUTER_MODEL=google/gemma-3-12b-it:free
    ```
 
 3. 重启 `npm run dev`，访问 `http://localhost:3000/api/health` 应当返回：

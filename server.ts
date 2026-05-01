@@ -3,7 +3,37 @@ import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import { createServer as createViteServer } from "vite";
 import path from "path";
+import { existsSync, readFileSync } from "node:fs";
 import { GoogleGenAI } from "@google/genai";
+
+function loadEnvFileSafe(filePath: string) {
+  if (!existsSync(filePath)) return;
+  try {
+    const content = readFileSync(filePath, "utf8");
+    for (const rawLine of content.split(/\r?\n/)) {
+      const line = rawLine.trim();
+      if (!line || line.startsWith("#")) continue;
+      const eq = line.indexOf("=");
+      if (eq === -1) continue;
+      const key = line.slice(0, eq).trim();
+      let value = line.slice(eq + 1).trim();
+      if (
+        (value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))
+      ) {
+        value = value.slice(1, -1);
+      }
+      if (!(key in process.env)) {
+        process.env[key] = value;
+      }
+    }
+  } catch (error) {
+    console.warn(`Failed to load env file ${filePath}:`, error);
+  }
+}
+
+loadEnvFileSafe(".env.local");
+loadEnvFileSafe(".env");
 
 type Provider = "openrouter" | "gemini";
 
@@ -17,12 +47,13 @@ const env = {
   openrouterKey: sanitizeEnv(process.env.OPENROUTER_API_KEY),
   openrouterModel:
     sanitizeEnv(process.env.OPENROUTER_MODEL) ||
-    "meta-llama/llama-3.3-70b-instruct:free",
+    "google/gemma-3-12b-it:free",
   openrouterReferer:
     sanitizeEnv(process.env.OPENROUTER_REFERER) || "http://localhost:3000",
   openrouterTitle:
     sanitizeEnv(process.env.OPENROUTER_TITLE) || "VECTOR Life Design Guide",
   openrouterTimeoutMs: Number(process.env.OPENROUTER_TIMEOUT_MS || 60_000),
+  openrouterJsonMode: sanitizeEnv(process.env.OPENROUTER_JSON_MODE).toLowerCase() === "true",
   geminiKey: sanitizeEnv(process.env.GEMINI_API_KEY),
   geminiModel: sanitizeEnv(process.env.GEMINI_MODEL) || "gemini-2.5-flash",
 };
@@ -36,6 +67,14 @@ function chooseProvider(): Provider | null {
 }
 
 async function callOpenRouter(prompt: string, signal?: AbortSignal): Promise<string> {
+  const body: Record<string, unknown> = {
+    model: env.openrouterModel,
+    messages: [{ role: "user", content: prompt }],
+  };
+  if (env.openrouterJsonMode) {
+    body.response_format = { type: "json_object" };
+  }
+
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     signal,
@@ -45,11 +84,7 @@ async function callOpenRouter(prompt: string, signal?: AbortSignal): Promise<str
       "HTTP-Referer": env.openrouterReferer,
       "X-Title": env.openrouterTitle,
     },
-    body: JSON.stringify({
-      model: env.openrouterModel,
-      messages: [{ role: "user", content: prompt }],
-      response_format: { type: "json_object" },
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {
