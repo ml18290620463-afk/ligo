@@ -5,57 +5,199 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import { GoogleGenAI } from "@google/genai";
 
+type Provider = "openrouter" | "gemini";
+
+const sanitizeEnv = (value: string | undefined) =>
+  value?.trim().replace(/^['"]|['"]$/g, "") || "";
+
+const env = {
+  port: Number(process.env.PORT || 3000),
+  host: process.env.HOST || "0.0.0.0",
+  forcedProvider: sanitizeEnv(process.env.AI_PROVIDER).toLowerCase() as Provider | "",
+  openrouterKey: sanitizeEnv(process.env.OPENROUTER_API_KEY),
+  openrouterModel:
+    sanitizeEnv(process.env.OPENROUTER_MODEL) ||
+    "meta-llama/llama-3.3-70b-instruct:free",
+  openrouterReferer:
+    sanitizeEnv(process.env.OPENROUTER_REFERER) || "http://localhost:3000",
+  openrouterTitle:
+    sanitizeEnv(process.env.OPENROUTER_TITLE) || "VECTOR Life Design Guide",
+  openrouterTimeoutMs: Number(process.env.OPENROUTER_TIMEOUT_MS || 60_000),
+  geminiKey: sanitizeEnv(process.env.GEMINI_API_KEY),
+  geminiModel: sanitizeEnv(process.env.GEMINI_MODEL) || "gemini-2.5-flash",
+};
+
+function chooseProvider(): Provider | null {
+  if (env.forcedProvider === "openrouter" && env.openrouterKey) return "openrouter";
+  if (env.forcedProvider === "gemini" && env.geminiKey) return "gemini";
+  if (env.openrouterKey) return "openrouter";
+  if (env.geminiKey) return "gemini";
+  return null;
+}
+
+async function callOpenRouter(prompt: string, signal?: AbortSignal): Promise<string> {
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    signal,
+    headers: {
+      Authorization: `Bearer ${env.openrouterKey}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": env.openrouterReferer,
+      "X-Title": env.openrouterTitle,
+    },
+    body: JSON.stringify({
+      model: env.openrouterModel,
+      messages: [{ role: "user", content: prompt }],
+      response_format: { type: "json_object" },
+    }),
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new Error(`OpenRouter ${response.status}: ${detail.slice(0, 300)}`);
+  }
+
+  const data = await response.json();
+  const content = data?.choices?.[0]?.message?.content;
+  if (typeof content !== "string" || !content) {
+    throw new Error("Empty OpenRouter response");
+  }
+  return content;
+}
+
+async function callGemini(prompt: string): Promise<string> {
+  const client = new GoogleGenAI({ apiKey: env.geminiKey });
+  const response = await client.models.generateContent({
+    model: env.geminiModel,
+    contents: prompt,
+    config: { responseMimeType: "application/json" },
+  });
+  return response.text || "";
+}
+
+interface FreeModelSummary {
+  id: string;
+  name: string;
+  context_length: number | null;
+  description: string;
+}
+
+async function fetchOpenRouterFreeModels(): Promise<FreeModelSummary[]> {
+  const headers: Record<string, string> = {};
+  if (env.openrouterKey) {
+    headers.Authorization = `Bearer ${env.openrouterKey}`;
+  }
+
+  const response = await fetch("https://openrouter.ai/api/v1/models", { headers });
+  if (!response.ok) {
+    throw new Error(`Upstream ${response.status}`);
+  }
+  const data = await response.json();
+  const items = Array.isArray(data?.data) ? data.data : [];
+
+  return items
+    .filter((model: any) => {
+      const id = String(model?.id || "");
+      const promptPrice = Number(model?.pricing?.prompt ?? 1);
+      const completionPrice = Number(model?.pricing?.completion ?? 1);
+      return id.endsWith(":free") || (promptPrice === 0 && completionPrice === 0);
+    })
+    .map((model: any): FreeModelSummary => ({
+      id: String(model?.id || ""),
+      name: String(model?.name || model?.id || ""),
+      context_length: typeof model?.context_length === "number" ? model.context_length : null,
+      description: String(model?.description || "").slice(0, 220),
+    }))
+    .sort((a: FreeModelSummary, b: FreeModelSummary) => a.id.localeCompare(b.id));
+}
+
 async function startServer() {
   const app = express();
-  const port = Number(process.env.PORT || 3000);
-  const host = process.env.HOST || "0.0.0.0";
+  const port = Number.isFinite(env.port) ? env.port : 3000;
+
   const morningStarLimiter = rateLimit({
     windowMs: Number(process.env.MORNING_STAR_RATE_LIMIT_WINDOW_MS || 60_000),
     limit: Number(process.env.MORNING_STAR_RATE_LIMIT_MAX || 5),
     standardHeaders: true,
     legacyHeaders: false,
-    message: { error: 'Too many Morning Star requests. Please try again later.' },
+    message: { error: "Too many Morning Star requests. Please try again later." },
   });
 
-  app.use(helmet({
-    contentSecurityPolicy: false,
-    crossOriginEmbedderPolicy: false,
-  }));
+  const modelsListLimiter = rateLimit({
+    windowMs: 60_000,
+    limit: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  app.use(
+    helmet({
+      contentSecurityPolicy: false,
+      crossOriginEmbedderPolicy: false,
+    }),
+  );
   app.use(express.json({ limit: "128kb" }));
 
-  // API 路由 - 占位或后续服务器逻辑
-  app.get("/api/health", (req, res) => {
-    res.json({ status: "ok" });
+  app.get("/api/health", (_req, res) => {
+    const provider = chooseProvider();
+    const model =
+      provider === "openrouter"
+        ? env.openrouterModel
+        : provider === "gemini"
+          ? env.geminiModel
+          : null;
+    res.json({ status: "ok", provider, model });
   });
 
-  app.post('/api/morning-star', morningStarLimiter, async (req, res) => {
-    try {
-      const { prompt } = req.body;
-      const apiKey = process.env.GEMINI_API_KEY?.trim()?.replace(/['"]/g, '') || '';
-
-      if (typeof prompt !== 'string' || prompt.trim().length === 0 || prompt.length > 60000) {
-        return res.status(400).json({ error: 'Invalid prompt payload' });
-      }
-
-      if (!apiKey) {
-        return res.status(503).json({ error: 'AI backend is not configured' });
-      }
-
-      const geminiClient = new GoogleGenAI({ apiKey });
-      const response = await geminiClient.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: prompt,
-        config: { responseMimeType: 'application/json' },
+  app.get("/api/models", modelsListLimiter, async (_req, res) => {
+    if (!env.openrouterKey) {
+      return res.status(503).json({
+        error: "OPENROUTER_API_KEY not configured",
       });
+    }
 
-      res.json({ response: response.text || '' });
+    try {
+      const models = await fetchOpenRouterFreeModels();
+      res.json({
+        provider: "openrouter",
+        defaultModel: env.openrouterModel,
+        count: models.length,
+        models,
+      });
     } catch (error) {
-      console.error('Gemini API Error:', error);
-      res.status(502).json({ error: 'Failed to fetch from secure backend' });
+      console.error("OpenRouter models list error:", error);
+      res.status(502).json({ error: "Failed to fetch OpenRouter models" });
     }
   });
 
-  // Vite 开发/生产中间件配置
+  app.post("/api/morning-star", morningStarLimiter, async (req, res) => {
+    const provider = chooseProvider();
+    if (!provider) {
+      return res.status(503).json({ error: "AI backend is not configured" });
+    }
+
+    const { prompt } = req.body;
+    if (typeof prompt !== "string" || prompt.trim().length === 0 || prompt.length > 60_000) {
+      return res.status(400).json({ error: "Invalid prompt payload" });
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), env.openrouterTimeoutMs);
+
+    try {
+      const text =
+        provider === "openrouter"
+          ? await callOpenRouter(prompt, controller.signal)
+          : await callGemini(prompt);
+      res.json({ response: text, provider });
+    } catch (error) {
+      console.error(`AI Error (${provider}):`, error);
+      res.status(502).json({ error: "Failed to fetch from secure backend" });
+    } finally {
+      clearTimeout(timeout);
+    }
+  });
+
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -63,15 +205,22 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
+    const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
-    app.get('*all', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+    app.get("*all", (_req, res) => {
+      res.sendFile(path.join(distPath, "index.html"));
     });
   }
 
-  app.listen(Number.isFinite(port) ? port : 3000, host, () => {
-    console.log(`Server running on http://localhost:${Number.isFinite(port) ? port : 3000}`);
+  app.listen(port, env.host, () => {
+    const provider = chooseProvider();
+    console.log(`Server running on http://localhost:${port}`);
+    if (provider) {
+      const model = provider === "openrouter" ? env.openrouterModel : env.geminiModel;
+      console.log(`AI provider: ${provider} (model: ${model})`);
+    } else {
+      console.log("AI provider: not configured (set OPENROUTER_API_KEY or GEMINI_API_KEY)");
+    }
   });
 }
 
