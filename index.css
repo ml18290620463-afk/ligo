@@ -1,0 +1,200 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", "PingFang SC", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "PingFang SC", "Microsoft YaHei", ui-monospace, SFMono-Regular, monospace;
+
+  /* Vector Core - High-End Technical Theme Tokens */
+  --color-archive-bg: #f4f7f9;
+  --color-archive-surface: rgba(255, 255, 255, 0.85);
+  --color-archive-border: rgba(15, 23, 42, 0.08);
+  --color-archive-border-strong: rgba(15, 23, 42, 0.15);
+  --color-archive-text-main: #0f172a;
+  --color-archive-text-muted: #334155;
+  --color-archive-text-dim: #64748b;
+  --color-archive-accent: #0891b2;
+  --color-archive-accent-light: #22d3ee;
+  --color-archive-electric: #4f46e5;
+  --color-archive-danger: #f43f5e; 
+  --color-archive-success: #10b981;
+  --color-tech-indigo: #6366f1;
+  --color-tech-slate: #0f172a;
+  --color-vector-magenta: #C85F72;
+  --color-vector-alert: #C85F72;
+}
+
+:root {
+  --background: #05070a; /* Ultra Deep Slate */
+  --foreground: #e2e8f0;
+  --accent: #06b6d4; /* Technical Cyan */
+  --accent-secondary: #6366f1; /* Deep Tech Indigo */
+  --vector-magenta: #C85F72;
+  --vector-alert: #C85F72;
+  --text-muted: #64748b;
+  --grid-color: rgba(6, 182, 212, 0.02);
+  --grid-color-alt: rgba(255, 46, 204, 0.02);
+}
+
+@utility neon-glow-magenta {
+  text-shadow: 0 0 12px rgba(200, 95, 114, 0.4), 0 0 25px rgba(200, 95, 114, 0.1);
+}
+
+@utility neon-glow-alert {
+  text-shadow: 0 0 12px rgba(200, 95, 114, 0.4), 0 0 25px rgba(200, 95, 114, 0.1);
+}
+
+@utility neon-border-magenta {
+  box-shadow: 0 0 10px rgba(200, 95, 114, 0.15), inset 0 0 5px rgba(200, 95, 114, 0.05);
+}
+
+@utility neon-border-alert {
+  box-shadow: 0 0 10px rgba(200, 95, 114, 0.15), inset 0 0 5px rgba(200, 95, 114, 0.05);
+}
+
+@utility tech-border {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+html.light {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --accent: #0891b2;
+  --accent-secondary: #0e7490;
+  --text-muted: #64748b;
+  --grid-color: rgba(8, 145, 178, 0.05);
+  --grid-color-alt: rgba(15, 23, 42, 0.02);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  transition: background-color 0.5s ease, color 0.5s ease;
+  background-image: 
+    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px),
+    linear-gradient(var(--grid-color) 1px, transparent 1px);
+  background-size: 60px 60px;
+  background-attachment: fixed;
+}
+
+html.light body {
+  background-image: 
+    radial-gradient(circle at 2px 2px, var(--grid-color) 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+/* Research Archive Glass */
+.archive-glass {
+  @apply backdrop-blur-xl;
+  background: var(--color-archive-surface);
+  border: 1px solid var(--color-archive-border);
+}
+
+.light .archive-glass {
+  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(0, 122, 140, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+}
+
+/* Research Archive Components */
+.archive-card {
+  @apply border transition-all duration-300;
+  background: var(--color-archive-surface);
+  border-color: var(--color-archive-border);
+}
+
+.light .archive-card {
+  background: rgba(255, 255, 255, 0.6);
+  border-color: rgba(0, 122, 140, 0.1);
+}
+
+.light .archive-card:hover {
+  border-color: rgba(0, 122, 140, 0.3);
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 8px 30px rgba(0, 122, 140, 0.05);
+}
+
+.archive-input {
+  @apply w-full border text-sm p-3 rounded-sm outline-none transition-all duration-300 font-sans;
+  background: var(--color-archive-surface);
+  border-color: var(--color-archive-border);
+  color: var(--color-archive-text-main);
+}
+
+.light .archive-input {
+  background: rgba(255, 255, 255, 0.5);
+  border-color: rgba(0, 122, 140, 0.15);
+}
+
+.light .archive-input:focus {
+  background: white;
+  border-color: var(--color-archive-accent);
+  box-shadow: 0 0 0 3px rgba(0, 122, 140, 0.05);
+}
+
+.archive-label {
+  @apply text-[10px] font-mono uppercase tracking-widest mb-1 block;
+  color: var(--color-archive-text-dim);
+}
+
+.light .archive-label {
+  color: var(--color-archive-text-muted);
+}
+
+/* Typography Enhancements */
+.light h1, .light h2, .light h3 {
+  color: var(--color-archive-text-main);
+  letter-spacing: 0.05em;
+  font-weight: 700;
+}
+
+.light p {
+  line-height: 1.7;
+  color: var(--color-archive-text-muted);
+}
+
+.light .font-mono {
+  color: var(--color-archive-accent);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-secondary);
+}
+
+@utility clip-path-polygon {
+  clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%);
+}
+
+/* Container Query Support for improved responsiveness */
+.responsive-container {
+  container-type: inline-size;
+  width: 100%;
+}
+
+@container (min-width: 480px) {
+  .archive-card {
+    padding: 1.5rem;
+  }
+}
+
+@container (min-width: 768px) {
+  .archive-card {
+    padding: 2rem;
+  }
+}
