@@ -2,17 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { DiaryEntry, GroupingMode, Language, Theme, Attachment, Container } from '../types';
 import { useSearch } from '../hooks/useSearch';
-import { useTransientState } from '../hooks/useTransientState';
 import { useTimeoutManager } from '../hooks/useTimeoutManager';
 import { TRANSLATIONS } from '../constants';
 import { AppStorageKeys } from '../services/appSettings';
 import { getStoredString, setStoredString } from '../services/browserStorage';
-import { downloadTextFile } from '../services/fileDownload';
-import { useAttachmentUpload } from '../hooks/useAttachmentUpload';
 import { useBackupImport } from '../hooks/useBackupImport';
 import { useDashboardVault } from '../hooks/useDashboardVault';
-import { useGuidingStarsEditor } from '../hooks/useGuidingStarsEditor';
-import { useDashboardSecurity } from '../hooks/useDashboardSecurity';
 import { useBackupReminder } from '../hooks/useBackupReminder';
 import { VaultUnlockModal } from './VaultUnlockModal';
 import { BackupImportConfirmModal } from './BackupImportConfirmModal';
@@ -20,12 +15,13 @@ import { BackupReminderBanner } from './BackupReminderBanner';
 import { FilterHub } from './FilterHub';
 import { DashboardHeader } from './DashboardHeader';
 import { FilterBar } from './FilterBar';
-import { SettingsPanel } from './SettingsPanel';
+import { DashboardSettingsModal } from './DashboardSettingsModal';
 import { DashboardFooter } from './DashboardFooter';
 import { VaultContent } from './VaultContent';
 import { useClickOutside } from '../hooks/useClickOutside';
+import { useDashboardExport } from '../hooks/useDashboardExport';
+import { useDashboardImportConfirm } from '../hooks/useDashboardImportConfirm';
 import { groupDashboardEntries, sortDashboardGroupKeys } from '../services/dashboardGrouping';
-import { buildBackupExport, buildNotesExport, NotesExportMode } from '../services/dashboardExport';
 import { getActiveDashboardEntries, getBaseDashboardEntries } from '../services/dashboardFilters';
 
 interface DashboardProps {
@@ -192,39 +188,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Wipe Safety State
-  const [wipeMode, setWipeMode] = useState(false);
-  const [wipeInput, setWipeInput] = useState('');
-
-  const {
-    securityMode,
-    setSecurityMode,
-    oldPassword,
-    setOldPassword,
-    newPassword,
-    setNewPassword,
-    confirmPassword,
-    setConfirmPassword,
-    securityError,
-    securitySuccess,
-    handleSecuritySetup,
-    showError: showSecurityError,
-  } = useDashboardSecurity({
-    passwordHash,
-    passwordSalt,
-    entries,
-    onSetPassword,
-    onBulkUpdateEntries,
-    copy: {
-      passwordRequirement: t.passwordRequirement,
-      passwordMismatch: t.passwordMismatch,
-      passwordVerifyFailed: t.passwordVerifyFailed,
-      passwordChangeSuccess: t.passwordChangeSuccess,
-      reEncryptFailureWarning: (n) =>
-        `WARNING: ${n} entries could not be decrypted with your current password. Changing the master password now will lock these entries permanently with the old keys. Continue?`,
-    },
-    setIsFullscreen,
-  });
+  // Settings-only state (security / stars editor / wipe / attachment +
+  // media transient banners) lives inside DashboardSettingsModal so the
+  // dashboard shell doesn't re-render every time those panels tick.
 
   // Grouping State
   const [groupingMode, setGroupingMode] = useState<GroupingMode>('none');
@@ -236,37 +202,27 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const [showConfirmHome, setShowConfirmHome] = useState(false);
   const [lastClickTime, setLastClickTime] = useState(0);
-  const [isViewingRecovery, setIsViewingRecovery] = useState(false);
-  const [showSecurityPassword, setShowSecurityPassword] = useState(false);
-  const [recoveryKeyValue, setRecoveryKeyValue] = useState<string | null>(null);
 
-  // Language Dropdown State
-  const [showLangDropdown, setShowLangDropdown] = useState(false);
-  const langDropdownRef = useClickOutside<HTMLDivElement>(showLangDropdown, () =>
-    setShowLangDropdown(false),
-  );
-  const [stagedMaterial, setStagedMaterial] = useState<Attachment | null>(null);
   const {
-    value: mediaError,
-    setValue: setMediaError,
-    showValue: showMediaError,
-  } = useTransientState<string | null>(null);
-  const {
-    value: mediaSuccess,
-    setValue: setMediaSuccess,
-    showValue: showMediaSuccess,
-  } = useTransientState<string | null>(null);
-
-  const [exportTarget, setExportTarget] = useState<'all' | string>('all');
-  const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
+    dynamicVersion,
+    handleExport,
+    handleDownloadNotes,
+    exportTarget,
+    setExportTarget,
+    isExportDropdownOpen,
+    setIsExportDropdownOpen,
+  } = useDashboardExport({
+    entries,
+    filteredEntries,
+    currentUser,
+    t,
+    recordBackup,
+  });
   const dropdownRef = useClickOutside<HTMLDivElement>(isExportDropdownOpen, () =>
     setIsExportDropdownOpen(false),
   );
 
-  const [pendingImportConfirm, setPendingImportConfirm] = useState<{
-    message: string;
-    resolve: (ok: boolean) => void;
-  } | null>(null);
+  const importConfirm = useDashboardImportConfirm();
 
   const {
     inputRef: importInputRef,
@@ -275,65 +231,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
   } = useBackupImport({
     onImportBackup,
     t,
-    confirm: (message) =>
-      new Promise<boolean>((resolve) => {
-        setPendingImportConfirm({ message, resolve });
-      }),
+    confirm: importConfirm.confirm,
     reportError: (error) => {
       console.error('Backup import failed', error);
     },
   });
 
-  const resolveImportConfirm = (ok: boolean) => {
-    if (pendingImportConfirm) pendingImportConfirm.resolve(ok);
-    setPendingImportConfirm(null);
-  };
-
-  const {
-    inputRef: mediaInputRef,
-    isUploading,
-    handleChange: handleMediaUpload,
-  } = useAttachmentUpload({
-    onTooLarge: () => {
-      setMediaError(null);
-      showMediaError(t.fileTooLarge);
-    },
-    onLargeWarning: () =>
-      showMediaSuccess(t.fileLargeWarning ?? 'Large attachment may slow saves and backups.'),
-    onReadError: () => showMediaError(t.uploadError),
-    onStaged: (attachment) => {
-      setMediaError(null);
-      setStagedMaterial(attachment);
-    },
-  });
-
-  // (click-outside / Escape handlers live in `useClickOutside` now.)
-
-  const [selectedNoteId, setSelectedNoteId] = useState<string>('all');
-
-  const {
-    isEditing: isEditingStars,
-    setIsEditing: setIsEditingStars,
-    tempDirectory,
-    tempSelected,
-    customStarName,
-    setCustomStarName,
-    toggleTempStar,
-    handleDeleteCustomStar,
-    handleAddCustomStar,
-    handleSaveStars,
-  } = useGuidingStarsEditor({
-    guidingStars,
-    selectedStars,
-    language,
-    showSettings,
-    limitMessage: t.guidingStarsLimit,
-    onLimitExceeded: showSecurityError,
-    onSaveGuidingStars,
-    onSaveSelectedStars,
-  });
-
-  // Update current time every second to for live countdown removed
+  // `isEditingStars` is owned by DashboardSettingsModal but FilterBar
+  // also wants to know whether the user is currently mid-edit (to dim
+  // affordances). Until we split FilterBar to consume it from a context,
+  // we surface a write-through flag here that both sides can read.
+  const [isEditingStars, setIsEditingStars] = useState(false);
 
   const toggleFullScreen = () => {
     if (!document.fullscreenElement) {
@@ -351,57 +259,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
     }
   };
 
-  const getDynamicVersion = () => {
-    const years = new Set(entries.map((e) => new Date(e.createdAt).getFullYear()));
-    const yearCount = Math.max(1, years.size);
-    const totalEntries = entries.length;
-    const deepArchiveCount = entries.filter((e) => e.isArchived).length;
-    return `v${yearCount}.${totalEntries}.${deepArchiveCount}`;
-  };
-  const dynamicVersion = getDynamicVersion();
-
-  const handleExport = () => {
-    const backup = buildBackupExport({
-      version: dynamicVersion,
-      entries,
-      currentUser,
-    });
-
-    downloadTextFile(backup.content, backup.filename);
-
-    // Phase 2 §2.d — record the timestamp so the Dashboard banner can
-    // tell the user how stale their backup is. The hook owns the
-    // `setStoredString(AppStorageKeys.lastBackupAt, …)` write so the
-    // dashboard never touches the storage key directly.
-    recordBackup();
-  };
-
-  const handleDownloadNotes = (mode: NotesExportMode = 'all') => {
-    const notes = buildNotesExport({
-      mode,
-      entries,
-      filteredEntries,
-      labels: t,
-      currentUser,
-    });
-
-    if (notes) downloadTextFile(notes.content, notes.filename);
-  };
+  // (dynamicVersion / handleExport / handleDownloadNotes live in
+  //  useDashboardExport now.)
 
   // (handleSecuritySetup lives in useDashboardSecurity now.)
-
-  const handleWipeRequest = () => {
-    setWipeMode(true);
-    setWipeInput('');
-  };
-
-  const handleWipeConfirm = () => {
-    if (wipeInput === 'DELETE') {
-      onWipeData();
-      setShowSettings(false);
-      setWipeMode(false);
-    }
-  };
 
   const groupedEntries = React.useMemo(() => {
     return groupDashboardEntries({
@@ -447,10 +308,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
       />
 
       <BackupImportConfirmModal
-        pending={pendingImportConfirm}
+        pending={importConfirm.pending}
         theme={theme}
         t={t}
-        onResolve={resolveImportConfirm}
+        onResolve={importConfirm.resolveConfirm}
       />
 
       <VaultUnlockModal
@@ -465,58 +326,34 @@ export const Dashboard: React.FC<DashboardProps> = ({
         onCancel={handleVaultCancel}
       />
 
-      <SettingsPanel
-        theme={theme}
-        language={language}
-        onSetLanguage={onSetLanguage}
+      <DashboardSettingsModal
         showSettings={showSettings}
         setShowSettings={setShowSettings}
-        isViewingRecovery={isViewingRecovery}
-        setIsViewingRecovery={setIsViewingRecovery}
-        securityMode={securityMode}
-        setSecurityMode={setSecurityMode}
-        passwordHash={passwordHash}
+        theme={theme}
+        onSetTheme={onSetTheme}
+        language={language}
+        onSetLanguage={onSetLanguage}
+        t={t}
         customIdentity={customIdentity}
         setCustomIdentity={setCustomIdentity}
         dynamicVersion={dynamicVersion}
+        passwordHash={passwordHash}
+        passwordSalt={passwordSalt}
         isUnlocked={isUnlocked}
-        onSetTheme={onSetTheme}
-        oldPassword={oldPassword}
-        setOldPassword={setOldPassword}
-        newPassword={newPassword}
-        setNewPassword={setNewPassword}
-        confirmPassword={confirmPassword}
-        setConfirmPassword={setConfirmPassword}
-        securityError={securityError}
-        securitySuccess={securitySuccess}
-        handleSecuritySetup={handleSecuritySetup}
-        isEditingStars={isEditingStars}
-        setIsEditingStars={setIsEditingStars}
-        tempDirectory={tempDirectory}
-        tempSelected={tempSelected}
-        customStarName={customStarName}
-        setCustomStarName={setCustomStarName}
-        toggleTempStar={toggleTempStar}
-        handleDeleteCustomStar={handleDeleteCustomStar}
-        handleAddCustomStar={handleAddCustomStar}
-        handleSaveStars={handleSaveStars}
-        selectedStars={selectedStars}
-        mediaInputRef={mediaInputRef}
-        handleMediaUpload={handleMediaUpload}
-        isUploading={isUploading}
-        stagedMaterial={stagedMaterial}
-        setStagedMaterial={setStagedMaterial}
-        onCreateMaterialEntry={onCreateMaterialEntry}
-        setMediaSuccess={(message) => {
-          if (message === null) {
-            setMediaSuccess(null);
-            return;
-          }
-          showMediaSuccess(message);
-        }}
-        mediaError={mediaError}
-        mediaSuccess={mediaSuccess}
+        onSetPassword={onSetPassword}
+        entries={entries}
         activeEntries={activeEntries}
+        onBulkUpdateEntries={onBulkUpdateEntries}
+        onWipeData={onWipeData}
+        onCreateMaterialEntry={onCreateMaterialEntry}
+        guidingStars={guidingStars}
+        selectedStars={selectedStars}
+        onSaveGuidingStars={onSaveGuidingStars}
+        onSaveSelectedStars={onSaveSelectedStars}
+        isScanning={isScanning}
+        scanProgress={scanProgress}
+        onTriggerScan={onTriggerScan}
+        lastScanSummary={lastScanSummary}
         handleExport={handleExport}
         dropdownRef={dropdownRef}
         isExportDropdownOpen={isExportDropdownOpen}
@@ -524,20 +361,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
         exportTarget={exportTarget}
         setExportTarget={setExportTarget}
         handleDownloadNotes={handleDownloadNotes}
-        entries={entries}
         importInputRef={importInputRef}
         handleImportBackup={onImportBackup ? handleImportBackup : undefined}
         importStatus={importStatus}
-        wipeInput={wipeInput}
-        setWipeInput={setWipeInput}
-        handleWipeConfirm={handleWipeConfirm}
-        setWipeMode={setWipeMode}
         handleGoHomeClick={handleGoHomeClick}
         isSailingHome={isSailingHome}
-        isScanning={isScanning}
-        scanProgress={scanProgress}
-        onTriggerScan={onTriggerScan}
-        lastScanSummary={lastScanSummary}
+        setIsFullscreen={setIsFullscreen}
+        onEditingStarsChange={setIsEditingStars}
       />
 
       <FilterBar
