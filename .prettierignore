@@ -1,0 +1,15 @@
+node_modules
+dist
+coverage
+playwright-report
+test-results
+.git
+package-lock.json
+Dockerfile
+.dockerignore
+deploy/nginx.conf
+deploy/nginx.conf.example
+scripts/*.sh
+LICENSE
+EVALUATION.md
+.cursor
