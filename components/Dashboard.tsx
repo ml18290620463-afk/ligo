@@ -1,6 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Lock } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { AnimatePresence } from 'motion/react';
 import { DiaryEntry, GroupingMode, Language, Theme, Attachment, Container } from '../types';
 import { useSearch } from '../hooks/useSearch';
 import { useTransientState } from '../hooks/useTransientState';
@@ -21,10 +20,10 @@ import { BackupReminderBanner } from './BackupReminderBanner';
 import { FilterHub } from './FilterHub';
 import { DashboardHeader } from './DashboardHeader';
 import { FilterBar } from './FilterBar';
-import { EntryGrid } from './EntryGrid';
 import { SettingsPanel } from './SettingsPanel';
-import { GeometricBoat } from './GeometricBoat';
-import { VaultListView } from './VaultListView';
+import { DashboardFooter } from './DashboardFooter';
+import { VaultContent } from './VaultContent';
+import { useClickOutside } from '../hooks/useClickOutside';
 import { groupDashboardEntries, sortDashboardGroupKeys } from '../services/dashboardGrouping';
 import { buildBackupExport, buildNotesExport, NotesExportMode } from '../services/dashboardExport';
 import { getActiveDashboardEntries, getBaseDashboardEntries } from '../services/dashboardFilters';
@@ -243,7 +242,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   // Language Dropdown State
   const [showLangDropdown, setShowLangDropdown] = useState(false);
-  const langDropdownRef = useRef<HTMLDivElement>(null);
+  const langDropdownRef = useClickOutside<HTMLDivElement>(showLangDropdown, () =>
+    setShowLangDropdown(false),
+  );
   const [stagedMaterial, setStagedMaterial] = useState<Attachment | null>(null);
   const {
     value: mediaError,
@@ -258,7 +259,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const [exportTarget, setExportTarget] = useState<'all' | string>('all');
   const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useClickOutside<HTMLDivElement>(isExportDropdownOpen, () =>
+    setIsExportDropdownOpen(false),
+  );
 
   const [pendingImportConfirm, setPendingImportConfirm] = useState<{
     message: string;
@@ -304,33 +307,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     },
   });
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (langDropdownRef.current && !langDropdownRef.current.contains(event.target as Node)) {
-        setShowLangDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsExportDropdownOpen(false);
-      }
-    };
-
-    if (isExportDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    } else {
-      document.removeEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isExportDropdownOpen]);
+  // (click-outside / Escape handlers live in `useClickOutside` now.)
 
   const [selectedNoteId, setSelectedNoteId] = useState<string>('all');
 
@@ -603,135 +580,35 @@ export const Dashboard: React.FC<DashboardProps> = ({
         )}
       </AnimatePresence>
 
-      <div
-        onClick={() => !isVaultOpen && handleToggleVault()}
-        className={`transition-all duration-700 relative overflow-hidden rounded-2xl border ${
-          theme === 'light'
-            ? 'bg-white/40 border-slate-200/40 shadow-sm'
-            : 'bg-[#0a0d12]/60 border-[#173242]/20 backdrop-blur-md'
-        } ${isVaultOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-40 lg:opacity-50 grayscale blur-xl translate-y-4 cursor-pointer hover:opacity-70'}`}
-      >
-        <AnimatePresence>
-          {!isVaultOpen && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/10 backdrop-blur-sm group"
-            >
-              <div className="p-6 rounded-full border border-cyan-500/20 bg-black/60 shadow-[0_0_30px_rgba(6,182,212,0.1)] group-hover:scale-110 group-hover:border-cyan-500/50 transition-all duration-500">
-                <Lock className="w-10 h-10 text-cyan-500/60 group-hover:text-cyan-400 group-hover:animate-pulse" />
-              </div>
-              <p className="mt-4 text-[10px] font-mono uppercase tracking-[0.3em] text-cyan-500/60 font-bold group-hover:text-cyan-400">
-                {t.encryptedLog} ● {t.clickToUnlock || '点击解锁'}
-              </p>
-            </motion.div>
-          )}
-        </AnimatePresence>
+      <VaultContent
+        isVaultOpen={isVaultOpen}
+        onUnsealRequest={handleToggleVault}
+        loading={loading}
+        theme={theme}
+        language={language}
+        t={t}
+        searchQuery={searchQuery}
+        paginatedEntries={paginatedEntries}
+        filteredEntries={filteredEntries}
+        hasMore={hasMore}
+        onLoadMore={() => setCurrentPage((prev) => prev + 1)}
+        groupingMode={groupingMode}
+        groupedEntries={groupedEntries}
+        groupKeys={groupKeys}
+        isListView={isListView}
+        onSelectEntry={onSelectEntry}
+        showFilterHub={showFilterHub}
+        setShowFilterHub={setShowFilterHub}
+        customIdentity={customIdentity}
+        currentUser={currentUser}
+      />
 
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 animate-pulse">
-            <div className="w-12 h-12 rounded-full border-2 border-cyan-500/20 border-t-cyan-500 animate-spin mb-4" />
-            <p className="text-[10px] font-mono uppercase tracking-[0.3em] text-cyan-700">
-              加载时空记录...
-            </p>
-          </div>
-        ) : isVaultOpen ? (
-          <div>
-            <VaultListView
-              entries={groupingMode === 'none' ? paginatedEntries : filteredEntries}
-              language={language}
-              theme={theme}
-              onSelectEntry={onSelectEntry}
-              groupingMode={groupingMode}
-              groupedEntries={groupedEntries}
-              groupKeys={groupKeys}
-            />
-            {groupingMode === 'none' && hasMore && (
-              <div className="flex justify-center py-8">
-                <button
-                  onClick={() => setCurrentPage((prev) => prev + 1)}
-                  className={`px-8 py-3 rounded-full border font-mono text-[10px] uppercase tracking-[0.4em] transition-all duration-500 hover:scale-105 active:scale-95 ${theme === 'light' ? 'bg-white border-slate-200 text-slate-500 hover:border-cyan-500 hover:text-cyan-600' : 'bg-black border-cyan-900/40 text-cyan-800 hover:border-cyan-500 hover:text-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.05)] hover:shadow-[0_0_30px_rgba(6,182,212,0.15)]'}`}
-                >
-                  {language === 'zh' ? '加载更多记录' : 'LOAD MORE RECORDS'}
-                </button>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div>
-            <EntryGrid
-              theme={theme}
-              language={language}
-              searchQuery={searchQuery}
-              filteredEntries={groupingMode === 'none' ? paginatedEntries : filteredEntries}
-              groupingMode={groupingMode}
-              groupedEntries={groupedEntries}
-              groupKeys={groupKeys}
-              isListView={isListView}
-              onSelectEntry={onSelectEntry}
-              showFilterHub={showFilterHub}
-              setShowFilterHub={setShowFilterHub}
-              customIdentity={customIdentity}
-              currentUser={currentUser}
-            />
-            {groupingMode === 'none' && hasMore && (
-              <div className="flex justify-center py-8">
-                <button
-                  onClick={() => setCurrentPage((prev) => prev + 1)}
-                  className={`px-8 py-3 rounded-full border font-mono text-[10px] uppercase tracking-[0.4em] transition-all duration-500 hover:scale-105 active:scale-95 ${theme === 'light' ? 'bg-white border-slate-200 text-slate-500 hover:border-cyan-500 hover:text-cyan-600' : 'bg-black border-cyan-900/40 text-cyan-800 hover:border-cyan-500 hover:text-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.05)] hover:shadow-[0_0_30px_rgba(6,182,212,0.15)]'}`}
-                >
-                  {language === 'zh' ? '加载更多记录' : 'LOAD MORE RECORDS'}
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Motivational Footer */}
-      <div
-        className={`relative z-10 rounded-xl overflow-hidden min-h-[300px] flex items-center justify-center group border mt-auto backdrop-blur-md transition-all duration-1000 ${theme === 'light' ? 'border-slate-200/40 bg-white/60 shadow-[0_20px_50px_rgba(0,0,0,0.03)]' : 'border-cyan-900/20 bg-black/40'}`}
-      >
-        {/* Background Pattern */}
-        <div
-          className={`absolute inset-0 opacity-[0.03] pointer-events-none ${theme === 'light' ? 'bg-[radial-gradient(#06b6d4_1px,transparent_1px)] bg-[size:20px_20px]' : 'bg-[radial-gradient(#06b6d4_1px,transparent_1px)] bg-[size:40px_40px]'}`}
-        ></div>
-        <div
-          className={`absolute inset-0 pointer-events-none ${theme === 'light' ? 'bg-gradient-to-t from-cyan-500/10 via-transparent to-transparent' : 'bg-gradient-to-t from-cyan-900/10 to-transparent'}`}
-        ></div>
-
-        <div className="relative z-10 max-w-3xl px-8 text-center flex flex-col items-center">
-          <div
-            onClick={handleGoHomeClick}
-            className={`mb-6 p-4 rounded-full border transition-all cursor-pointer ${
-              isSailingHome
-                ? 'duration-1000 translate-x-[200px] opacity-0 blur-md scale-75'
-                : 'duration-700 hover:scale-110 hover:shadow-[0_0_30px_rgba(6,182,212,0.4)]'
-            } ${theme === 'light' ? 'bg-white border-slate-100 shadow-sm' : 'bg-black/50 border-cyan-900/30'}`}
-          >
-            <div className="relative">
-              <GeometricBoat
-                className={`w-10 h-10 ${theme === 'light' ? 'text-slate-700' : 'text-slate-100'} relative z-10 transition-colors duration-500`}
-                theme={theme}
-              />
-              <div
-                className={`absolute inset-0 blur-md ${theme === 'light' ? 'bg-cyan-200/50' : 'bg-cyan-500/30'}`}
-              ></div>
-            </div>
-          </div>
-          <h3
-            className={`text-xl md:text-2xl font-light tracking-[0.2em] mb-2 transition-colors duration-700 ${theme === 'light' ? 'text-slate-600 group-hover:text-slate-900' : 'text-cyan-200/80 group-hover:text-cyan-100'}`}
-          >
-            {t.quote}
-          </h3>
-          <p
-            className={`text-[10px] font-mono tracking-[0.4em] uppercase ${theme === 'light' ? 'text-slate-300' : 'text-cyan-500/40'}`}
-          >
-            {t.quoteSub}
-          </p>
-        </div>
-      </div>
+      <DashboardFooter
+        theme={theme}
+        t={t}
+        isSailingHome={isSailingHome}
+        onGoHome={handleGoHomeClick}
+      />
     </div>
   );
 };
