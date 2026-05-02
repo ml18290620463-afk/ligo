@@ -9,9 +9,8 @@ const ALLOWED_TRANSITIONS: Record<AppState, AppState[]> = {
   [AppState.ARCHIVE]: [AppState.COVER, AppState.DASHBOARD, AppState.VIEWER],
 };
 
-export const canTransitionAppState = (from: AppState, to: AppState) => (
-  from === to || ALLOWED_TRANSITIONS[from].includes(to)
-);
+export const canTransitionAppState = (from: AppState, to: AppState) =>
+  from === to || ALLOWED_TRANSITIONS[from].includes(to);
 
 export const getAllowedAppStateTransitions = (from: AppState) => [
   from,

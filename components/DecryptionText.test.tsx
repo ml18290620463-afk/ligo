@@ -1,4 +1,4 @@
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, cleanup } from '@testing-library/react';
 import { DecryptionText } from './DecryptionText';
 import { describe, it, expect, afterEach } from 'vitest';
 

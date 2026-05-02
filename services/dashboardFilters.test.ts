@@ -14,12 +14,9 @@ const entry = (overrides: Partial<DiaryEntry>): DiaryEntry => ({
 
 describe('dashboardFilters', () => {
   it('returns non-archived entries for active dashboard surfaces', () => {
-    const entries = [
-      entry({ id: 'active' }),
-      entry({ id: 'archived', isArchived: true }),
-    ];
+    const entries = [entry({ id: 'active' }), entry({ id: 'archived', isArchived: true })];
 
-    expect(getActiveDashboardEntries(entries).map(item => item.id)).toEqual(['active']);
+    expect(getActiveDashboardEntries(entries).map((item) => item.id)).toEqual(['active']);
   });
 
   it('excludes memory boat and archived entries from the main vault', () => {
@@ -29,7 +26,11 @@ describe('dashboardFilters', () => {
       entry({ id: 'archived', isArchived: true }),
     ];
 
-    expect(getBaseDashboardEntries({ entries, selectedTag: null, selectedCategory: 'all' }).map(item => item.id)).toEqual(['main']);
+    expect(
+      getBaseDashboardEntries({ entries, selectedTag: null, selectedCategory: 'all' }).map(
+        (item) => item.id,
+      ),
+    ).toEqual(['main']);
   });
 
   it('applies tag and container filters together', () => {
@@ -39,15 +40,24 @@ describe('dashboardFilters', () => {
       entry({ id: 'wrong-container', tags: ['focus'], containerId: 'container-b' }),
     ];
 
-    expect(getBaseDashboardEntries({ entries, selectedTag: 'focus', selectedCategory: 'container-a' }).map(item => item.id)).toEqual(['match']);
+    expect(
+      getBaseDashboardEntries({
+        entries,
+        selectedTag: 'focus',
+        selectedCategory: 'container-a',
+      }).map((item) => item.id),
+    ).toEqual(['match']);
   });
 
   it('can isolate uncategorized entries', () => {
-    const entries = [
-      entry({ id: 'loose' }),
-      entry({ id: 'packed', containerId: 'container-a' }),
-    ];
+    const entries = [entry({ id: 'loose' }), entry({ id: 'packed', containerId: 'container-a' })];
 
-    expect(getBaseDashboardEntries({ entries, selectedTag: null, selectedCategory: 'uncategorized' }).map(item => item.id)).toEqual(['loose']);
+    expect(
+      getBaseDashboardEntries({
+        entries,
+        selectedTag: null,
+        selectedCategory: 'uncategorized',
+      }).map((item) => item.id),
+    ).toEqual(['loose']);
   });
 });

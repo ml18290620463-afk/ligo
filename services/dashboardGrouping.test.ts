@@ -40,7 +40,7 @@ describe('dashboardGrouping', () => {
       labels: TRANSLATIONS.zh,
     });
 
-    expect(groups['2025年06月'].map(item => item.id)).toEqual(['newer', 'older']);
+    expect(groups['2025年06月'].map((item) => item.id)).toEqual(['newer', 'older']);
   });
 
   it('sorts dated groups before unknown groups in descending chronological order', () => {

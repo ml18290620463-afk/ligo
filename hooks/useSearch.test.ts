@@ -21,7 +21,7 @@ const mockEntries: DiaryEntry[] = [
     createdAt: Date.now(),
     updatedAt: Date.now(),
     isLocked: false,
-  }
+  },
 ];
 
 describe('useSearch', () => {

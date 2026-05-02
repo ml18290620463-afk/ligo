@@ -12,11 +12,36 @@ interface MorningStarRadarProps {
 
 export const MorningStarRadar: React.FC<MorningStarRadarProps> = ({ metrics, t, theme }) => {
   const dimensions = [
-    { key: 'rationality', label: t.rationality, icon: Brain, color: theme === 'light' ? '#007a8c' : '#06b6d4' },
-    { key: 'emotionality', label: t.emotionality, icon: Heart, color: theme === 'light' ? '#f43f5e' : '#fb7185' },
-    { key: 'futureFocus', label: t.futureFocus, icon: FastForward, color: theme === 'light' ? '#7c3aed' : '#8b5cf6' },
-    { key: 'selfReflection', label: t.selfReflection, icon: User, color: theme === 'light' ? '#059669' : '#10b981' },
-    { key: 'resilience', label: t.resilience, icon: Shield, color: theme === 'light' ? '#d97706' : '#f59e0b' },
+    {
+      key: 'rationality',
+      label: t.rationality,
+      icon: Brain,
+      color: theme === 'light' ? '#007a8c' : '#06b6d4',
+    },
+    {
+      key: 'emotionality',
+      label: t.emotionality,
+      icon: Heart,
+      color: theme === 'light' ? '#f43f5e' : '#fb7185',
+    },
+    {
+      key: 'futureFocus',
+      label: t.futureFocus,
+      icon: FastForward,
+      color: theme === 'light' ? '#7c3aed' : '#8b5cf6',
+    },
+    {
+      key: 'selfReflection',
+      label: t.selfReflection,
+      icon: User,
+      color: theme === 'light' ? '#059669' : '#10b981',
+    },
+    {
+      key: 'resilience',
+      label: t.resilience,
+      icon: Shield,
+      color: theme === 'light' ? '#d97706' : '#f59e0b',
+    },
   ];
 
   const size = 200;
@@ -33,7 +58,7 @@ export const MorningStarRadar: React.FC<MorningStarRadarProps> = ({ metrics, t, 
   };
 
   const points = dimensions.map((d, i) => getPoint(i, metrics[d.key] || 0));
-  const polygonPath = points.map(p => `${p.x},${p.y}`).join(' ');
+  const polygonPath = points.map((p) => `${p.x},${p.y}`).join(' ');
 
   return (
     <div className="flex flex-col md:flex-row items-center gap-8 py-4">
@@ -96,7 +121,7 @@ export const MorningStarRadar: React.FC<MorningStarRadarProps> = ({ metrics, t, 
               style={{
                 left: `${(p.x / size) * 100}%`,
                 top: `${(p.y / size) * 100}%`,
-                transform: 'translate(-50%, -50%)'
+                transform: 'translate(-50%, -50%)',
               }}
             >
               <Icon className="w-3 h-3" style={{ color: d.color }} />
@@ -121,7 +146,9 @@ export const MorningStarRadar: React.FC<MorningStarRadarProps> = ({ metrics, t, 
               </span>
               <span style={{ color: d.color }}>{metrics[d.key] || 0}/10</span>
             </div>
-            <div className={`h-1 rounded-full overflow-hidden border ${theme === 'light' ? 'bg-[rgba(0,122,140,0.05)] border-[rgba(0,122,140,0.1)]' : 'bg-cyan-950/30 border-cyan-900/20'}`}>
+            <div
+              className={`h-1 rounded-full overflow-hidden border ${theme === 'light' ? 'bg-[rgba(0,122,140,0.05)] border-[rgba(0,122,140,0.1)]' : 'bg-cyan-950/30 border-cyan-900/20'}`}
+            >
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${(metrics[d.key] || 0) * 10}%` }}

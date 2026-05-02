@@ -36,7 +36,8 @@ describe('fileDownload', () => {
   it('creates text blobs with the requested filename', () => {
     downloadTextFile('hello', 'entry/name.txt');
 
-    const createdBlob = (URL.createObjectURL as unknown as ReturnType<typeof vi.fn>).mock.calls[0][0] as Blob;
+    const createdBlob = (URL.createObjectURL as unknown as ReturnType<typeof vi.fn>).mock
+      .calls[0][0] as Blob;
     expect(createdBlob.type).toBe('text/plain;charset=utf-8');
     expect(clickSpy).toHaveBeenCalledTimes(1);
   });

@@ -5,12 +5,12 @@ import { DiaryEntry, GroupingMode, Language, Theme } from '../types';
 import { TRANSLATIONS } from '../constants';
 import { createSeededRandom } from '../lib/random';
 import { asLegacyEntry, getEntryTimestamp, getEntryTitle } from '../services/entryCompat';
+import { useNowTick } from '../hooks/useNowTick';
 
 interface VaultListViewProps {
   entries: DiaryEntry[];
   language: Language;
   theme: Theme;
-  now: number;
   onSelectEntry: (entry: DiaryEntry) => void;
   groupingMode?: GroupingMode;
   groupedEntries?: Record<string, DiaryEntry[]>;
@@ -22,25 +22,30 @@ export const VaultListView = ({
   entries,
   language,
   theme,
-  now,
   onSelectEntry,
   groupingMode = 'none',
   groupedEntries = {},
   groupKeys = [],
 }: VaultListViewProps) => {
   const t = TRANSLATIONS[language];
+  const hasPendingTimeLock = useMemo(
+    () =>
+      entries.some((entry) => typeof entry.unlockAt === 'number' && entry.unlockAt > Date.now()),
+    [entries],
+  );
+  const now = useNowTick(hasPendingTimeLock);
   const decorativeNoise = useMemo(
     () =>
       new Map(
-        entries.map(entry => {
+        entries.map((entry) => {
           const random = createSeededRandom(`vault-${entry.id}`);
           const lines = Array.from({ length: 5 }, () =>
-            Array.from({ length: 48 }, () => Math.floor(random() * 36).toString(36)).join('')
+            Array.from({ length: 48 }, () => Math.floor(random() * 36).toString(36)).join(''),
           );
           return [entry.id, lines];
-        })
+        }),
       ),
-    [entries]
+    [entries],
   );
 
   const formatDate = (val: number | string | Date) => {
@@ -56,7 +61,8 @@ export const VaultListView = ({
 
   const getTitle = (e: DiaryEntry) => getEntryTitle(asLegacyEntry(e), t.untitledTheme || 'Trace');
 
-  const isEncrypted = (e: DiaryEntry) => e.isEncrypted === true && (!e.unlockAt || now < e.unlockAt);
+  const isEncrypted = (e: DiaryEntry) =>
+    e.isEncrypted === true && (!e.unlockAt || now < e.unlockAt);
 
   const formatCountdown = (unlockAt: number) => {
     const diff = unlockAt - now;
@@ -103,9 +109,14 @@ export const VaultListView = ({
             >
               {formatDate(getEntryTimestamp(asLegacyEntry(entry)))}
             </span>
-            <div className={`h-[1px] w-8 ${theme === 'light' ? 'bg-slate-100' : 'bg-white/[0.05]'}`} />
+            <div
+              className={`h-[1px] w-8 ${theme === 'light' ? 'bg-slate-100' : 'bg-white/[0.05]'}`}
+            />
             {entry.tags?.slice(0, 1).map((tag, i) => (
-              <span key={i} className={`text-[8px] font-mono uppercase tracking-widest ${theme === 'light' ? 'text-slate-300' : 'text-slate-600'}`}>
+              <span
+                key={i}
+                className={`text-[8px] font-mono uppercase tracking-widest ${theme === 'light' ? 'text-slate-300' : 'text-slate-600'}`}
+              >
                 {tag}
               </span>
             ))}
@@ -125,8 +136,12 @@ export const VaultListView = ({
         <div className="relative z-10 flex items-center gap-8 shrink-0">
           {encrypted && entry.unlockAt && (
             <div className="hidden sm:flex flex-col items-end">
-              <span className="text-[8px] font-mono opacity-20 uppercase tracking-[0.2em]">Restricted</span>
-              <span className={`text-xs font-mono font-black ${theme === 'light' ? 'text-[#C85F72]/80 shadow-[0_0_10px_rgba(200,95,114,0.1)]' : 'text-[#C85F72] neon-glow-alert'}`}>
+              <span className="text-[8px] font-mono opacity-20 uppercase tracking-[0.2em]">
+                Restricted
+              </span>
+              <span
+                className={`text-xs font-mono font-black ${theme === 'light' ? 'text-[#C85F72]/80 shadow-[0_0_10px_rgba(200,95,114,0.1)]' : 'text-[#C85F72] neon-glow-alert'}`}
+              >
                 {formatCountdown(entry.unlockAt)}
               </span>
             </div>
@@ -134,7 +149,9 @@ export const VaultListView = ({
 
           <div
             className={`p-1.5 transition-all duration-500 ${
-              encrypted ? 'text-[#C85F72]/40 group-hover:text-[#C85F72] neon-glow-alert' : 'text-slate-600 group-hover:text-cyan-400 font-bold'
+              encrypted
+                ? 'text-[#C85F72]/40 group-hover:text-[#C85F72] neon-glow-alert'
+                : 'text-slate-600 group-hover:text-cyan-400 font-bold'
             }`}
           >
             {encrypted ? <Lock className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
@@ -153,10 +170,14 @@ export const VaultListView = ({
   if (entries.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-32 text-center animate-in fade-in zoom-in duration-1000">
-        <div className={`w-20 h-20 rounded-full border border-dashed mb-8 flex items-center justify-center opacity-10 ${theme === 'light' ? 'border-slate-400' : 'border-cyan-500'}`}>
+        <div
+          className={`w-20 h-20 rounded-full border border-dashed mb-8 flex items-center justify-center opacity-10 ${theme === 'light' ? 'border-slate-400' : 'border-cyan-500'}`}
+        >
           <ShieldAlert className="w-10 h-10" />
         </div>
-        <p className={`text-base font-mono tracking-[0.2em] font-medium ${theme === 'light' ? 'text-slate-400' : 'text-cyan-900'}`}>
+        <p
+          className={`text-base font-mono tracking-[0.2em] font-medium ${theme === 'light' ? 'text-slate-400' : 'text-cyan-900'}`}
+        >
           {language === 'zh' ? '暂无可进入记忆舱的历史记录' : 'NO HISTORY RECORDS ACCESSIBLE'}
         </p>
       </div>
@@ -166,14 +187,22 @@ export const VaultListView = ({
   if (groupingMode !== 'none') {
     return (
       <div className="space-y-8 py-12 max-w-4xl mx-auto px-4">
-        {groupKeys.map(key => (
+        {groupKeys.map((key) => (
           <div key={key} className="space-y-4">
             <div className="flex items-center gap-4 px-8">
               <div className="w-1 h-4 bg-cyan-500 rounded-full" />
-              <h3 className={`text-xl font-black tracking-widest uppercase ${theme === 'light' ? 'text-slate-800' : 'text-cyan-500'}`}>{key}</h3>
-              <span className="text-[10px] font-mono text-slate-500 opacity-40">[{groupedEntries[key]?.length || 0}]</span>
+              <h3
+                className={`text-xl font-black tracking-widest uppercase ${theme === 'light' ? 'text-slate-800' : 'text-cyan-500'}`}
+              >
+                {key}
+              </h3>
+              <span className="text-[10px] font-mono text-slate-500 opacity-40">
+                [{groupedEntries[key]?.length || 0}]
+              </span>
             </div>
-            <div className="space-y-[4px]">{groupedEntries[key]?.map((entry, idx) => renderEntry(entry, idx))}</div>
+            <div className="space-y-[4px]">
+              {groupedEntries[key]?.map((entry, idx) => renderEntry(entry, idx))}
+            </div>
           </div>
         ))}
       </div>

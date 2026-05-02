@@ -5,7 +5,7 @@ function randomHexToken(): string {
     if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
       const bytes = new Uint8Array(BYTE_LENGTH);
       crypto.getRandomValues(bytes);
-      return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+      return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
     }
   } catch {
     // fall through to legacy fallback

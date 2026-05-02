@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppStorageKeys } from './appSettings';
+import * as browserStorage from './browserStorage';
 import { clearEditorDraft, loadEditorDraft, saveEditorDraft } from './editorDraft';
 import { SecurityService } from './securityService';
 
@@ -37,9 +38,20 @@ describe('editorDraft', () => {
 
     const result = await saveEditorDraft({ title: 'T', content: 'Secret text', tags: 'tag' }, 'pw');
 
-    expect(result).toEqual({ saved: false });
+    expect(result).toEqual({ saved: false, reason: 'encrypt' });
     expect(localStorage.getItem(AppStorageKeys.draftContent)).toBeNull();
     expect(localStorage.getItem(AppStorageKeys.draftTitle)).toBe('T');
+  });
+
+  it('reports a quota failure when localStorage rejects writes', async () => {
+    const setSpy = vi
+      .spyOn(browserStorage, 'setStoredString')
+      .mockImplementation((key: string) => key !== AppStorageKeys.draftContent);
+
+    const result = await saveEditorDraft({ title: 'T', content: 'Plain text', tags: 'tag' }, null);
+
+    expect(result).toEqual({ saved: false, reason: 'quota' });
+    expect(setSpy).toHaveBeenCalledWith(AppStorageKeys.draftContent, 'Plain text');
   });
 
   it('clears saved draft keys', async () => {

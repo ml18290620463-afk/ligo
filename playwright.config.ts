@@ -1,8 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 
-process.env.NO_PROXY = [process.env.NO_PROXY, '127.0.0.1', 'localhost']
-  .filter(Boolean)
-  .join(',');
+process.env.NO_PROXY = [process.env.NO_PROXY, '127.0.0.1', 'localhost'].filter(Boolean).join(',');
 
 const port = Number(process.env.E2E_PORT || 3100);
 const baseURL = `http://127.0.0.1:${port}`;

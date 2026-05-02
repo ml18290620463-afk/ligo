@@ -20,9 +20,12 @@ const mockProps: ComponentProps<typeof SettingsPanel> = {
   dynamicVersion: '1.0',
   isUnlocked: true,
   onSetTheme: vi.fn(),
-  oldPassword: '', setOldPassword: vi.fn(),
-  newPassword: '', setNewPassword: vi.fn(),
-  confirmPassword: '', setConfirmPassword: vi.fn(),
+  oldPassword: '',
+  setOldPassword: vi.fn(),
+  newPassword: '',
+  setNewPassword: vi.fn(),
+  confirmPassword: '',
+  setConfirmPassword: vi.fn(),
   securityError: null,
   securitySuccess: null,
   handleSecuritySetup: vi.fn(),
@@ -60,7 +63,7 @@ const mockProps: ComponentProps<typeof SettingsPanel> = {
   handleWipeConfirm: vi.fn(),
   setWipeMode: vi.fn(),
   handleGoHomeClick: vi.fn(),
-  isSailingHome: false
+  isSailingHome: false,
 };
 
 describe('SettingsPanel', () => {
@@ -91,7 +94,7 @@ describe('SettingsPanel', () => {
 
   it('calls setShowSettings when close is clicked', () => {
     render(<SettingsPanel {...mockProps} />);
-    const closeBtn = screen.getAllByRole('button').find(b => b.querySelector('.lucide-x'));
+    const closeBtn = screen.getAllByRole('button').find((b) => b.querySelector('.lucide-x'));
     if (closeBtn) {
       fireEvent.click(closeBtn);
       expect(mockProps.setShowSettings).toHaveBeenCalledWith(false);

@@ -12,7 +12,7 @@ export const isEntryTimeLocked = (entry: DiaryEntry, now = Date.now()) =>
 export const getInitialViewerAccessState = (
   entry: DiaryEntry,
   masterPassword: string | null,
-  now = Date.now()
+  now = Date.now(),
 ): ViewerAccessState => {
   const timeLocked = isEntryTimeLocked(entry, now);
   const canReadImmediately = !timeLocked && !masterPassword && !entry.isEncrypted;

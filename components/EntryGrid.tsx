@@ -1,10 +1,11 @@
-import React, { useRef } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { ChevronRight, Clock, Image as ImageIcon, Video, Music, FileText, ArrowDown, Lock, Shield } from 'lucide-react';
+import React, { useMemo, useRef } from 'react';
+import { motion } from 'motion/react';
+import { ChevronRight, Lock, Shield } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { DiaryEntry, GroupingMode, Language, Theme } from '../types';
 import { DecryptionText } from './DecryptionText';
 import { TRANSLATIONS } from '../constants';
+import { useNowTick } from '../hooks/useNowTick';
 
 interface EntryGridProps {
   theme: Theme;
@@ -15,7 +16,6 @@ interface EntryGridProps {
   groupedEntries: Record<string, DiaryEntry[]>;
   groupKeys: string[];
   isListView: boolean;
-  now: number;
   onSelectEntry: (entry: DiaryEntry) => void;
   showFilterHub: boolean;
   setShowFilterHub: (show: boolean) => void;
@@ -24,9 +24,7 @@ interface EntryGridProps {
   disableVirtualization?: boolean;
 }
 
-type FlatGridItem =
-  | { type: 'header'; key: string }
-  | { type: 'entry'; entry: DiaryEntry };
+type FlatGridItem = { type: 'header'; key: string } | { type: 'entry'; entry: DiaryEntry };
 
 export const EntryGrid: React.FC<EntryGridProps> = ({
   theme,
@@ -37,38 +35,50 @@ export const EntryGrid: React.FC<EntryGridProps> = ({
   groupedEntries,
   groupKeys,
   isListView,
-  now,
   onSelectEntry,
   showFilterHub,
   setShowFilterHub,
   customIdentity,
   currentUser,
-  disableVirtualization = false
+  disableVirtualization = false,
 }) => {
   const t = TRANSLATIONS[language];
   const parentRef = useRef<HTMLDivElement>(null);
 
+  // Only run a 1Hz tick when at least one entry is currently time-locked.
+  // The check is intentionally re-evaluated on every render; it stays cheap
+  // because filteredEntries is the already filtered/paginated slice.
+  const hasPendingTimeLock = useMemo(
+    () =>
+      filteredEntries.some(
+        (entry) => typeof entry.unlockAt === 'number' && entry.unlockAt > Date.now(),
+      ),
+    [filteredEntries],
+  );
+  const now = useNowTick(hasPendingTimeLock);
+
   const isVitestWorker = Boolean(
     typeof window !== 'undefined' &&
-    (window as Window & { __VITEST_WORKER__?: unknown }).__VITEST_WORKER__
+    (window as Window & { __VITEST_WORKER__?: unknown }).__VITEST_WORKER__,
   );
 
-  const isTest = disableVirtualization || 
+  const isTest =
+    disableVirtualization ||
     (typeof process !== 'undefined' && process.env.NODE_ENV === 'test') ||
     isVitestWorker;
 
   // Flatten items for virtualization
   const flatItems = React.useMemo(() => {
     const list: FlatGridItem[] = [];
-    groupKeys.forEach(key => {
+    groupKeys.forEach((key) => {
       // Show header if grouping is active OR if we have keys and want to categorize ALL
       if (groupingMode !== 'none') {
         list.push({ type: 'header', key });
       }
-      
+
       const entries = groupedEntries[key];
       if (entries) {
-        entries.forEach(entry => list.push({ type: 'entry', entry }));
+        entries.forEach((entry) => list.push({ type: 'entry', entry }));
       }
     });
     return list;
@@ -91,7 +101,7 @@ export const EntryGrid: React.FC<EntryGridProps> = ({
 
     let currentStart = 0;
     return flatItems.map((item, index) => {
-      const size = item.type === 'header' ? 100 : (isListView ? 60 : 280);
+      const size = item.type === 'header' ? 100 : isListView ? 60 : 280;
       const start = currentStart;
       currentStart += size;
       return {
@@ -105,27 +115,43 @@ export const EntryGrid: React.FC<EntryGridProps> = ({
 
   if (filteredEntries.length === 0) {
     return (
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className={`text-center py-20 border border-dashed rounded-lg backdrop-blur-sm ${theme === 'light' ? 'border-slate-200 bg-slate-50/50' : 'border-cyan-900/50 bg-black/20'}`}
       >
-        <p className={`font-mono text-lg ${theme === 'light' ? 'text-slate-400' : 'text-cyan-700'}`}>
-          {searchQuery ? (language === 'zh' ? '未找到相关航迹' : 'No matching logs found') : t.emptyState}
+        <p
+          className={`font-mono text-lg ${theme === 'light' ? 'text-slate-400' : 'text-cyan-700'}`}
+        >
+          {searchQuery
+            ? language === 'zh'
+              ? '未找到相关航迹'
+              : 'No matching logs found'
+            : t.emptyState}
         </p>
         <p className={`text-sm mt-2 ${theme === 'light' ? 'text-slate-300' : 'text-cyan-900'}`}>
-          {searchQuery ? (language === 'zh' ? '尝试调整你的检索指令' : 'Try adjusting your search directive') : t.emptyStateDesc.replace('{user}', (customIdentity || currentUser)?.split('@')[0] || 'User')}
+          {searchQuery
+            ? language === 'zh'
+              ? '尝试调整你的检索指令'
+              : 'Try adjusting your search directive'
+            : t.emptyStateDesc.replace(
+                '{user}',
+                (customIdentity || currentUser)?.split('@')[0] || 'User',
+              )}
         </p>
       </motion.div>
     );
   }
 
-  const totalHeight = isTest 
-    ? flatItems.reduce((acc, item) => acc + (item.type === 'header' ? 100 : (isListView ? 60 : 280)), 0)
+  const totalHeight = isTest
+    ? flatItems.reduce(
+        (acc, item) => acc + (item.type === 'header' ? 100 : isListView ? 60 : 280),
+        0,
+      )
     : virtualizer.getTotalSize();
 
   return (
-    <div 
+    <div
       ref={parentRef}
       className="max-h-[75vh] overflow-auto custom-scrollbar relative pr-2"
       style={{
@@ -141,7 +167,7 @@ export const EntryGrid: React.FC<EntryGridProps> = ({
       >
         {virtualItems.map((virtualRow) => {
           const item = flatItems[virtualRow.index];
-          
+
           if (item?.type === 'header') {
             const key = item.key;
             return (
@@ -157,16 +183,22 @@ export const EntryGrid: React.FC<EntryGridProps> = ({
                 }}
                 className={`py-8 flex items-center gap-6 z-10 sticky top-0 ${theme === 'light' ? 'bg-slate-50/80 backdrop-blur-xl' : 'bg-black/60 backdrop-blur-xl'} border-b border-white/5`}
               >
-                <div className={`w-1 h-8 rounded-full ${theme === 'light' ? 'bg-cyan-500' : 'bg-cyan-400 ring-2 ring-cyan-500/30'}`} />
-                <h3 className={`text-2xl md:text-3xl font-black tracking-[0.2em] uppercase ${theme === 'light' ? 'text-[#1a202c]' : 'text-white'}`}>
+                <div
+                  className={`w-1 h-8 rounded-full ${theme === 'light' ? 'bg-cyan-500' : 'bg-cyan-400 ring-2 ring-cyan-500/30'}`}
+                />
+                <h3
+                  className={`text-2xl md:text-3xl font-black tracking-[0.2em] uppercase ${theme === 'light' ? 'text-[#1a202c]' : 'text-white'}`}
+                >
                   {key}
                 </h3>
-                
+
                 <div className="flex items-center gap-3 ml-auto px-4 py-1 rounded-full bg-white/5 border border-white/5">
-                   <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)] animate-pulse" />
-                   <span className={`text-[10px] font-mono tracking-widest font-black uppercase ${theme === 'light' ? 'text-slate-500' : 'text-cyan-400'}`}>
-                     {groupedEntries[key]?.length || 0} {language === 'zh' ? '份航迹' : 'LOGS'}
-                   </span>
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)] animate-pulse" />
+                  <span
+                    className={`text-[10px] font-mono tracking-widest font-black uppercase ${theme === 'light' ? 'text-slate-500' : 'text-cyan-400'}`}
+                  >
+                    {groupedEntries[key]?.length || 0} {language === 'zh' ? '份航迹' : 'LOGS'}
+                  </span>
                 </div>
               </div>
             );
@@ -176,7 +208,9 @@ export const EntryGrid: React.FC<EntryGridProps> = ({
 
           const { entry } = item;
           if (isListView) {
-            const entryIndex = flatItems.filter((it, idx) => it.type === 'entry' && idx <= virtualRow.index).length;
+            const entryIndex = flatItems.filter(
+              (it, idx) => it.type === 'entry' && idx <= virtualRow.index,
+            ).length;
             const displayIndex = entryIndex < 10 ? `0${entryIndex}` : `${entryIndex}`;
 
             return (
@@ -194,74 +228,127 @@ export const EntryGrid: React.FC<EntryGridProps> = ({
               >
                 {/* Structural Spine (Timeline Line) */}
                 <div className="relative w-12 flex items-center justify-center pointer-events-none pr-4">
-                   <div className={`absolute left-1/2 top-0 bottom-0 w-px border-l border-dashed transition-colors duration-500 ${theme === 'light' ? 'border-cyan-100' : 'border-cyan-900/30'}`} />
-                   <div className={`z-10 text-[8px] font-black font-mono px-1.5 py-0.5 rounded border ${theme === 'light' ? 'bg-white border-slate-200 text-slate-300' : 'bg-black border-cyan-900/50 text-cyan-800'}`}>
-                      {displayIndex}
-                   </div>
+                  <div
+                    className={`absolute left-1/2 top-0 bottom-0 w-px border-l border-dashed transition-colors duration-500 ${theme === 'light' ? 'border-cyan-100' : 'border-cyan-900/30'}`}
+                  />
+                  <div
+                    className={`z-10 text-[8px] font-black font-mono px-1.5 py-0.5 rounded border ${theme === 'light' ? 'bg-white border-slate-200 text-slate-300' : 'bg-black border-cyan-900/50 text-cyan-800'}`}
+                  >
+                    {displayIndex}
+                  </div>
                 </div>
 
-                <div 
+                <div
+                  role="button"
+                  tabIndex={0}
+                  aria-label={entry.title}
                   onClick={() => {
+                    if (entry.unlockAt && entry.unlockAt > now) return;
+                    onSelectEntry(entry);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key !== 'Enter' && e.key !== ' ') return;
+                    e.preventDefault();
                     if (entry.unlockAt && entry.unlockAt > now) return;
                     onSelectEntry(entry);
                   }}
                   className={`
                     flex-1 flex items-center gap-4 h-full px-6 py-4 border-l-2 font-mono text-[11px] transition-all cursor-pointer group relative overflow-hidden rounded-r-lg
-                    ${entry.unlockAt && entry.unlockAt > now
-                       ? (theme === 'light' ? 'border-indigo-200/50 bg-indigo-50/5 cursor-not-allowed opacity-60' : 'border-indigo-900/40 bg-indigo-950/5 cursor-not-allowed opacity-60 shadow-[inset_0_0_20px_rgba(99,102,241,0.05)]')
-                       : (theme === 'light' ? 'border-slate-100 bg-white/40 hover:bg-white hover:border-cyan-500 text-slate-900' : 'border-white/[0.05] bg-white/[0.01] hover:bg-white/[0.03] hover:border-cyan-500/50 text-slate-300')
+                    ${
+                      entry.unlockAt && entry.unlockAt > now
+                        ? theme === 'light'
+                          ? 'border-indigo-200/50 bg-indigo-50/5 cursor-not-allowed opacity-60'
+                          : 'border-indigo-900/40 bg-indigo-950/5 cursor-not-allowed opacity-60 shadow-[inset_0_0_20px_rgba(99,102,241,0.05)]'
+                        : theme === 'light'
+                          ? 'border-slate-100 bg-white/40 hover:bg-white hover:border-cyan-500 text-slate-900'
+                          : 'border-white/[0.05] bg-white/[0.01] hover:bg-white/[0.03] hover:border-cyan-500/50 text-slate-300'
                     }
                   `}
                 >
                   {/* Stereoscopic Decorative Lines */}
-                  <div className={`absolute top-0 right-0 w-2 h-2 border-t border-r ${theme === 'light' ? 'border-slate-200 opacity-40' : 'border-cyan-500/10'}`} />
-                  <div className={`absolute bottom-0 right-0 w-2 h-2 border-b border-r ${theme === 'light' ? 'border-slate-200 opacity-40' : 'border-cyan-500/10'}`} />
-                  
+                  <div
+                    className={`absolute top-0 right-0 w-2 h-2 border-t border-r ${theme === 'light' ? 'border-slate-200 opacity-40' : 'border-cyan-500/10'}`}
+                  />
+                  <div
+                    className={`absolute bottom-0 right-0 w-2 h-2 border-b border-r ${theme === 'light' ? 'border-slate-200 opacity-40' : 'border-cyan-500/10'}`}
+                  />
+
                   {/* Left Connector Line */}
-                  <div className={`absolute top-1/2 left-0 w-3 h-px -translate-y-1/2 ${theme === 'light' ? 'bg-cyan-100' : 'bg-cyan-500/20'}`} />
-                  
+                  <div
+                    className={`absolute top-1/2 left-0 w-3 h-px -translate-y-1/2 ${theme === 'light' ? 'bg-cyan-100' : 'bg-cyan-500/20'}`}
+                  />
+
                   {/* Outer Frame Accent for List Item */}
-                  <div className={`absolute top-0 left-0 w-full h-[1px] opacity-10 ${theme === 'light' ? 'bg-[#007a8c]' : 'bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.4)]'}`} />
-                  <div className={`absolute bottom-0 left-0 w-full h-[1px] opacity-10 ${theme === 'light' ? 'bg-[#007a8c]' : 'bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.4)]'}`} />
+                  <div
+                    className={`absolute top-0 left-0 w-full h-[1px] opacity-10 ${theme === 'light' ? 'bg-[#007a8c]' : 'bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.4)]'}`}
+                  />
+                  <div
+                    className={`absolute bottom-0 left-0 w-full h-[1px] opacity-10 ${theme === 'light' ? 'bg-[#007a8c]' : 'bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.4)]'}`}
+                  />
 
                   {/* Subtle Grid Pattern Overlay (Hover) */}
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-[0.03] pointer-events-none transition-opacity duration-500"
-                       style={{ backgroundImage: `radial-gradient(circle, ${theme === 'light' ? '#000' : '#fff'} 1px, transparent 1px)`, backgroundSize: '10px 10px' }} />
-
-                  {/* Scanning Laser Line (List View) */}
-                  <motion.div 
-                    className={`absolute top-0 bottom-0 w-1 pointer-events-none z-10 opacity-0 group-hover:opacity-100 ${theme === 'light' ? 'bg-gradient-to-b from-transparent via-cyan-400 to-transparent' : 'bg-gradient-to-b from-transparent via-cyan-400 to-transparent shadow-[0_0_8px_rgba(34,211,238,0.4)]'}`}
-                    initial={{ left: '-5%' }}
-                    whileHover={{ 
-                      left: ['-5%', '105%'],
-                      transition: { duration: 1.2, repeat: Infinity, ease: "linear" }
+                  <div
+                    className="absolute inset-0 opacity-0 group-hover:opacity-[0.03] pointer-events-none transition-opacity duration-500"
+                    style={{
+                      backgroundImage: `radial-gradient(circle, ${theme === 'light' ? '#000' : '#fff'} 1px, transparent 1px)`,
+                      backgroundSize: '10px 10px',
                     }}
                   />
 
-                  <div className={`shrink-0 opacity-40 font-bold ${theme === 'light' ? 'text-slate-500' : 'text-slate-600'}`}>[{new Date(entry.createdAt).toLocaleDateString()}]</div>
-                  <div className={`shrink-0 hidden lg:block opacity-20 ${theme === 'light' ? 'text-slate-300' : 'text-slate-700'}`}>ID:{entry.id.slice(0,4)}</div>
+                  {/* Scanning Laser Line (List View) */}
+                  <motion.div
+                    className={`absolute top-0 bottom-0 w-1 pointer-events-none z-10 opacity-0 group-hover:opacity-100 ${theme === 'light' ? 'bg-gradient-to-b from-transparent via-cyan-400 to-transparent' : 'bg-gradient-to-b from-transparent via-cyan-400 to-transparent shadow-[0_0_8px_rgba(34,211,238,0.4)]'}`}
+                    initial={{ left: '-5%' }}
+                    whileHover={{
+                      left: ['-5%', '105%'],
+                      transition: { duration: 1.2, repeat: Infinity, ease: 'linear' },
+                    }}
+                  />
+
+                  <div
+                    className={`shrink-0 opacity-40 font-bold ${theme === 'light' ? 'text-slate-500' : 'text-slate-600'}`}
+                  >
+                    [{new Date(entry.createdAt).toLocaleDateString()}]
+                  </div>
+                  <div
+                    className={`shrink-0 hidden lg:block opacity-20 ${theme === 'light' ? 'text-slate-300' : 'text-slate-700'}`}
+                  >
+                    ID:{entry.id.slice(0, 4)}
+                  </div>
                   <div className="flex-1 truncate tracking-[0.2em] flex items-center gap-3">
-                    <span className="opacity-20 text-cyan-700 font-black">{">>"}</span>
-                    <span className={`transition-colors uppercase truncate tracking-[0.1em] font-bold ${
-                      entry.unlockAt && entry.unlockAt > now
-                        ? 'text-indigo-500/60 drop-shadow-[0_0_3px_rgba(99,102,241,0.2)]'
-                        : (theme === 'light' ? 'group-hover:text-cyan-600 text-slate-700' : 'group-hover:text-white text-slate-400')
-                    }`}>
+                    <span className="opacity-20 text-cyan-700 font-black">{'>>'}</span>
+                    <span
+                      className={`transition-colors uppercase truncate tracking-[0.1em] font-bold ${
+                        entry.unlockAt && entry.unlockAt > now
+                          ? 'text-indigo-500/60 drop-shadow-[0_0_3px_rgba(99,102,241,0.2)]'
+                          : theme === 'light'
+                            ? 'group-hover:text-cyan-600 text-slate-700'
+                            : 'group-hover:text-white text-slate-400'
+                      }`}
+                    >
                       {entry.title}
                     </span>
                   </div>
                   <div className="shrink-0 flex items-center gap-4 sm:gap-6">
-                     {entry.unlockAt && entry.unlockAt > now ? (
-                       <div className={`flex items-center gap-2 ${theme === 'light' ? 'text-slate-300' : 'text-slate-700'} group-hover:text-indigo-400 transition-colors`}>
-                         <Lock className="w-3.5 h-3.5" />
-                         <span className="text-[9px] font-black uppercase tracking-[0.2em] hidden sm:group-hover:inline animate-pulse">{t.encryptedRecord || 'ENC'}</span>
-                       </div>
-                     ) : (
-                       <div className={`flex items-center gap-2 ${theme === 'light' ? 'text-slate-300' : 'text-slate-700'} group-hover:text-cyan-400 transition-colors`}>
-                         <Shield className="w-3.5 h-3.5" />
-                         <span className="hidden sm:group-hover:inline text-[9px] font-black tracking-[0.2em]">{t.safeRecord || 'SAFE'}</span>
-                       </div>
-                     )}
+                    {entry.unlockAt && entry.unlockAt > now ? (
+                      <div
+                        className={`flex items-center gap-2 ${theme === 'light' ? 'text-slate-300' : 'text-slate-700'} group-hover:text-indigo-400 transition-colors`}
+                      >
+                        <Lock className="w-3.5 h-3.5" />
+                        <span className="text-[9px] font-black uppercase tracking-[0.2em] hidden sm:group-hover:inline animate-pulse">
+                          {t.encryptedRecord || 'ENC'}
+                        </span>
+                      </div>
+                    ) : (
+                      <div
+                        className={`flex items-center gap-2 ${theme === 'light' ? 'text-slate-300' : 'text-slate-700'} group-hover:text-cyan-400 transition-colors`}
+                      >
+                        <Shield className="w-3.5 h-3.5" />
+                        <span className="hidden sm:group-hover:inline text-[9px] font-black tracking-[0.2em]">
+                          {t.safeRecord || 'SAFE'}
+                        </span>
+                      </div>
+                    )}
                     <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-all -translate-x-4 group-hover:translate-x-0" />
                   </div>
                 </div>
@@ -282,65 +369,104 @@ export const EntryGrid: React.FC<EntryGridProps> = ({
                 }}
                 className="py-3 px-2"
               >
-                <div 
+                <div
+                  role="button"
+                  tabIndex={0}
+                  aria-label={entry.title}
                   onClick={() => {
+                    if (entry.unlockAt && entry.unlockAt > now) return;
+                    onSelectEntry(entry);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key !== 'Enter' && e.key !== ' ') return;
+                    e.preventDefault();
                     if (entry.unlockAt && entry.unlockAt > now) return;
                     onSelectEntry(entry);
                   }}
                   className={`
                      relative w-full h-full border-l-2 transition-all cursor-pointer group overflow-hidden flex flex-col items-start justify-between p-8
-                     ${entry.unlockAt && entry.unlockAt > now
-                        ? (theme === 'light' ? 'bg-indigo-50/5 border-indigo-200/20 cursor-not-allowed grayscale opacity-60' : 'bg-indigo-950/5 border-indigo-900/40 cursor-not-allowed grayscale opacity-60')
-                        : (theme === 'light' ? 'bg-white/40 border-slate-100 hover:border-cyan-500 hover:bg-white' : 'bg-white/[0.01] border-white/[0.05] hover:border-cyan-500/50 hover:bg-white/[0.03]')
+                     ${
+                       entry.unlockAt && entry.unlockAt > now
+                         ? theme === 'light'
+                           ? 'bg-indigo-50/5 border-indigo-200/20 cursor-not-allowed grayscale opacity-60'
+                           : 'bg-indigo-950/5 border-indigo-900/40 cursor-not-allowed grayscale opacity-60'
+                         : theme === 'light'
+                           ? 'bg-white/40 border-slate-100 hover:border-cyan-500 hover:bg-white'
+                           : 'bg-white/[0.01] border-white/[0.05] hover:border-cyan-500/50 hover:bg-white/[0.03]'
                      }
                   `}
                 >
                   {/* Nested Mechanical Frame (Grid) */}
-                  <div className={`absolute inset-[2px] border pointer-events-none transition-all duration-500 opacity-20 ${theme === 'light' ? 'border-slate-200 group-hover:border-cyan-200' : 'border-cyan-500/20 group-hover:border-cyan-500/40'}`} />
+                  <div
+                    className={`absolute inset-[2px] border pointer-events-none transition-all duration-500 opacity-20 ${theme === 'light' ? 'border-slate-200 group-hover:border-cyan-200' : 'border-cyan-500/20 group-hover:border-cyan-500/40'}`}
+                  />
 
                   {/* Inner Depth Glow (Grid) */}
-                  <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none ${theme === 'light' ? 'shadow-[inset_0_0_30px_rgba(0,122,140,0.05)]' : 'shadow-[inset_0_0_40px_rgba(34,211,238,0.03)]'}`} />
+                  <div
+                    className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none ${theme === 'light' ? 'shadow-[inset_0_0_30px_rgba(0,122,140,0.05)]' : 'shadow-[inset_0_0_40px_rgba(34,211,238,0.03)]'}`}
+                  />
 
                   {/* Scanning Laser Line (Grid View) */}
-                  <motion.div 
+                  <motion.div
                     className={`absolute left-0 right-0 h-0.5 pointer-events-none z-10 opacity-0 group-hover:opacity-100 ${theme === 'light' ? 'bg-gradient-to-r from-transparent via-cyan-400 to-transparent' : 'bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_10px_rgba(34,211,238,0.4)]'}`}
                     initial={{ top: '-5%' }}
-                    whileHover={{ 
+                    whileHover={{
                       top: ['-5%', '105%'],
-                      transition: { duration: 1.8, repeat: Infinity, ease: "linear" }
+                      transition: { duration: 1.8, repeat: Infinity, ease: 'linear' },
                     }}
                   />
 
                   {/* Stereoscopic Decorative Lines */}
-                  <div className={`absolute top-0 right-0 w-8 h-8 pointer-events-none border-t border-r translate-x-4 -translate-y-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 group-hover:translate-y-0 transition-all duration-300 ${theme === 'light' ? 'border-cyan-200' : 'border-cyan-500/30'}`} />
-                  <div className={`absolute bottom-0 right-0 w-4 h-4 pointer-events-none border-b border-r ${theme === 'light' ? 'border-slate-100' : 'border-cyan-900/40'}`} />
-                  <div className={`absolute top-1/2 left-0 w-px h-12 -translate-y-1/2 ${theme === 'light' ? 'bg-gradient-to-b from-transparent via-cyan-100 to-transparent' : 'bg-gradient-to-b from-transparent via-cyan-500/20 to-transparent'}`} />
+                  <div
+                    className={`absolute top-0 right-0 w-8 h-8 pointer-events-none border-t border-r translate-x-4 -translate-y-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 group-hover:translate-y-0 transition-all duration-300 ${theme === 'light' ? 'border-cyan-200' : 'border-cyan-500/30'}`}
+                  />
+                  <div
+                    className={`absolute bottom-0 right-0 w-4 h-4 pointer-events-none border-b border-r ${theme === 'light' ? 'border-slate-100' : 'border-cyan-900/40'}`}
+                  />
+                  <div
+                    className={`absolute top-1/2 left-0 w-px h-12 -translate-y-1/2 ${theme === 'light' ? 'bg-gradient-to-b from-transparent via-cyan-100 to-transparent' : 'bg-gradient-to-b from-transparent via-cyan-500/20 to-transparent'}`}
+                  />
 
                   <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:opacity-[0.1] transition-opacity font-mono text-[60px] select-none pointer-events-none uppercase font-black">
                     {entry.title.slice(0, 1)}
                   </div>
 
                   <div className="flex flex-col gap-1 relative z-10">
-                    <span className={`text-[9px] font-mono tracking-[0.4em] uppercase ${theme === 'light' ? 'text-slate-300' : 'text-slate-700'}`}>
+                    <span
+                      className={`text-[9px] font-mono tracking-[0.4em] uppercase ${theme === 'light' ? 'text-slate-300' : 'text-slate-700'}`}
+                    >
                       [{new Date(entry.createdAt).toLocaleDateString()}]
                     </span>
-                    <h4 className={`text-lg font-black tracking-tighter uppercase transition-colors duration-300 ${theme === 'light' ? 'text-slate-800' : 'text-slate-100 group-hover:text-cyan-400'}`}>
+                    <h4
+                      className={`text-lg font-black tracking-tighter uppercase transition-colors duration-300 ${theme === 'light' ? 'text-slate-800' : 'text-slate-100 group-hover:text-cyan-400'}`}
+                    >
                       {entry.title}
                     </h4>
                   </div>
 
                   <div className="flex items-center gap-4 relative z-10 w-full justify-between mt-8 pt-4 border-t border-white/[0.03]">
                     <div className="flex gap-2">
-                       {entry.tags?.slice(0, 2).map((tag, i) => (
-                         <span key={i} className={`text-[8px] font-mono uppercase tracking-widest ${theme === 'light' ? 'text-slate-300' : 'text-slate-700'}`}>#{tag}</span>
-                       ))}
+                      {entry.tags?.slice(0, 2).map((tag, i) => (
+                        <span
+                          key={i}
+                          className={`text-[8px] font-mono uppercase tracking-widest ${theme === 'light' ? 'text-slate-300' : 'text-slate-700'}`}
+                        >
+                          #{tag}
+                        </span>
+                      ))}
                     </div>
-                    <div className={`transition-all duration-500 ${
-                      entry.unlockAt && entry.unlockAt > now 
-                        ? 'text-indigo-500/40 group-hover:text-indigo-400 drop-shadow-[0_0_5px_rgba(99,102,241,0.2)]' 
-                        : 'text-slate-700 group-hover:text-cyan-400'
-                    }`}>
-                        {entry.unlockAt && entry.unlockAt > now ? <Lock className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
+                    <div
+                      className={`transition-all duration-500 ${
+                        entry.unlockAt && entry.unlockAt > now
+                          ? 'text-indigo-500/40 group-hover:text-indigo-400 drop-shadow-[0_0_5px_rgba(99,102,241,0.2)]'
+                          : 'text-slate-700 group-hover:text-cyan-400'
+                      }`}
+                    >
+                      {entry.unlockAt && entry.unlockAt > now ? (
+                        <Lock className="w-4 h-4" />
+                      ) : (
+                        <Shield className="w-4 h-4" />
+                      )}
                     </div>
                   </div>
                 </div>
@@ -353,7 +479,7 @@ export const EntryGrid: React.FC<EntryGridProps> = ({
   );
 };
 
-const HoverDecryptionText = ({ text, speed }: { text: string, speed: number }) => {
+const HoverDecryptionText = ({ text, speed }: { text: string; speed: number }) => {
   const truncatedText = text.slice(0, 15) + (text.length > 15 ? '...' : '');
   return <DecryptionText text={truncatedText} speed={speed} />;
 };

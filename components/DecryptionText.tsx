@@ -8,18 +8,18 @@ interface DecryptionTextProps {
   startDelay?: number;
 }
 
-const CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&^*()_+-=[]{}|;:,.<>/?";
+const CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&^*()_+-=[]{}|;:,.<>/?';
 
-export const DecryptionText: React.FC<DecryptionTextProps> = ({ 
-  text, 
-  speed = 30, 
+export const DecryptionText: React.FC<DecryptionTextProps> = ({
+  text,
+  speed = 30,
   revealSpeed = 2,
-  className = "",
-  startDelay = 0 
+  className = '',
+  startDelay = 0,
 }) => {
   const [displayText, setDisplayText] = useState('');
   const [isDone, setIsDone] = useState(false);
-  
+
   useEffect(() => {
     let iteration = 0;
     let timer: ReturnType<typeof setInterval> | null = null;
@@ -27,16 +27,16 @@ export const DecryptionText: React.FC<DecryptionTextProps> = ({
 
     const startAnimation = () => {
       timer = setInterval(() => {
-        setDisplayText(prev => {
+        setDisplayText((prev) => {
           return text
-            .split("")
+            .split('')
             .map((letter, index) => {
               if (index < iteration) {
                 return text[index];
               }
               return CHARS[Math.floor(Math.random() * CHARS.length)];
             })
-            .join("");
+            .join('');
         });
 
         if (iteration >= text.length) {
@@ -44,7 +44,7 @@ export const DecryptionText: React.FC<DecryptionTextProps> = ({
           setIsDone(true);
         }
 
-        iteration += 1 / revealSpeed; 
+        iteration += 1 / revealSpeed;
       }, speed);
     };
 
@@ -60,9 +60,5 @@ export const DecryptionText: React.FC<DecryptionTextProps> = ({
     };
   }, [text, speed, revealSpeed, startDelay]);
 
-  return (
-    <span className={className}>
-      {displayText}
-    </span>
-  );
+  return <span className={className}>{displayText}</span>;
 };

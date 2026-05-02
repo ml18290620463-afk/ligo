@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { Dashboard } from './Dashboard';
 import { TRANSLATIONS } from '../constants';
 
@@ -94,7 +94,9 @@ describe('Dashboard', () => {
   it('triggers onNewEntry when "New" button clicked', () => {
     render(<Dashboard {...defaultProps} />);
     // Use getByRole to target the button specifically
-    const newButton = screen.getAllByRole('button').find(b => b.textContent?.includes(t.newEntry));
+    const newButton = screen
+      .getAllByRole('button')
+      .find((b) => b.textContent?.includes(t.newEntry));
     if (!newButton) throw new Error('New button not found');
     fireEvent.click(newButton);
     expect(defaultProps.onNewEntry).toHaveBeenCalled();
@@ -102,12 +104,12 @@ describe('Dashboard', () => {
 
   it('triggers onSelectEntry when an entry is clicked', async () => {
     render(<Dashboard {...defaultProps} />);
-    
+
     // Find the first entry and click it
     // In List View, entry tiles have entry.title
     const entry = screen.getAllByText('Test Entry 1')[0];
     fireEvent.click(entry);
-    
+
     expect(defaultProps.onSelectEntry).toHaveBeenCalled();
     // It should be called with the entry object, but we just check if it's called
   });
@@ -116,7 +118,7 @@ describe('Dashboard', () => {
     render(<Dashboard {...defaultProps} />);
     const settingsButton = screen.getAllByTitle(t.settingsTitle)[0];
     fireEvent.click(settingsButton);
-    
+
     // The SettingsPanel title is t.navigationLog
     expect(await screen.findByText(t.navigationLog)).toBeDefined();
   });

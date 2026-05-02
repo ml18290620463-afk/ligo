@@ -1,5 +1,5 @@
 import { get, set } from 'idb-keyval';
-import { Attachment, Container, DiaryEntry, Principle } from '../types';
+import { Container, DiaryEntry, Principle } from '../types';
 import { getStoredString } from './browserStorage';
 import { DIARY_LEGACY_KEYS, getDiaryStorageKeys, mirrorDiaryValue } from './diaryStorage';
 import { asLegacyEntry, getEntryTimestamp } from './entryCompat';
@@ -18,7 +18,7 @@ interface ScanOptions {
   delayMs?: number;
 }
 
-export const delayMigrationStep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+export const delayMigrationStep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const getLegacyStorageKeys = (userId: string | undefined) => {
   const keys: string[] = [...DIARY_LEGACY_KEYS];
@@ -28,7 +28,7 @@ export const getLegacyStorageKeys = (userId: string | undefined) => {
       `vector_principles_${userId}`,
       `vector_pwd_hash_${userId}`,
       `vector_pwd_salt_${userId}`,
-      `vector_containers_${userId}`
+      `vector_containers_${userId}`,
     );
   }
   return keys;
@@ -105,12 +105,12 @@ const collectLegacyValue = (key: string, value: unknown, result: DiaryMigrationR
 
 export const dedupeMigrationResult = (result: DiaryMigrationResult): DiaryMigrationResult => {
   const uniqueEntriesMap = new Map<string, DiaryEntry>();
-  result.entries.forEach(item => {
+  result.entries.forEach((item) => {
     if (item && item.id && !uniqueEntriesMap.has(item.id)) uniqueEntriesMap.set(item.id, item);
   });
 
   const contentSet = new Set<string>();
-  const entries = Array.from(uniqueEntriesMap.values()).filter(item => {
+  const entries = Array.from(uniqueEntriesMap.values()).filter((item) => {
     if (!item.content) return true;
     const hash = item.content.trim().substring(0, 100);
     if (contentSet.has(hash)) return false;
@@ -119,10 +119,14 @@ export const dedupeMigrationResult = (result: DiaryMigrationResult): DiaryMigrat
   });
 
   const principles = Array.from(
-    new Map(result.principles.filter(item => item && item.id).map(item => [item.id, item])).values()
+    new Map(
+      result.principles.filter((item) => item && item.id).map((item) => [item.id, item]),
+    ).values(),
   );
   const containers = Array.from(
-    new Map(result.containers.filter(item => item && item.id).map(item => [item.id, item])).values()
+    new Map(
+      result.containers.filter((item) => item && item.id).map((item) => [item.id, item]),
+    ).values(),
   );
 
   return {
@@ -136,7 +140,7 @@ export const dedupeMigrationResult = (result: DiaryMigrationResult): DiaryMigrat
 
 export const scanLegacyDiaryData = async (
   userId: string | undefined,
-  options: ScanOptions = {}
+  options: ScanOptions = {},
 ): Promise<DiaryMigrationResult> => {
   const result: DiaryMigrationResult = {
     entries: [],
@@ -167,7 +171,7 @@ export const scanLegacyDiaryData = async (
 
 export const persistMigrationResult = async (
   userId: string | undefined,
-  result: DiaryMigrationResult
+  result: DiaryMigrationResult,
 ) => {
   const keys = getDiaryStorageKeys(userId);
 
@@ -187,21 +191,35 @@ export const persistMigrationResult = async (
   }
 
   if (result.passwordHash) {
+    // Sensitive: never mirror password hash to localStorage.
     await set(keys.passwordHash, result.passwordHash).catch(() => {});
-    mirrorDiaryValue(keys.passwordHash, result.passwordHash);
   }
 
   if (result.passwordSalt) {
     await set(keys.passwordSalt, result.passwordSalt).catch(() => {});
-    mirrorDiaryValue(keys.passwordSalt, result.passwordSalt);
   }
 };
 
-export const mergeMigrationEntries = (migratedEntries: DiaryEntry[], existingEntries: DiaryEntry[]) =>
-  Array.from(new Map([...migratedEntries, ...existingEntries].map(entry => [entry.id, entry])).values());
+export const mergeMigrationEntries = (
+  migratedEntries: DiaryEntry[],
+  existingEntries: DiaryEntry[],
+) =>
+  Array.from(
+    new Map([...migratedEntries, ...existingEntries].map((entry) => [entry.id, entry])).values(),
+  );
 
-export const mergeMigrationPrinciples = (migratedPrinciples: Principle[], existingPrinciples: Principle[]) =>
-  Array.from(new Map([...migratedPrinciples, ...existingPrinciples].map(item => [item.id, item])).values());
+export const mergeMigrationPrinciples = (
+  migratedPrinciples: Principle[],
+  existingPrinciples: Principle[],
+) =>
+  Array.from(
+    new Map([...migratedPrinciples, ...existingPrinciples].map((item) => [item.id, item])).values(),
+  );
 
-export const mergeMigrationContainers = (migratedContainers: Container[], existingContainers: Container[]) =>
-  Array.from(new Map([...migratedContainers, ...existingContainers].map(item => [item.id, item])).values());
+export const mergeMigrationContainers = (
+  migratedContainers: Container[],
+  existingContainers: Container[],
+) =>
+  Array.from(
+    new Map([...migratedContainers, ...existingContainers].map((item) => [item.id, item])).values(),
+  );

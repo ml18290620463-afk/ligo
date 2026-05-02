@@ -1,6 +1,9 @@
 import React, { useEffect, lazy, Suspense } from 'react';
+import { MotionConfig } from 'motion/react';
+import { useShallow } from 'zustand/react/shallow';
 import { AppState, DiaryEntry, Language, Theme } from './types';
 import { useDiaryData } from './hooks/useDiaryData';
+import { useMotionPreference } from './hooks/useMotionPreference';
 import { Dashboard } from './components/Dashboard';
 import { CoverScreen } from './components/CoverScreen';
 import { MasterLock } from './components/MasterLock';
@@ -11,9 +14,15 @@ import { SecurityService } from './services/securityService';
 import { useAppStore } from './stores/appStore';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
-const Viewer = lazy(() => import('./components/Viewer').then(module => ({ default: module.Viewer })));
-const Editor = lazy(() => import('./components/Editor').then(module => ({ default: module.Editor })));
-const ArchiveVault = lazy(() => import('./components/ArchiveVault').then(module => ({ default: module.ArchiveVault })));
+const Viewer = lazy(() =>
+  import('./components/Viewer').then((module) => ({ default: module.Viewer })),
+);
+const Editor = lazy(() =>
+  import('./components/Editor').then((module) => ({ default: module.Editor })),
+);
+const ArchiveVault = lazy(() =>
+  import('./components/ArchiveVault').then((module) => ({ default: module.ArchiveVault })),
+);
 
 const ScreenLoader: React.FC<{ language: Language }> = ({ language }) => (
   <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm">
@@ -27,6 +36,10 @@ const ScreenLoader: React.FC<{ language: Language }> = ({ language }) => (
 );
 
 const App: React.FC = () => {
+  // Subscribe via `useShallow` so changes to unrelated store fields (e.g.
+  // a child component flipping `selectedEntry`) do not trigger an App
+  // re-render. Without this, the Zustand default reference-equality check
+  // re-renders the entire tree on every `set()` call.
   const {
     appState,
     setAppState,
@@ -42,34 +55,70 @@ const App: React.FC = () => {
     setCurrentUser,
     setMasterPassword,
     setIsUnlocked,
-    setSelectedEntry
-  } = useAppStore();
+    setSelectedEntry,
+  } = useAppStore(
+    useShallow((state) => ({
+      appState: state.appState,
+      setAppState: state.setAppState,
+      language: state.language,
+      setLanguage: state.setLanguage,
+      theme: state.theme,
+      setTheme: state.setTheme,
+      currentUser: state.currentUser,
+      userId: state.userId,
+      masterPassword: state.masterPassword,
+      isUnlocked: state.isUnlocked,
+      selectedEntry: state.selectedEntry,
+      setCurrentUser: state.setCurrentUser,
+      setMasterPassword: state.setMasterPassword,
+      setIsUnlocked: state.setIsUnlocked,
+      setSelectedEntry: state.setSelectedEntry,
+    })),
+  );
 
   // Update currentUser when language changes
   useEffect(() => {
     setCurrentUser(TRANSLATIONS[language].localUser);
-  }, [language]);
-  
+  }, [language, setCurrentUser]);
+
   // Data Layer Hook
-  const { 
-    entries, 
+  const {
+    entries,
     principles,
-    addEntry, updateEntry, bulkUpdateEntries, deleteEntry, archiveEntry, unarchiveEntry, 
-    addPrinciple, deletePrinciple, updatePrinciple,
+    addEntry,
+    updateEntry,
+    bulkUpdateEntries,
+    deleteEntry,
+    archiveEntry,
+    unarchiveEntry,
+    addPrinciple,
+    deletePrinciple,
+    updatePrinciple,
+    importBackup,
     wipeData,
-    passwordHash, passwordSalt, savePasswordHash, savePasswordSalt, clearPasswordHash,
-    guidingStars, saveGuidingStars,
-    selectedStars, saveSelectedStars,
-    containers, addContainer, deleteContainer,
+    passwordHash,
+    passwordSalt,
+    savePasswordHash,
+    savePasswordSalt,
+    clearPasswordHash,
+    guidingStars,
+    saveGuidingStars,
+    selectedStars,
+    saveSelectedStars,
+    containers,
+    addContainer,
+    deleteContainer,
     loading,
     isScanning,
     scanProgress,
-    triggerScan
+    triggerScan,
+    lastScanSummary,
+    syncStatus,
   } = useDiaryData(userId, language);
 
   // Derived Principles for Cover Screen
   const homePrinciples = [
-    ...principles.filter(p => p.showOnHome).map(p => ({ ...p, sortDate: p.createdAt }))
+    ...principles.filter((p) => p.showOnHome).map((p) => ({ ...p, sortDate: p.createdAt })),
   ].sort((a, b) => b.sortDate - a.sortDate); // Smart Sorting: Most recent first
 
   // --- Handlers ---
@@ -85,19 +134,23 @@ const App: React.FC = () => {
     }
   };
 
-  const handleOnboardingComplete = async (password: string, directory: string[], selection: string[]) => {
+  const handleOnboardingComplete = async (
+    password: string,
+    directory: string[],
+    selection: string[],
+  ) => {
     // Generate salt
     const saltArray = window.crypto.getRandomValues(new Uint8Array(32));
     const salt = btoa(String.fromCharCode(...saltArray));
     SecurityService.wipeSensitive(saltArray);
-    
+
     // Hash password
     const hash = await SecurityService.hashPassword(password, salt);
-    
+
     // Save
     await savePasswordSalt(salt);
     await savePasswordHash(hash);
-    
+
     await saveGuidingStars(directory);
     await saveSelectedStars(selection);
     setMasterPassword(password);
@@ -115,14 +168,14 @@ const App: React.FC = () => {
     const saltArray = window.crypto.getRandomValues(new Uint8Array(32));
     const salt = btoa(String.fromCharCode(...saltArray));
     SecurityService.wipeSensitive(saltArray);
-    
+
     // Hash password
     const hash = await SecurityService.hashPassword(password, salt);
-    
+
     // Save
     await savePasswordSalt(salt);
     await savePasswordHash(hash);
-    
+
     setMasterPassword(password);
     setIsUnlocked(true);
   };
@@ -160,154 +213,192 @@ const App: React.FC = () => {
     AppState.DASHBOARD,
     AppState.VIEWER,
     AppState.EDITOR,
-    AppState.ARCHIVE
+    AppState.ARCHIVE,
   ].includes(appState);
 
   return (
     <ErrorBoundary>
-      <div className={`min-h-screen font-sans relative transition-colors duration-1000 ${theme === 'light' ? 'bg-[#f0f4f7] text-[#1a202c] selection:bg-[#007a8c]/20 selection:text-[#007a8c]' : 'bg-[#030303] text-gray-100 selection:bg-cyan-500 selection:text-white'}`}>
-      
-      {showGlobalBackground && <SpaceTimeBackground theme={theme} />}
+      <AppMotionConfig>
+        <div
+          className={`min-h-screen font-sans relative transition-colors duration-1000 ${theme === 'light' ? 'bg-[#f0f4f7] text-[#1a202c] selection:bg-[#007a8c]/20 selection:text-[#007a8c]' : 'bg-[#030303] text-gray-100 selection:bg-cyan-500 selection:text-white'}`}
+        >
+          {showGlobalBackground && <SpaceTimeBackground theme={theme} />}
 
-      {loading && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm">
-          <div className="flex flex-col items-center gap-4">
-            <div className="w-12 h-12 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
-            <div className="font-mono text-cyan-500 text-xs tracking-widest animate-pulse uppercase">
-              {TRANSLATIONS[language].restoringLink}
+          {loading && (
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm">
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-12 h-12 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
+                <div className="font-mono text-cyan-500 text-xs tracking-widest animate-pulse uppercase">
+                  {TRANSLATIONS[language].restoringLink}
+                </div>
+              </div>
             </div>
-          </div>
+          )}
+
+          {appState === AppState.COVER && (
+            <CoverScreen
+              onStart={handleStartFromCover}
+              language={language}
+              principles={homePrinciples}
+              theme={theme}
+            />
+          )}
+
+          {appState === AppState.ONBOARDING && (
+            <Onboarding
+              language={language}
+              onSetLanguage={(lang: Language) => setLanguage(lang)}
+              theme={theme}
+              onComplete={handleOnboardingComplete}
+              onCancel={() => setAppState(AppState.COVER)}
+            />
+          )}
+
+          {appState === AppState.DASHBOARD &&
+            (passwordHash && !isUnlocked ? (
+              <MasterLock
+                language={language}
+                theme={theme}
+                onUnlock={handleUnlock}
+                onResetPassword={handleSetPassword}
+                onCancel={() => setAppState(AppState.COVER)}
+                onWipeData={handleWipeData}
+                passwordHash={passwordHash}
+                passwordSalt={passwordSalt}
+              />
+            ) : (
+              <Dashboard
+                entries={entries}
+                currentUser={currentUser}
+                isGuest={userId === 'guest'}
+                language={language}
+                onSetLanguage={(lang: Language) => setLanguage(lang)}
+                theme={theme}
+                onSetTheme={(t: Theme) => setTheme(t)}
+                onSelectEntry={handleSelectEntry}
+                onUpdateEntry={updateEntry}
+                onBulkUpdateEntries={bulkUpdateEntries}
+                onNewEntry={() => setAppState(AppState.EDITOR)}
+                onOpenArchive={() => setAppState(AppState.ARCHIVE)}
+                onReplayIntro={() => setAppState(AppState.COVER)}
+                onWipeData={handleWipeData}
+                onCreateMaterialEntry={(material, isArchived) => {
+                  addEntry({
+                    title: material.name,
+                    content: `[Attachment: ${material.name}]`,
+                    tags: ['upload', 'material', material.type],
+                    attachment: material,
+                    isArchived,
+                  });
+                }}
+                isUnlocked={isUnlocked}
+                passwordHash={passwordHash}
+                passwordSalt={passwordSalt}
+                onSetPassword={handleSetPassword}
+                onClearPassword={handleClearPassword}
+                onImportBackup={importBackup}
+                guidingStars={guidingStars}
+                onSaveGuidingStars={saveGuidingStars}
+                selectedStars={selectedStars}
+                onSaveSelectedStars={saveSelectedStars}
+                containers={containers}
+                onAddContainer={addContainer}
+                onDeleteContainer={deleteContainer}
+                isScanning={isScanning}
+                scanProgress={scanProgress}
+                onTriggerScan={triggerScan}
+                lastScanSummary={lastScanSummary}
+                syncStatus={syncStatus}
+                loading={loading}
+              />
+            ))}
+
+          {appState === AppState.VIEWER && selectedEntry && (
+            <Suspense fallback={<ScreenLoader language={language} />}>
+              <Viewer
+                language={language}
+                theme={theme}
+                entry={selectedEntry}
+                currentUser={currentUser}
+                masterPassword={masterPassword}
+                guidingStars={selectedStars}
+                onBack={handleBackToDashboard}
+                onGoHome={() => setAppState(AppState.COVER)}
+                onUpdateEntry={(entry) => {
+                  updateEntry(entry);
+                  setSelectedEntry(entry);
+                }}
+                onDelete={(id) => {
+                  deleteEntry(id);
+                  handleBackToDashboard();
+                }}
+                onArchive={(id) => {
+                  archiveEntry(id);
+                  handleBackToDashboard();
+                }}
+                onRestore={(id) => {
+                  unarchiveEntry(id);
+                  handleBackToDashboard();
+                }}
+                containers={containers}
+              />
+            </Suspense>
+          )}
+
+          {appState === AppState.EDITOR && (
+            <Suspense fallback={<ScreenLoader language={language} />}>
+              <Editor
+                language={language}
+                theme={theme}
+                masterPassword={masterPassword}
+                onSave={handleSaveEntry}
+                onCancel={handleBackToDashboard}
+                onGoHome={() => setAppState(AppState.COVER)}
+                existingTitles={entries.map((e) => e.title)}
+              />
+            </Suspense>
+          )}
+
+          {appState === AppState.ARCHIVE && (
+            <Suspense fallback={<ScreenLoader language={language} />}>
+              <ArchiveVault
+                language={language}
+                theme={theme}
+                entries={entries}
+                principles={principles}
+                onAddPrinciple={addPrinciple}
+                onDeletePrinciple={deletePrinciple}
+                onUpdatePrinciple={updatePrinciple}
+                onBack={handleBackToDashboard}
+                onGoHome={() => setAppState(AppState.COVER)}
+                onSelectEntry={handleSelectEntry}
+                containers={containers}
+                onAddContainer={addContainer}
+                onDeleteContainer={deleteContainer}
+              />
+            </Suspense>
+          )}
         </div>
-      )}
-
-      {appState === AppState.COVER && (
-        <CoverScreen onStart={handleStartFromCover} language={language} principles={homePrinciples} theme={theme} />
-      )}
-
-      {appState === AppState.ONBOARDING && (
-        <Onboarding 
-          language={language} 
-          onSetLanguage={(lang: Language) => setLanguage(lang)}
-          theme={theme}
-          onComplete={handleOnboardingComplete} 
-          onCancel={() => setAppState(AppState.COVER)}
-        />
-      )}
-
-      {appState === AppState.DASHBOARD && (
-        passwordHash && !isUnlocked ? (
-          <MasterLock 
-            language={language} 
-            theme={theme}
-            onUnlock={handleUnlock} 
-            onResetPassword={handleSetPassword}
-            onCancel={() => setAppState(AppState.COVER)}
-            onWipeData={handleWipeData}
-            passwordHash={passwordHash} 
-            passwordSalt={passwordSalt}
-          />
-        ) : (
-          <Dashboard 
-            entries={entries} 
-            currentUser={currentUser}
-            isGuest={userId === 'guest'}
-            language={language}
-            onSetLanguage={(lang: Language) => setLanguage(lang)}
-            theme={theme}
-            onSetTheme={(t: Theme) => setTheme(t)}
-            onSelectEntry={handleSelectEntry} 
-            onUpdateEntry={updateEntry}
-            onBulkUpdateEntries={bulkUpdateEntries}
-            onNewEntry={() => setAppState(AppState.EDITOR)} 
-            onOpenArchive={() => setAppState(AppState.ARCHIVE)}
-            onReplayIntro={() => setAppState(AppState.COVER)}
-            onWipeData={handleWipeData}
-            onCreateMaterialEntry={(material, isArchived) => {
-               addEntry({
-                 title: material.name,
-                 content: `[Attachment: ${material.name}]`,
-                 tags: ['upload', 'material', material.type],
-                 attachment: material,
-                 isArchived,
-
-               });
-            }}
-            isUnlocked={isUnlocked}
-            passwordHash={passwordHash}
-            passwordSalt={passwordSalt}
-            onSetPassword={handleSetPassword}
-            onClearPassword={handleClearPassword}
-            guidingStars={guidingStars}
-            onSaveGuidingStars={saveGuidingStars}
-            selectedStars={selectedStars}
-            onSaveSelectedStars={saveSelectedStars}
-            containers={containers}
-            onAddContainer={addContainer}
-            onDeleteContainer={deleteContainer}
-            isScanning={isScanning}
-            scanProgress={scanProgress}
-            onTriggerScan={triggerScan}
-            loading={loading}
-          />
-        )
-      )}
-
-      {appState === AppState.VIEWER && selectedEntry && (
-        <Suspense fallback={<ScreenLoader language={language} />}>
-          <Viewer 
-            language={language}
-            theme={theme}
-            entry={selectedEntry}
-            currentUser={currentUser}
-            masterPassword={masterPassword}
-            guidingStars={selectedStars}
-            onBack={handleBackToDashboard} 
-            onGoHome={() => setAppState(AppState.COVER)}
-            onUpdateEntry={(entry) => { updateEntry(entry); setSelectedEntry(entry); }}
-            onDelete={(id) => { deleteEntry(id); handleBackToDashboard(); }}
-            onArchive={(id) => { archiveEntry(id); handleBackToDashboard(); }}
-            onRestore={(id) => { unarchiveEntry(id); handleBackToDashboard(); }}
-            containers={containers}
-          />
-        </Suspense>
-      )}
-
-      {appState === AppState.EDITOR && (
-        <Suspense fallback={<ScreenLoader language={language} />}>
-          <Editor 
-            language={language}
-            theme={theme}
-            masterPassword={masterPassword}
-            onSave={handleSaveEntry} 
-            onCancel={handleBackToDashboard}
-            onGoHome={() => setAppState(AppState.COVER)}
-            existingTitles={entries.map(e => e.title)} 
-          />
-        </Suspense>
-      )}
-
-      {appState === AppState.ARCHIVE && (
-        <Suspense fallback={<ScreenLoader language={language} />}>
-          <ArchiveVault
-            language={language}
-            theme={theme}
-            entries={entries}
-            principles={principles}
-            onAddPrinciple={addPrinciple}
-            onDeletePrinciple={deletePrinciple}
-            onUpdatePrinciple={updatePrinciple}
-            onBack={handleBackToDashboard}
-            onGoHome={() => setAppState(AppState.COVER)}
-            onSelectEntry={handleSelectEntry} 
-            containers={containers}
-            onAddContainer={addContainer}
-            onDeleteContainer={deleteContainer}
-          />
-        </Suspense>
-      )}
-
-    </div>
+      </AppMotionConfig>
     </ErrorBoundary>
+  );
+};
+
+/**
+ * Bridges the OS-level `prefers-reduced-motion` setting into every
+ * `motion/react` consumer. Setting `transition={{ duration: 0 }}` collapses
+ * spring/ease transitions to instant; `reducedMotion="user"` also short-
+ * circuits the variants pipeline.
+ */
+const AppMotionConfig: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const reduce = useMotionPreference();
+  return (
+    <MotionConfig
+      reducedMotion={reduce ? 'always' : 'user'}
+      transition={reduce ? { duration: 0 } : undefined}
+    >
+      {children}
+    </MotionConfig>
   );
 };
 

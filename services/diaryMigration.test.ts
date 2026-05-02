@@ -1,10 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as idb from 'idb-keyval';
-import {
-  getLegacyStorageKeys,
-  mergeMigrationEntries,
-  scanLegacyDiaryData,
-} from './diaryMigration';
+import { getLegacyStorageKeys, mergeMigrationEntries, scanLegacyDiaryData } from './diaryMigration';
 
 vi.mock('idb-keyval', () => ({
   get: vi.fn(),
@@ -24,15 +20,18 @@ describe('diaryMigration', () => {
   });
 
   it('scans and deduplicates legacy localStorage entries', async () => {
-    localStorage.setItem('vector_data_guest', JSON.stringify([
-      { id: 'a', title: 'A', content: 'same-content' },
-      { id: 'b', title: 'B', content: 'same-content' },
-      { id: 'c', title: 'C', content: 'unique-content' },
-    ]));
+    localStorage.setItem(
+      'vector_data_guest',
+      JSON.stringify([
+        { id: 'a', title: 'A', content: 'same-content' },
+        { id: 'b', title: 'B', content: 'same-content' },
+        { id: 'c', title: 'C', content: 'unique-content' },
+      ]),
+    );
 
     const result = await scanLegacyDiaryData(undefined);
 
-    expect(result.entries.map(entry => entry.id)).toEqual(['a', 'c']);
+    expect(result.entries.map((entry) => entry.id)).toEqual(['a', 'c']);
   });
 
   it('collects password metadata from legacy keys', async () => {
@@ -49,9 +48,11 @@ describe('diaryMigration', () => {
   });
 
   it('keeps migrated entries ahead of existing entries when merging', () => {
-    expect(mergeMigrationEntries(
-      [{ id: 'new', title: 'New', content: '', createdAt: 1, tags: [], isLocked: false }],
-      [{ id: 'old', title: 'Old', content: '', createdAt: 1, tags: [], isLocked: false }]
-    ).map(entry => entry.id)).toEqual(['new', 'old']);
+    expect(
+      mergeMigrationEntries(
+        [{ id: 'new', title: 'New', content: '', createdAt: 1, tags: [], isLocked: false }],
+        [{ id: 'old', title: 'Old', content: '', createdAt: 1, tags: [], isLocked: false }],
+      ).map((entry) => entry.id),
+    ).toEqual(['new', 'old']);
   });
 });

@@ -1,10 +1,7 @@
 const UNSAFE_FILENAME_CHARS = /[<>:"/\\|?*\u0000-\u001F]/g;
 
 export const sanitizeDownloadFilename = (filename: string) => {
-  const sanitized = filename
-    .replace(UNSAFE_FILENAME_CHARS, '_')
-    .replace(/\s+/g, ' ')
-    .trim();
+  const sanitized = filename.replace(UNSAFE_FILENAME_CHARS, '_').replace(/\s+/g, ' ').trim();
 
   return sanitized || 'download';
 };
@@ -30,7 +27,7 @@ export const downloadBlob = (blob: Blob, filename: string) => {
 export const downloadTextFile = (
   content: string,
   filename: string,
-  mimeType = 'text/plain;charset=utf-8'
+  mimeType = 'text/plain;charset=utf-8',
 ) => {
   downloadBlob(new Blob([content], { type: mimeType }), filename);
 };

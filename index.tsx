@@ -2,20 +2,61 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
-import * as Sentry from "@sentry/react";
+import * as Sentry from '@sentry/react';
+import { initWebVitalsReporter } from './lib/vitals';
+
+const SENTRY_REDACT_PATTERNS: readonly RegExp[] = [
+  /\b(?:sk|pk|api|access|secret|bearer)[\s_:=-]+[A-Za-z0-9._\-+/=]{12,}/gi,
+  /Bearer\s+[A-Za-z0-9._\-+/=]{12,}/gi,
+  /\b[A-Za-z0-9+/=]{120,}\b/g,
+];
+
+const scrubText = (input: string): string => {
+  let next = input;
+  for (const pattern of SENTRY_REDACT_PATTERNS) {
+    next = next.replace(pattern, '[REDACTED]');
+  }
+  return next;
+};
 
 if (process.env.SENTRY_DSN) {
-  Sentry.init({ dsn: process.env.SENTRY_DSN });
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    sendDefaultPii: false,
+    beforeSend(event) {
+      if (event.request) {
+        delete event.request.cookies;
+        delete event.request.headers;
+        delete event.request.data;
+      }
+      if (event.message) event.message = scrubText(event.message);
+      if (event.exception?.values) {
+        for (const value of event.exception.values) {
+          if (value?.value) value.value = scrubText(value.value);
+        }
+      }
+      return event;
+    },
+    beforeBreadcrumb(breadcrumb) {
+      if (breadcrumb?.message) breadcrumb.message = scrubText(breadcrumb.message);
+      return breadcrumb;
+    },
+  });
 }
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
-  throw new Error("Could not find root element to mount to");
+  throw new Error('Could not find root element to mount to');
 }
+
+// Phase 2 §2.m — start collecting Core Web Vitals after Sentry has had a
+// chance to init. The reporter is a no-op when Sentry is disabled, so
+// this is safe to call unconditionally.
+initWebVitalsReporter();
 
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <App />
-  </React.StrictMode>
+  </React.StrictMode>,
 );

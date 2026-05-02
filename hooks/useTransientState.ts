@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useTimeoutManager } from './useTimeoutManager';
 
-export const useTransientState = <T,>(initialValue: T, defaultDuration = 3000) => {
+export const useTransientState = <T>(initialValue: T, defaultDuration = 3000) => {
   const [value, setValueState] = useState<T>(initialValue);
   const { scheduleTimeout, clearScheduledTimeouts } = useTimeoutManager();
 
@@ -10,7 +10,7 @@ export const useTransientState = <T,>(initialValue: T, defaultDuration = 3000) =
       clearScheduledTimeouts();
       setValueState(nextValue);
     },
-    [clearScheduledTimeouts]
+    [clearScheduledTimeouts],
   );
 
   const showValue = useCallback(
@@ -19,7 +19,7 @@ export const useTransientState = <T,>(initialValue: T, defaultDuration = 3000) =
       setValueState(nextValue);
       scheduleTimeout(() => setValueState(initialValue), duration);
     },
-    [clearScheduledTimeouts, defaultDuration, initialValue, scheduleTimeout]
+    [clearScheduledTimeouts, defaultDuration, initialValue, scheduleTimeout],
   );
 
   return {

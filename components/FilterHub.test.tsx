@@ -4,7 +4,16 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { DiaryEntry } from '../types';
 
 const mockEntries: DiaryEntry[] = [
-  { id: '1', title: 'T1', content: 'C1', tags: ['work'], createdAt: Date.now(), updatedAt: Date.now(), isLocked: false, containerId: 'work' },
+  {
+    id: '1',
+    title: 'T1',
+    content: 'C1',
+    tags: ['work'],
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    isLocked: false,
+    containerId: 'work',
+  },
 ];
 
 const mockProps = {
@@ -42,7 +51,7 @@ describe('FilterHub', () => {
 
   it('calls onSelectCategory when category clicked', () => {
     render(<FilterHub {...mockProps} />);
-    // Category buttons are in the categories list. 
+    // Category buttons are in the categories list.
     // They are rendered as 'WORK' due to uppercase styling in some views but literally 'WORK' in others.
     const workBtns = screen.getAllByText(/Work/i);
     fireEvent.click(workBtns[0]);

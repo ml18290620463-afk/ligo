@@ -11,11 +11,12 @@ export const useSearch = (entries: DiaryEntry[], query: string) => {
   return useMemo(() => {
     if (!query) return entries;
     const lowerQuery = query.toLowerCase();
-    
-    return entries.filter(e => 
-      e.title.toLowerCase().includes(lowerQuery) || 
-      e.content.toLowerCase().includes(lowerQuery) ||
-      e.tags.some(t => t.toLowerCase().includes(lowerQuery))
+
+    return entries.filter(
+      (e) =>
+        e.title.toLowerCase().includes(lowerQuery) ||
+        e.content.toLowerCase().includes(lowerQuery) ||
+        e.tags.some((t) => t.toLowerCase().includes(lowerQuery)),
     );
   }, [entries, query]);
 };

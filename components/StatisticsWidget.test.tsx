@@ -1,7 +1,6 @@
 import { render, screen, cleanup } from '@testing-library/react';
 import { StatisticsWidget } from './StatisticsWidget';
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { DiaryEntry } from '../types';
 
 const mockProps = {
   theme: 'dark' as const,

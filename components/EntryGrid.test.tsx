@@ -4,7 +4,15 @@ import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { DiaryEntry } from '../types';
 
 const mockEntries: DiaryEntry[] = [
-  { id: '1', title: 'Test 1', content: 'C1', tags: ['tag'], createdAt: Date.now(), updatedAt: Date.now(), isLocked: false },
+  {
+    id: '1',
+    title: 'Test 1',
+    content: 'C1',
+    tags: ['tag'],
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    isLocked: false,
+  },
 ];
 
 const mockProps = {
@@ -13,10 +21,9 @@ const mockProps = {
   searchQuery: '',
   filteredEntries: mockEntries,
   groupingMode: 'none' as const,
-  groupedEntries: { 'ALL': mockEntries },
+  groupedEntries: { ALL: mockEntries },
   groupKeys: ['ALL'],
   isListView: true,
-  now: Date.now(),
   onSelectEntry: vi.fn(),
   showFilterHub: false,
   setShowFilterHub: vi.fn(),
@@ -61,7 +68,7 @@ describe('EntryGrid', () => {
     expect(screen.getByText('Test 1')).toBeDefined();
     expect(screen.getByText('#tag')).toBeDefined();
   });
-  
+
   it('renders empty state when no entries', () => {
     render(<EntryGrid {...mockProps} filteredEntries={[]} />);
     expect(screen.getByText(/过往皆为判断的注脚/i)).toBeDefined();

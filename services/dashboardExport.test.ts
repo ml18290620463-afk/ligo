@@ -16,7 +16,7 @@ const entry = (overrides: Partial<DiaryEntry>): DiaryEntry => ({
 const now = new Date('2026-05-01T10:20:30.000Z');
 
 describe('dashboardExport', () => {
-  it('builds a stable backup filename and JSON payload', () => {
+  it('builds a stable backup filename and schema-tagged JSON payload', () => {
     const result = buildBackupExport({
       version: 'v1.2.3',
       entries: [entry({ id: 'backup-entry' })],
@@ -25,9 +25,22 @@ describe('dashboardExport', () => {
     });
 
     expect(result.filename).toBe('VECTOR_PILOT_EXAMPLE.COM_BACKUP_2026-05-01T10-20-30-000Z.json');
-    expect(JSON.parse(result.content)).toMatchObject({
+    expect(JSON.parse(result.content)).toEqual({
+      type: 'vector-vault-backup',
+      schemaVersion: 1,
       version: 'v1.2.3',
-      entries: [{ id: 'backup-entry' }],
+      exportedAt: '2026-05-01T10:20:30.000Z',
+      entryCount: 1,
+      entries: [
+        {
+          id: 'backup-entry',
+          title: 'Entry One',
+          content: 'content',
+          createdAt: 1000,
+          tags: [],
+          isLocked: false,
+        },
+      ],
     });
   });
 
@@ -35,7 +48,11 @@ describe('dashboardExport', () => {
     const result = buildNotesExport({
       mode: 'all',
       entries: [
-        entry({ id: 'visible', title: 'Visible', content: 'hello ![x](data:image/png;base64,abc)' }),
+        entry({
+          id: 'visible',
+          title: 'Visible',
+          content: 'hello ![x](data:image/png;base64,abc)',
+        }),
         entry({ id: 'archived', title: 'Archived', isArchived: true }),
       ],
       filteredEntries: [],

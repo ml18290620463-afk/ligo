@@ -8,6 +8,13 @@ export interface EditorDraft {
   tags: string;
 }
 
+export type EditorDraftSaveReason = 'encrypt' | 'quota' | 'unknown';
+
+export interface EditorDraftSaveResult {
+  saved: boolean;
+  reason?: EditorDraftSaveReason;
+}
+
 const emptyDraft: EditorDraft = {
   title: '',
   content: '',
@@ -18,12 +25,13 @@ function safeGetItem(key: string): string {
   return getStoredString(key) ?? '';
 }
 
-function safeSetItem(key: string, value: string) {
-  setStoredString(key, value);
-}
-
 function safeRemoveItem(key: string) {
   removeStoredValue(key);
+}
+
+/** Returns true on success; false when the underlying storage rejected (quota etc). */
+function trySetItem(key: string, value: string): boolean {
+  return setStoredString(key, value);
 }
 
 export async function loadEditorDraft(masterPassword: string | null): Promise<EditorDraft> {
@@ -53,17 +61,21 @@ export async function loadEditorDraft(masterPassword: string | null): Promise<Ed
 
 export async function saveEditorDraft(
   draft: EditorDraft,
-  masterPassword: string | null
-): Promise<{ saved: boolean }> {
+  masterPassword: string | null,
+): Promise<EditorDraftSaveResult> {
   try {
     if (draft.title) {
-      safeSetItem(AppStorageKeys.draftTitle, draft.title);
+      if (!trySetItem(AppStorageKeys.draftTitle, draft.title)) {
+        return { saved: false, reason: 'quota' };
+      }
     } else {
       safeRemoveItem(AppStorageKeys.draftTitle);
     }
 
     if (draft.tags) {
-      safeSetItem(AppStorageKeys.draftTags, draft.tags);
+      if (!trySetItem(AppStorageKeys.draftTags, draft.tags)) {
+        return { saved: false, reason: 'quota' };
+      }
     } else {
       safeRemoveItem(AppStorageKeys.draftTags);
     }
@@ -74,20 +86,27 @@ export async function saveEditorDraft(
     }
 
     if (masterPassword) {
+      let encrypted: string;
       try {
-        const encrypted = await SecurityService.encrypt(draft.content, masterPassword);
-        safeSetItem(AppStorageKeys.draftContent, `ENC:${encrypted}`);
-        return { saved: true };
+        encrypted = await SecurityService.encrypt(draft.content, masterPassword);
       } catch {
+        // Drop the previous payload so we never silently keep stale plaintext
+        // around if encryption breaks mid-session.
         safeRemoveItem(AppStorageKeys.draftContent);
-        return { saved: false };
+        return { saved: false, reason: 'encrypt' };
       }
+      if (!trySetItem(AppStorageKeys.draftContent, `ENC:${encrypted}`)) {
+        return { saved: false, reason: 'quota' };
+      }
+      return { saved: true };
     }
 
-    safeSetItem(AppStorageKeys.draftContent, draft.content);
+    if (!trySetItem(AppStorageKeys.draftContent, draft.content)) {
+      return { saved: false, reason: 'quota' };
+    }
     return { saved: true };
   } catch {
-    return { saved: false };
+    return { saved: false, reason: 'unknown' };
   }
 }
 

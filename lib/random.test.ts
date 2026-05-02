@@ -13,6 +13,6 @@ describe('createSeededRandom', () => {
     const random = createSeededRandom('range');
     const values = Array.from({ length: 20 }, () => random());
 
-    expect(values.every(value => value >= 0 && value < 1)).toBe(true);
+    expect(values.every((value) => value >= 0 && value < 1)).toBe(true);
   });
 });
