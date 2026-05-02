@@ -1,8 +1,9 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @theme {
-  --font-sans: "Inter", "PingFang SC", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", "PingFang SC", "Microsoft YaHei", ui-monospace, SFMono-Regular, monospace;
+  --font-sans: 'Inter', 'PingFang SC', 'Microsoft YaHei', ui-sans-serif, system-ui, sans-serif;
+  --font-mono:
+    'JetBrains Mono', 'PingFang SC', 'Microsoft YaHei', ui-monospace, SFMono-Regular, monospace;
 
   /* Vector Core - High-End Technical Theme Tokens */
   --color-archive-bg: #f4f7f9;
@@ -15,12 +16,12 @@
   --color-archive-accent: #0891b2;
   --color-archive-accent-light: #22d3ee;
   --color-archive-electric: #4f46e5;
-  --color-archive-danger: #f43f5e; 
+  --color-archive-danger: #f43f5e;
   --color-archive-success: #10b981;
   --color-tech-indigo: #6366f1;
   --color-tech-slate: #0f172a;
-  --color-vector-magenta: #C85F72;
-  --color-vector-alert: #C85F72;
+  --color-vector-magenta: #c85f72;
+  --color-vector-alert: #c85f72;
 }
 
 :root {
@@ -28,27 +29,35 @@
   --foreground: #e2e8f0;
   --accent: #06b6d4; /* Technical Cyan */
   --accent-secondary: #6366f1; /* Deep Tech Indigo */
-  --vector-magenta: #C85F72;
-  --vector-alert: #C85F72;
+  --vector-magenta: #c85f72;
+  --vector-alert: #c85f72;
   --text-muted: #64748b;
   --grid-color: rgba(6, 182, 212, 0.02);
   --grid-color-alt: rgba(255, 46, 204, 0.02);
 }
 
 @utility neon-glow-magenta {
-  text-shadow: 0 0 12px rgba(200, 95, 114, 0.4), 0 0 25px rgba(200, 95, 114, 0.1);
+  text-shadow:
+    0 0 12px rgba(200, 95, 114, 0.4),
+    0 0 25px rgba(200, 95, 114, 0.1);
 }
 
 @utility neon-glow-alert {
-  text-shadow: 0 0 12px rgba(200, 95, 114, 0.4), 0 0 25px rgba(200, 95, 114, 0.1);
+  text-shadow:
+    0 0 12px rgba(200, 95, 114, 0.4),
+    0 0 25px rgba(200, 95, 114, 0.1);
 }
 
 @utility neon-border-magenta {
-  box-shadow: 0 0 10px rgba(200, 95, 114, 0.15), inset 0 0 5px rgba(200, 95, 114, 0.05);
+  box-shadow:
+    0 0 10px rgba(200, 95, 114, 0.15),
+    inset 0 0 5px rgba(200, 95, 114, 0.05);
 }
 
 @utility neon-border-alert {
-  box-shadow: 0 0 10px rgba(200, 95, 114, 0.15), inset 0 0 5px rgba(200, 95, 114, 0.05);
+  box-shadow:
+    0 0 10px rgba(200, 95, 114, 0.15),
+    inset 0 0 5px rgba(200, 95, 114, 0.05);
 }
 
 @utility tech-border {
@@ -70,8 +79,10 @@ body {
   background-color: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
-  transition: background-color 0.5s ease, color 0.5s ease;
-  background-image: 
+  transition:
+    background-color 0.5s ease,
+    color 0.5s ease;
+  background-image:
     linear-gradient(90deg, var(--grid-color) 1px, transparent 1px),
     linear-gradient(var(--grid-color) 1px, transparent 1px);
   background-size: 60px 60px;
@@ -79,8 +90,7 @@ body {
 }
 
 html.light body {
-  background-image: 
-    radial-gradient(circle at 2px 2px, var(--grid-color) 1px, transparent 0);
+  background-image: radial-gradient(circle at 2px 2px, var(--grid-color) 1px, transparent 0);
   background-size: 24px 24px;
 }
 
@@ -143,7 +153,9 @@ html.light body {
 }
 
 /* Typography Enhancements */
-.light h1, .light h2, .light h3 {
+.light h1,
+.light h2,
+.light h3 {
   color: var(--color-archive-text-main);
   letter-spacing: 0.05em;
   font-weight: 700;
@@ -175,6 +187,28 @@ html.light body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--accent-secondary);
+}
+
+/* Keyboard focus must always be visible. Tailwind's default outline can be
+ * invisible against the cyan / dark theme, so we force a high-contrast
+ * indicator on every focusable element when navigated by keyboard
+ * (`:focus-visible` does not fire on mouse clicks). Animations are also
+ * suppressed for users who prefer reduced motion. */
+:focus-visible {
+  outline: 2px solid #22d3ee;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 @utility clip-path-polygon {
