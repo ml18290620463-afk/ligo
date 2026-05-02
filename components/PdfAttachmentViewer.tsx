@@ -2,8 +2,12 @@ import React, { useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
+// Bundle the pdf.js worker locally (Vite resolves `?url` to a hashed asset
+// served from /assets) so we are not dependent on unpkg.com and our CSP
+// `worker-src 'self'` does not need to allow third-party origins.
+import pdfWorkerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerSrc;
 
 interface PdfAttachmentViewerProps {
   file: string;
@@ -20,10 +24,12 @@ export const PdfAttachmentViewer: React.FC<PdfAttachmentViewerProps> = ({ file, 
         file={file}
         onLoadSuccess={({ numPages: pages }) => {
           setNumPages(pages);
-          setPageNumber(prev => Math.min(prev, pages));
+          setPageNumber((prev) => Math.min(prev, pages));
         }}
         className="max-w-full"
-        loading={<div className="font-mono text-cyan-600 animate-pulse my-10">Loading Document...</div>}
+        loading={
+          <div className="font-mono text-cyan-600 animate-pulse my-10">Loading Document...</div>
+        }
       >
         <Page
           pageNumber={pageNumber}
@@ -36,7 +42,7 @@ export const PdfAttachmentViewer: React.FC<PdfAttachmentViewerProps> = ({ file, 
       {numPages && (
         <div className="flex items-center gap-4 mt-4 font-mono text-xs">
           <button
-            onClick={() => setPageNumber(prev => Math.max(prev - 1, 1))}
+            onClick={() => setPageNumber((prev) => Math.max(prev - 1, 1))}
             disabled={pageNumber <= 1}
             className={`px-3 py-1 rounded disabled:opacity-50 ${
               theme === 'light'
@@ -50,7 +56,7 @@ export const PdfAttachmentViewer: React.FC<PdfAttachmentViewerProps> = ({ file, 
             Page {pageNumber} of {numPages}
           </span>
           <button
-            onClick={() => setPageNumber(prev => Math.min(prev + 1, numPages))}
+            onClick={() => setPageNumber((prev) => Math.min(prev + 1, numPages))}
             disabled={pageNumber >= numPages}
             className={`px-3 py-1 rounded disabled:opacity-50 ${
               theme === 'light'

@@ -6,6 +6,7 @@ import { AppError, reportError } from '../lib/error';
 import { getStoredString } from '../services/browserStorage';
 import {
   DiaryStorageKeys,
+  entriesPayloadExceedsMirror,
   getDiaryStorageKeys,
   mirrorDiaryValue,
   readDiaryJson,
@@ -23,6 +24,25 @@ import {
 } from '../services/diaryMigration';
 import { asLegacyEntry } from '../services/entryCompat';
 
+export type ImportBackupMode = 'merge' | 'replace';
+
+export interface ImportBackupSummary {
+  mode: ImportBackupMode;
+  importedCount: number;
+  totalAfter: number;
+}
+
+export interface ScanSummary {
+  status: 'success' | 'error';
+  finishedAt: number;
+  /** Counts of newly merged items in each domain. */
+  mergedEntries: number;
+  mergedPrinciples: number;
+  mergedContainers: number;
+  /** Present when status === 'error'. */
+  error?: string;
+}
+
 const sanitizeEntry = (entry: unknown): DiaryEntry => {
   const safeEntry = asLegacyEntry(entry);
   const now = Date.now();
@@ -30,8 +50,14 @@ const sanitizeEntry = (entry: unknown): DiaryEntry => {
     id: safeEntry.id || generateSecureId('rec'),
     title: safeEntry.title || safeEntry.name || 'Trace Record',
     content: safeEntry.content || safeEntry.text || safeEntry.body || '',
-    createdAt: typeof safeEntry.createdAt === 'number' && !Number.isNaN(safeEntry.createdAt) ? safeEntry.createdAt : now,
-    updatedAt: typeof safeEntry.updatedAt === 'number' && !Number.isNaN(safeEntry.updatedAt) ? safeEntry.updatedAt : now,
+    createdAt:
+      typeof safeEntry.createdAt === 'number' && !Number.isNaN(safeEntry.createdAt)
+        ? safeEntry.createdAt
+        : now,
+    updatedAt:
+      typeof safeEntry.updatedAt === 'number' && !Number.isNaN(safeEntry.updatedAt)
+        ? safeEntry.updatedAt
+        : now,
     tags: Array.isArray(safeEntry.tags) ? safeEntry.tags : [],
     isLocked: Boolean(safeEntry.isLocked),
     isEncrypted: Boolean(safeEntry.isEncrypted),
@@ -40,7 +66,10 @@ const sanitizeEntry = (entry: unknown): DiaryEntry => {
     archivedToShip: Boolean(safeEntry.archivedToShip),
     containerId: safeEntry.containerId || undefined,
     attachment: safeEntry.attachment || undefined,
-    unlockAt: typeof safeEntry.unlockAt === 'number' && !Number.isNaN(safeEntry.unlockAt) ? safeEntry.unlockAt : undefined,
+    unlockAt:
+      typeof safeEntry.unlockAt === 'number' && !Number.isNaN(safeEntry.unlockAt)
+        ? safeEntry.unlockAt
+        : undefined,
   };
 };
 
@@ -76,9 +105,12 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
   const [selectedStars, setSelectedStars] = useState<string[]>([]);
   const [materials, setMaterials] = useState<Attachment[]>([]);
   const [containers, setContainers] = useState<Container[]>([]);
-  const [syncStatus, setSyncStatus] = useState<'synced' | 'local-only' | 'error' | 'merging'>('local-only');
+  const [syncStatus, setSyncStatus] = useState<
+    'synced' | 'local-only' | 'error' | 'merging' | 'mirror-skipped'
+  >('local-only');
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
+  const [lastScanSummary, setLastScanSummary] = useState<ScanSummary | null>(null);
   const activeLoadIdRef = useRef(0);
 
   useEffect(() => {
@@ -102,14 +134,16 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
           if (migrationResult.entries.length > 0) currentEntries = migrationResult.entries;
 
           mirrorDiaryValue(keys.initializedFlag, 'true');
-          console.log(`Vector Vault: Migration complete. Merged ${migrationResult.entries.length} entries.`);
+          console.log(
+            `Vector Vault: Migration complete. Merged ${migrationResult.entries.length} entries.`,
+          );
         }
 
         if (!currentEntries) {
           currentEntries = await readStoredOptionalArray<DiaryEntry>(keys.entries);
         }
 
-        if ((!currentEntries || currentEntries.length === 0)) {
+        if (!currentEntries || currentEntries.length === 0) {
           const backup = await readStoredOptionalArray<DiaryEntry>(keys.backup);
           if (backup && backup.length > 0) currentEntries = backup;
         }
@@ -123,6 +157,25 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
         const currentPrinciples = await readStoredArray<Principle>(keys.principles);
         const currentPasswordHash = await readStoredScalar(keys.passwordHash);
         const currentPasswordSalt = await readStoredScalar(keys.passwordSalt);
+
+        // One-shot migration: prior versions mirrored the password hash and
+        // salt to localStorage. Move any leftover values into IndexedDB and
+        // wipe the mirror copies so an XSS payload can no longer harvest
+        // them.
+        const passwordHashMirror = readDiaryString(keys.passwordHash);
+        if (passwordHashMirror) {
+          if (!currentPasswordHash) {
+            await set(keys.passwordHash, passwordHashMirror).catch(() => {});
+          }
+          removeDiaryMirror(keys.passwordHash);
+        }
+        const passwordSaltMirror = readDiaryString(keys.passwordSalt);
+        if (passwordSaltMirror) {
+          if (!currentPasswordSalt) {
+            await set(keys.passwordSalt, passwordSaltMirror).catch(() => {});
+          }
+          removeDiaryMirror(keys.passwordSalt);
+        }
         const currentGuidingStars = await readStoredArray<string>(keys.guidingStars);
         const currentSelectedStars = await readStoredArray<string>(keys.selectedStars);
         const currentMaterials = await readStoredArray<Attachment>(keys.materials);
@@ -151,9 +204,10 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
         setMaterials([]);
         setContainers([]);
       } finally {
-        if (isStale()) return;
-        setLoading(false);
-        setSyncStatus('local-only');
+        if (!isStale()) {
+          setLoading(false);
+          setSyncStatus('local-only');
+        }
       }
     };
 
@@ -164,48 +218,80 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
     };
   }, [userId, language]);
 
-  const persistEntries = async (newEntries: DiaryEntry[]) => {
-    const keys = getDiaryStorageKeys(userId);
-    setEntries(newEntries);
-    try {
-      await set(keys.entries, newEntries).catch(err => {
-        console.warn('IndexedDB set failed, falling back to localStorage', err);
-        mirrorDiaryValue(keys.entries, JSON.stringify(newEntries));
-      });
-      await set(keys.backup, newEntries).catch(() => {});
-    } catch (error) {
-      reportError(AppError.fromError(error), 'persistEntries');
-      setSyncStatus('error');
-    }
-  };
+  const persistEntries = useCallback(
+    async (newEntries: DiaryEntry[]) => {
+      const keys = getDiaryStorageKeys(userId);
+      setEntries(newEntries);
+      try {
+        let payload: string | null = null;
+        let mirrorSkipped = false;
+        await set(keys.entries, newEntries).catch((err) => {
+          console.warn('IndexedDB set failed, falling back to localStorage', err);
+          payload ??= JSON.stringify(newEntries);
+          if (entriesPayloadExceedsMirror(payload.length)) {
+            mirrorSkipped = true;
+          } else {
+            mirrorDiaryValue(keys.entries, payload);
+          }
+        });
+        await set(keys.backup, newEntries).catch(() => {});
+        if (mirrorSkipped) {
+          setSyncStatus('mirror-skipped');
+        } else if (payload !== null) {
+          // We had to use the localStorage fallback at least once; flag the
+          // session as local-only so callers know IDB is degraded.
+          setSyncStatus('local-only');
+        }
+      } catch (error) {
+        reportError(AppError.fromError(error), 'persistEntries');
+        setSyncStatus('error');
+      }
+    },
+    [userId],
+  );
 
-  const persistPrinciples = async (newPrinciples: Principle[]) => {
-    const keys = getDiaryStorageKeys(userId);
-    setPrinciples(newPrinciples);
-    try {
-      await set(keys.principles, newPrinciples).catch(err => {
-        console.warn('IndexedDB set failed for principles, falling back to localStorage', err);
-        mirrorDiaryValue(keys.principles, JSON.stringify(newPrinciples));
-      });
-    } catch (error) {
-      console.error('Failed to save principles', error);
-    }
-  };
+  const persistPrinciples = useCallback(
+    async (newPrinciples: Principle[]) => {
+      const keys = getDiaryStorageKeys(userId);
+      setPrinciples(newPrinciples);
+      try {
+        await set(keys.principles, newPrinciples).catch((err) => {
+          console.warn('IndexedDB set failed for principles, falling back to localStorage', err);
+          mirrorDiaryValue(keys.principles, JSON.stringify(newPrinciples));
+        });
+      } catch (error) {
+        console.error('Failed to save principles', error);
+      }
+    },
+    [userId],
+  );
 
   const savePasswordHash = async (hash: string) => {
     const keys = getDiaryStorageKeys(userId);
     setPasswordHash(hash);
-    await set(keys.passwordHash, hash).catch(() => {
-      mirrorDiaryValue(keys.passwordHash, hash);
-    });
+    try {
+      await set(keys.passwordHash, hash);
+    } catch (error) {
+      // Sensitive material must NEVER fall back to localStorage. We surface
+      // a sync error and keep the in-memory value so the user can still
+      // operate this session, but persistence has failed.
+      reportError(AppError.fromError(error), 'savePasswordHash');
+      setSyncStatus('error');
+    }
+    // Defensive: remove any pre-existing mirror written by older versions.
+    removeDiaryMirror(keys.passwordHash);
   };
 
   const savePasswordSalt = async (salt: string) => {
     const keys = getDiaryStorageKeys(userId);
     setPasswordSalt(salt);
-    await set(keys.passwordSalt, salt).catch(() => {
-      mirrorDiaryValue(keys.passwordSalt, salt);
-    });
+    try {
+      await set(keys.passwordSalt, salt);
+    } catch (error) {
+      reportError(AppError.fromError(error), 'savePasswordSalt');
+      setSyncStatus('error');
+    }
+    removeDiaryMirror(keys.passwordSalt);
   };
 
   const clearPasswordHash = async () => {
@@ -234,123 +320,187 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
     });
   };
 
-  const addMaterial = useCallback(async (material: Attachment) => {
-    const keys = getDiaryStorageKeys(userId);
-    const newMaterials = [material, ...materials];
-    setMaterials(newMaterials);
-    await set(keys.materials, newMaterials).catch(() => {
-      console.warn('Failed to save materials to IndexedDB');
-    });
-  }, [userId, materials]);
-
-  const deleteMaterial = useCallback(async (index: number) => {
-    const keys = getDiaryStorageKeys(userId);
-    const newMaterials = materials.filter((_, currentIndex) => currentIndex !== index);
-    setMaterials(newMaterials);
-    await set(keys.materials, newMaterials).catch(() => {
-      console.warn('Failed to save materials to IndexedDB');
-    });
-  }, [userId, materials]);
-
-  const persistContainers = async (newContainers: Container[]) => {
-    const keys = getDiaryStorageKeys(userId);
-    setContainers(newContainers);
-    try {
-      await set(keys.containers, newContainers).catch(err => {
-        console.warn('IndexedDB set failed for containers, falling back to localStorage', err);
-        mirrorDiaryValue(keys.containers, JSON.stringify(newContainers));
+  const addMaterial = useCallback(
+    async (material: Attachment) => {
+      const keys = getDiaryStorageKeys(userId);
+      // Functional updater + reference capture: avoids the stale-closure
+      // window where a quick second tap would read an out-of-date
+      // `materials` snapshot and lose the previous addition (the bug
+      // tracked in EVALUATION §7 / Phase 2 follow-up F1.4).
+      let nextMaterials: Attachment[] = [];
+      setMaterials((prev) => {
+        nextMaterials = [material, ...prev];
+        return nextMaterials;
       });
-    } catch (error) {
-      reportError(AppError.fromError(error), 'persistContainers');
-    }
-  };
+      await set(keys.materials, nextMaterials).catch(() => {
+        console.warn('Failed to save materials to IndexedDB');
+      });
+    },
+    [userId],
+  );
 
-  const addContainer = useCallback((name: string) => {
-    const newContainer: Container = {
-      id: generateSecureId('container'),
-      name,
-      createdAt: Date.now(),
-    };
-    persistContainers([newContainer, ...containers]);
-  }, [containers, userId]);
+  const deleteMaterial = useCallback(
+    async (index: number) => {
+      const keys = getDiaryStorageKeys(userId);
+      let nextMaterials: Attachment[] = [];
+      setMaterials((prev) => {
+        nextMaterials = prev.filter((_, currentIndex) => currentIndex !== index);
+        return nextMaterials;
+      });
+      await set(keys.materials, nextMaterials).catch(() => {
+        console.warn('Failed to save materials to IndexedDB');
+      });
+    },
+    [userId],
+  );
 
-  const deleteContainer = useCallback((id: string) => {
-    const newContainers = containers.filter(container => container.id !== id);
-    persistContainers(newContainers);
-    const updatedEntries = entries.map(entry => (entry.containerId === id ? { ...entry, containerId: undefined } : entry));
-    persistEntries(updatedEntries);
-  }, [containers, entries, userId]);
+  const persistContainers = useCallback(
+    async (newContainers: Container[]) => {
+      const keys = getDiaryStorageKeys(userId);
+      setContainers(newContainers);
+      try {
+        await set(keys.containers, newContainers).catch((err) => {
+          console.warn('IndexedDB set failed for containers, falling back to localStorage', err);
+          mirrorDiaryValue(keys.containers, JSON.stringify(newContainers));
+        });
+      } catch (error) {
+        reportError(AppError.fromError(error), 'persistContainers');
+      }
+    },
+    [userId],
+  );
 
-  const addEntry = useCallback(async (data: Omit<DiaryEntry, 'id' | 'createdAt' | 'isLocked'>) => {
-    const now = Date.now();
-    const newEntry: DiaryEntry = {
-      id: generateSecureId(),
-      createdAt: now,
-      updatedAt: now,
-      isLocked: false,
-      isArchived: false,
-      migrated: false,
-      archivedToShip: false,
-      ...data,
-    };
-    persistEntries([newEntry, ...entries]);
-  }, [entries, userId]);
+  const addContainer = useCallback(
+    (name: string) => {
+      const newContainer: Container = {
+        id: generateSecureId('container'),
+        name,
+        createdAt: Date.now(),
+      };
+      persistContainers([newContainer, ...containers]);
+    },
+    [containers, persistContainers],
+  );
 
-  const updateEntry = useCallback(async (updatedEntry: DiaryEntry) => {
-    const now = Date.now();
-    const nextEntries = entries.map(entry => (entry.id === updatedEntry.id ? { ...updatedEntry, updatedAt: now } : entry));
-    persistEntries(nextEntries);
-  }, [entries, userId]);
+  const deleteContainer = useCallback(
+    (id: string) => {
+      const newContainers = containers.filter((container) => container.id !== id);
+      persistContainers(newContainers);
+      const updatedEntries = entries.map((entry) =>
+        entry.containerId === id ? { ...entry, containerId: undefined } : entry,
+      );
+      persistEntries(updatedEntries);
+    },
+    [containers, entries, persistContainers, persistEntries],
+  );
 
-  const bulkUpdateEntries = useCallback(async (updatedEntries: DiaryEntry[]) => {
-    const now = Date.now();
-    const updatedEntriesMap = new Map(updatedEntries.map(entry => [entry.id, { ...entry, updatedAt: now }]));
-    const nextEntries = entries.map(entry => updatedEntriesMap.get(entry.id) || entry);
-    persistEntries(nextEntries);
-  }, [entries, userId]);
+  const addEntry = useCallback(
+    async (data: Omit<DiaryEntry, 'id' | 'createdAt' | 'isLocked'>) => {
+      const now = Date.now();
+      const newEntry: DiaryEntry = {
+        id: generateSecureId(),
+        createdAt: now,
+        updatedAt: now,
+        isLocked: false,
+        isArchived: false,
+        migrated: false,
+        archivedToShip: false,
+        ...data,
+      };
+      persistEntries([newEntry, ...entries]);
+    },
+    [entries, persistEntries],
+  );
 
-  const deleteEntry = useCallback(async (id: string) => {
-    persistEntries(entries.filter(entry => entry.id !== id));
-  }, [entries, userId]);
+  const updateEntry = useCallback(
+    async (updatedEntry: DiaryEntry) => {
+      const now = Date.now();
+      const nextEntries = entries.map((entry) =>
+        entry.id === updatedEntry.id ? { ...updatedEntry, updatedAt: now } : entry,
+      );
+      persistEntries(nextEntries);
+    },
+    [entries, persistEntries],
+  );
 
-  const archiveEntry = useCallback(async (id: string) => {
-    const now = Date.now();
-    const nextEntries = entries.map(entry => (
-      entry.id === id ? { ...entry, isArchived: true, archivedToShip: true, updatedAt: now } : entry
-    ));
-    persistEntries(nextEntries);
-  }, [entries, userId]);
+  const bulkUpdateEntries = useCallback(
+    async (updatedEntries: DiaryEntry[]) => {
+      const now = Date.now();
+      const updatedEntriesMap = new Map(
+        updatedEntries.map((entry) => [entry.id, { ...entry, updatedAt: now }]),
+      );
+      const nextEntries = entries.map((entry) => updatedEntriesMap.get(entry.id) || entry);
+      persistEntries(nextEntries);
+    },
+    [entries, persistEntries],
+  );
 
-  const unarchiveEntry = useCallback(async (id: string) => {
-    const now = Date.now();
-    const nextEntries = entries.map(entry => (
-      entry.id === id ? { ...entry, isArchived: false, archivedToShip: false, updatedAt: now } : entry
-    ));
-    persistEntries(nextEntries);
-  }, [entries, userId]);
+  const deleteEntry = useCallback(
+    async (id: string) => {
+      persistEntries(entries.filter((entry) => entry.id !== id));
+    },
+    [entries, persistEntries],
+  );
 
-  const addPrinciple = useCallback(async (text: string, year: number, showOnHome: boolean = true) => {
-    const newPrinciple: Principle = {
-      id: generateSecureId(),
-      text,
-      year,
-      createdAt: Date.now(),
-      showOnHome,
-    };
-    persistPrinciples([newPrinciple, ...principles]);
-  }, [principles, userId]);
+  const archiveEntry = useCallback(
+    async (id: string) => {
+      const now = Date.now();
+      const nextEntries = entries.map((entry) =>
+        entry.id === id
+          ? { ...entry, isArchived: true, archivedToShip: true, updatedAt: now }
+          : entry,
+      );
+      persistEntries(nextEntries);
+    },
+    [entries, persistEntries],
+  );
 
-  const deletePrinciple = useCallback(async (id: string) => {
-    persistPrinciples(principles.filter(principle => principle.id !== id));
-  }, [principles, userId]);
+  const unarchiveEntry = useCallback(
+    async (id: string) => {
+      const now = Date.now();
+      const nextEntries = entries.map((entry) =>
+        entry.id === id
+          ? { ...entry, isArchived: false, archivedToShip: false, updatedAt: now }
+          : entry,
+      );
+      persistEntries(nextEntries);
+    },
+    [entries, persistEntries],
+  );
 
-  const updatePrinciple = useCallback(async (updatedPrinciple: Principle) => {
-    persistPrinciples(principles.map(principle => (
-      principle.id === updatedPrinciple.id ? updatedPrinciple : principle
-    )));
-  }, [principles, userId]);
+  const addPrinciple = useCallback(
+    async (text: string, year: number, showOnHome: boolean = true) => {
+      const newPrinciple: Principle = {
+        id: generateSecureId(),
+        text,
+        year,
+        createdAt: Date.now(),
+        showOnHome,
+      };
+      persistPrinciples([newPrinciple, ...principles]);
+    },
+    [principles, persistPrinciples],
+  );
 
-  const triggerScan = useCallback(async () => {
+  const deletePrinciple = useCallback(
+    async (id: string) => {
+      persistPrinciples(principles.filter((principle) => principle.id !== id));
+    },
+    [principles, persistPrinciples],
+  );
+
+  const updatePrinciple = useCallback(
+    async (updatedPrinciple: Principle) => {
+      persistPrinciples(
+        principles.map((principle) =>
+          principle.id === updatedPrinciple.id ? updatedPrinciple : principle,
+        ),
+      );
+    },
+    [principles, persistPrinciples],
+  );
+
+  const triggerScan = useCallback(async (): Promise<ScanSummary> => {
     try {
       const keys = getDiaryStorageKeys(userId);
       setIsScanning(true);
@@ -364,8 +514,13 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
 
       setScanProgress(90);
 
+      let mergedEntriesCount = 0;
+      let mergedPrinciplesCount = 0;
+      let mergedContainersCount = 0;
+
       if (migrationResult.entries.length > 0) {
         const mergedEntries = mergeMigrationEntries(migrationResult.entries, entries);
+        mergedEntriesCount = Math.max(0, mergedEntries.length - entries.length);
         await set(keys.entries, mergedEntries).catch(() => {});
         mirrorDiaryValue(keys.entries, JSON.stringify(mergedEntries));
         setEntries(mergedEntries);
@@ -373,6 +528,7 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
 
       if (migrationResult.principles.length > 0) {
         const mergedPrinciples = mergeMigrationPrinciples(migrationResult.principles, principles);
+        mergedPrinciplesCount = Math.max(0, mergedPrinciples.length - principles.length);
         await set(keys.principles, mergedPrinciples).catch(() => {});
         mirrorDiaryValue(keys.principles, JSON.stringify(mergedPrinciples));
         setPrinciples(mergedPrinciples);
@@ -380,35 +536,77 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
 
       if (migrationResult.containers.length > 0) {
         const mergedContainers = mergeMigrationContainers(migrationResult.containers, containers);
+        mergedContainersCount = Math.max(0, mergedContainers.length - containers.length);
         await set(keys.containers, mergedContainers).catch(() => {});
         mirrorDiaryValue(keys.containers, JSON.stringify(mergedContainers));
         setContainers(mergedContainers);
       }
 
       if (migrationResult.passwordHash) {
+        // Sensitive: never mirror password hash to localStorage.
         await set(keys.passwordHash, migrationResult.passwordHash).catch(() => {});
-        mirrorDiaryValue(keys.passwordHash, migrationResult.passwordHash);
+        removeDiaryMirror(keys.passwordHash);
         setPasswordHash(migrationResult.passwordHash);
       }
 
       if (migrationResult.passwordSalt) {
         await set(keys.passwordSalt, migrationResult.passwordSalt).catch(() => {});
-        mirrorDiaryValue(keys.passwordSalt, migrationResult.passwordSalt);
+        removeDiaryMirror(keys.passwordSalt);
         setPasswordSalt(migrationResult.passwordSalt);
       }
 
       mirrorDiaryValue(keys.initializedFlag, 'true');
       setScanProgress(100);
-      console.log(`Vector Vault: Manual scan complete. Merged ${migrationResult.entries.length} entries.`);
+      console.log(
+        `Vector Vault: Manual scan complete. Merged ${migrationResult.entries.length} entries.`,
+      );
 
       await delayMigrationStep(1000);
       setIsScanning(false);
       setScanProgress(0);
+
+      const summary: ScanSummary = {
+        status: 'success',
+        finishedAt: Date.now(),
+        mergedEntries: mergedEntriesCount,
+        mergedPrinciples: mergedPrinciplesCount,
+        mergedContainers: mergedContainersCount,
+      };
+      setLastScanSummary(summary);
+      return summary;
     } catch (error) {
-      console.error('Scan failed', error);
+      reportError(AppError.fromError(error), 'triggerScan');
       setIsScanning(false);
+      setScanProgress(0);
+      const summary: ScanSummary = {
+        status: 'error',
+        finishedAt: Date.now(),
+        mergedEntries: 0,
+        mergedPrinciples: 0,
+        mergedContainers: 0,
+        error: error instanceof Error ? error.message : 'unknown',
+      };
+      setLastScanSummary(summary);
+      return summary;
     }
   }, [userId, entries, principles, containers]);
+
+  const importBackup = useCallback(
+    async (
+      incoming: DiaryEntry[],
+      mode: ImportBackupMode = 'merge',
+    ): Promise<ImportBackupSummary> => {
+      const sanitized = incoming.map(sanitizeEntry);
+      const next = mode === 'replace' ? sanitized : mergeMigrationEntries(sanitized, entries);
+      await persistEntries(next);
+      return {
+        mode,
+        importedCount: sanitized.length,
+        totalAfter: next.length,
+      };
+    },
+    [entries, persistEntries],
+  );
 
   const wipeData = useCallback(async () => {
     const keys = getDiaryStorageKeys(userId);
@@ -454,6 +652,7 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
     addPrinciple,
     deletePrinciple,
     updatePrinciple,
+    importBackup,
     wipeData,
     passwordHash,
     passwordSalt,
@@ -475,5 +674,6 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
     isScanning,
     scanProgress,
     triggerScan,
+    lastScanSummary,
   };
 };

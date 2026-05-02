@@ -14,7 +14,7 @@ vi.mock('idb-keyval', () => ({
 
 describe('useDiaryData', () => {
   const userId = 'test-user';
-  
+
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
@@ -28,10 +28,10 @@ describe('useDiaryData', () => {
 
   it('should load mock data if no storage data exists', async () => {
     const { result } = renderHook(() => useDiaryData(userId, 'zh'));
-    
+
     // Wait for useEffect to finish
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
     expect(result.current.loading).toBe(false);
@@ -40,13 +40,13 @@ describe('useDiaryData', () => {
 
   it('should add an entry', async () => {
     const { result } = renderHook(() => useDiaryData(userId));
-    
+
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
     const initialCount = result.current.entries.length;
-    
+
     await act(async () => {
       await result.current.addEntry({
         title: 'New Entry',
@@ -62,9 +62,9 @@ describe('useDiaryData', () => {
 
   it('should update an entry', async () => {
     const { result } = renderHook(() => useDiaryData(userId));
-    
+
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
     const entryToUpdate = result.current.entries[0];
@@ -82,9 +82,9 @@ describe('useDiaryData', () => {
 
   it('should delete an entry', async () => {
     const { result } = renderHook(() => useDiaryData(userId));
-    
+
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
     const initialCount = result.current.entries.length;
@@ -99,9 +99,9 @@ describe('useDiaryData', () => {
 
   it('should wipe data', async () => {
     const { result } = renderHook(() => useDiaryData(userId));
-    
+
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
     });
 
     await act(async () => {
@@ -115,9 +115,9 @@ describe('useDiaryData', () => {
 
   it('should handle principles', async () => {
     const { result } = renderHook(() => useDiaryData(userId));
-    
+
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
     });
 
     await act(async () => {
@@ -136,9 +136,9 @@ describe('useDiaryData', () => {
 
   it('should handle containers', async () => {
     const { result } = renderHook(() => useDiaryData(userId));
-    
+
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
     });
 
     await act(async () => {
@@ -157,9 +157,9 @@ describe('useDiaryData', () => {
 
   it('should handle passwords', async () => {
     const { result } = renderHook(() => useDiaryData(userId));
-    
+
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
     });
 
     await act(async () => {
@@ -179,9 +179,9 @@ describe('useDiaryData', () => {
 
   it('should handle archive/unarchive', async () => {
     const { result } = renderHook(() => useDiaryData(userId));
-    
+
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
     });
 
     const entryId = result.current.entries[0].id;
@@ -189,12 +189,12 @@ describe('useDiaryData', () => {
     await act(async () => {
       await result.current.archiveEntry(entryId);
     });
-    expect(result.current.entries.find(e => e.id === entryId)?.isArchived).toBe(true);
+    expect(result.current.entries.find((e) => e.id === entryId)?.isArchived).toBe(true);
 
     await act(async () => {
       await result.current.unarchiveEntry(entryId);
     });
-    expect(result.current.entries.find(e => e.id === entryId)?.isArchived).toBe(false);
+    expect(result.current.entries.find((e) => e.id === entryId)?.isArchived).toBe(false);
   });
 
   it('should ignore stale async loads after language changes', async () => {
@@ -204,7 +204,7 @@ describe('useDiaryData', () => {
     vi.mocked(idb.get).mockImplementation(() => {
       callCount += 1;
       if (callCount === 1) {
-        return new Promise(resolve => {
+        return new Promise((resolve) => {
           resolveFirstGet = resolve;
         });
       }
@@ -213,20 +213,20 @@ describe('useDiaryData', () => {
 
     const { result, rerender } = renderHook(
       ({ language }: { language: 'zh' | 'en' }) => useDiaryData(userId, language),
-      { initialProps: { language: 'zh' as const } }
+      { initialProps: { language: 'zh' as const } },
     );
 
     rerender({ language: 'en' as const });
 
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
     });
 
     expect(result.current.entries[0]?.title).toBe(MOCK_ENTRIES.en[0].title);
 
     await act(async () => {
       resolveFirstGet?.(undefined);
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
     });
 
     expect(result.current.entries[0]?.title).toBe(MOCK_ENTRIES.en[0].title);
@@ -238,13 +238,19 @@ describe('useDiaryData', () => {
     localStorage.setItem(keys.passwordSalt, 'persisted-salt');
     localStorage.setItem(keys.guidingStars, JSON.stringify(['Marcus Aurelius']));
     localStorage.setItem(keys.selectedStars, JSON.stringify(['Marcus Aurelius']));
-    localStorage.setItem(keys.materials, JSON.stringify([{ type: 'image', name: 'img.png', data: 'data:' }]));
-    localStorage.setItem(keys.containers, JSON.stringify([{ id: 'c1', name: 'Work', createdAt: 1 }]));
+    localStorage.setItem(
+      keys.materials,
+      JSON.stringify([{ type: 'image', name: 'img.png', data: 'data:' }]),
+    );
+    localStorage.setItem(
+      keys.containers,
+      JSON.stringify([{ id: 'c1', name: 'Work', createdAt: 1 }]),
+    );
 
     const { result } = renderHook(() => useDiaryData(userId));
 
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
     });
 
     expect(result.current.passwordHash).toBe('persisted-hash');
@@ -260,12 +266,96 @@ describe('useDiaryData', () => {
     const { result } = renderHook(() => useDiaryData(userId));
 
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
       await result.current.wipeData();
     });
 
     expect(idb.del).toHaveBeenCalledWith(keys.selectedStars);
     expect(idb.del).toHaveBeenCalledWith(keys.materials);
     expect(localStorage.getItem(DiaryStorageKeys.initializedFlag)).toBeNull();
+  });
+
+  it('imports backup entries by merging with existing ones', async () => {
+    const { result } = renderHook(() => useDiaryData(userId));
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    });
+
+    const initialCount = result.current.entries.length;
+    let summary: { mode: 'merge' | 'replace'; importedCount: number; totalAfter: number } | null =
+      null;
+
+    await act(async () => {
+      summary = await result.current.importBackup(
+        [
+          {
+            id: 'imported-1',
+            title: 'Imported',
+            content: 'from backup',
+            createdAt: 5,
+            tags: [],
+            isLocked: false,
+          },
+        ],
+        'merge',
+      );
+    });
+
+    expect(summary).toMatchObject({ mode: 'merge', importedCount: 1 });
+    expect(result.current.entries.some((e) => e.id === 'imported-1')).toBe(true);
+    expect(result.current.entries.length).toBe(initialCount + 1);
+  });
+
+  it('records a successful scan summary', async () => {
+    const { result } = renderHook(() => useDiaryData(userId));
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    });
+
+    let summary: Awaited<ReturnType<typeof result.current.triggerScan>> | null = null;
+    await act(async () => {
+      summary = await result.current.triggerScan();
+    });
+
+    expect(summary?.status).toBe('success');
+    expect(result.current.lastScanSummary?.status).toBe('success');
+    expect(result.current.isScanning).toBe(false);
+  });
+
+  it('addMaterial preserves rapid successive entries (no stale closure)', async () => {
+    const { result } = renderHook(() => useDiaryData(userId));
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    });
+
+    const initial = result.current.materials.length;
+
+    // Two synchronous calls in the same render frame would have lost the
+    // first one in the previous (closure-based) implementation because both
+    // invocations would read the same `materials` snapshot.
+    await act(async () => {
+      await Promise.all([
+        result.current.addMaterial({
+          type: 'image',
+          name: 'a.png',
+          mimeType: 'image/png',
+          data: 'data:image/png;base64,a',
+        }),
+        result.current.addMaterial({
+          type: 'image',
+          name: 'b.png',
+          mimeType: 'image/png',
+          data: 'data:image/png;base64,b',
+        }),
+      ]);
+    });
+
+    expect(result.current.materials.length).toBe(initial + 2);
+    const names = result.current.materials.map((m) => m.name);
+    expect(names).toContain('a.png');
+    expect(names).toContain('b.png');
   });
 });

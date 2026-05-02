@@ -1,6 +1,6 @@
-import { MorningStarPersona } from "../types";
+import { MorningStarPersona } from '../types';
 
-const MORNING_STAR_PUBLIC_ERROR = "星光暂时失联，请稍后重试。";
+const MORNING_STAR_PUBLIC_ERROR = '星光暂时失联，请稍后重试。';
 
 const fetchFromSecureBackend = async (prompt: string): Promise<string> => {
   const response = await fetch('/api/morning-star', {
@@ -8,13 +8,13 @@ const fetchFromSecureBackend = async (prompt: string): Promise<string> => {
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ prompt })
+    body: JSON.stringify({ prompt }),
   });
-  
+
   if (!response.ok) {
     throw new Error(MORNING_STAR_PUBLIC_ERROR);
   }
-  
+
   const data = await response.json();
   if (typeof data.response === 'string') {
     return data.response;
@@ -22,20 +22,34 @@ const fetchFromSecureBackend = async (prompt: string): Promise<string> => {
   throw new Error(MORNING_STAR_PUBLIC_ERROR);
 };
 
-export const getMorningStarAnalysis = async (entryContent: string, reflectionContext: string | undefined, personas: MorningStarPersona[]): Promise<string> => {
+export const getMorningStarAnalysis = async (
+  entryContent: string,
+  reflectionContext: string | undefined,
+  personas: MorningStarPersona[],
+): Promise<string> => {
   const personaPrompts: Record<string, string> = {
-    'Elon Musk': "埃隆·马斯克 (Elon Musk)：第一性原理的守望者。关注物理层面的终极逻辑，将困难解构为原子。他的语言应当充满动力学与客观真理的冷峻。",
-    'Albert Camus': "阿尔贝·加缪 (Albert Camus)：在荒诞中起舞的西绪福斯。不逃避痛苦，而是在承载痛苦中发现自由。他的语言温和、优雅且具有反抗的力量。",
-    'Jorge Luis Borges': "豪尔赫·路易斯·博尔赫斯 (Jorge Luis Borges)：时间的建筑师。将经历视为迷宫或镜子，探讨因果的循环。他的语言博大精深且充满超凡脱俗的幻境感。",
-    'Naval Ravikant': "纳瓦尔·拉维康特 (Naval Ravikant)：现代斯多葛的财富诗人。将理性的复利应用于幸福与自由。他的语言简练、有力，如禅宗箴言般直击本质。",
-    'Marcus Aurelius': "马可·奥勒留 (Marcus Aurelius)：手握权力的自省者。俯瞰自我如尘埃，服从理性的秩序。他的语言肃穆、沉静，带有一种跨越千年的正义感。",
-    'Laozi': "老子 (Laozi)：上善若水的观察者。在虚静中察觉万物规律，追求阴阳的动态平衡。他的语言含蓄、深邃，多用自然意象指引行动。"
+    'Elon Musk':
+      '埃隆·马斯克 (Elon Musk)：第一性原理的守望者。关注物理层面的终极逻辑，将困难解构为原子。他的语言应当充满动力学与客观真理的冷峻。',
+    'Albert Camus':
+      '阿尔贝·加缪 (Albert Camus)：在荒诞中起舞的西绪福斯。不逃避痛苦，而是在承载痛苦中发现自由。他的语言温和、优雅且具有反抗的力量。',
+    'Jorge Luis Borges':
+      '豪尔赫·路易斯·博尔赫斯 (Jorge Luis Borges)：时间的建筑师。将经历视为迷宫或镜子，探讨因果的循环。他的语言博大精深且充满超凡脱俗的幻境感。',
+    'Naval Ravikant':
+      '纳瓦尔·拉维康特 (Naval Ravikant)：现代斯多葛的财富诗人。将理性的复利应用于幸福与自由。他的语言简练、有力，如禅宗箴言般直击本质。',
+    'Marcus Aurelius':
+      '马可·奥勒留 (Marcus Aurelius)：手握权力的自省者。俯瞰自我如尘埃，服从理性的秩序。他的语言肃穆、沉静，带有一种跨越千年的正义感。',
+    Laozi:
+      '老子 (Laozi)：上善若水的观察者。在虚静中察觉万物规律，追求阴阳的动态平衡。他的语言含蓄、深邃，多用自然意象指引行动。',
   };
 
-  const combinedPersonaPrompt = personas.map(p => {
-    const prompt = personaPrompts[p] || `${p}：请以这位智者或偶像的口吻说话。展现出你作为指引之星的智慧和魅力。`;
-    return prompt;
-  }).join('\n\n');
+  const combinedPersonaPrompt = personas
+    .map((p) => {
+      const prompt =
+        personaPrompts[p] ||
+        `${p}：请以这位智者或偶像的口吻说话。展现出你作为指引之星的智慧和魅力。`;
+      return prompt;
+    })
+    .join('\n\n');
 
   const prompt = `你是一个既像真诚的朋友，又像专业教练的思考伙伴。当前用户（记录者）选择了以下几位智者作为启明星来引导他们：
     ${combinedPersonaPrompt}
@@ -72,23 +86,27 @@ export const getMorningStarAnalysis = async (entryContent: string, reflectionCon
     【用户原始记录与事件】:
     "${entryContent}"
     
-    ${reflectionContext ? `【用户后期的反思与复盘】:
+    ${
+      reflectionContext
+        ? `【用户后期的反思与复盘】:
     "${reflectionContext}"
 
     （⚠️ 重要指令）：
     1. 请重点评价用户在上面的“反思与复盘”中所展示出的【思考深度、判断力以及结论的客观性】。
     2. 如果用户在反思中流露出某种偏见或局限，请温和地、不着痕迹地通过不同的视角来点醒用户。
     3. 目标是让用户通过阅读你的回信，能够“想得更清楚”，并深信这次经历是他成长的宝贵养料。
-    4. 评价反馈要像一位懂得“克制”与“慈悲”的长者或挚友。` : '（用户尚未提供反思，请仅基于原始记录进行初步的智慧导引。）'}`;
+    4. 评价反馈要像一位懂得“克制”与“慈悲”的长者或挚友。`
+        : '（用户尚未提供反思，请仅基于原始记录进行初步的智慧导引。）'
+    }`;
 
   try {
     const responseText = await fetchFromSecureBackend(prompt);
     return responseText;
   } catch (error: unknown) {
-    console.error("Morning Star Critical Error:", error);
-    return JSON.stringify({ 
+    console.error('Morning Star Critical Error:', error);
+    return JSON.stringify({
       content: `### ⚠️ 星光指引中断\n\n${MORNING_STAR_PUBLIC_ERROR}\n\n请稍后再次发送你的反思。`,
-      metrics: { resilience: 0 } 
+      metrics: { resilience: 0 },
     });
   }
 };

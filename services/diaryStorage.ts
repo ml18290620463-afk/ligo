@@ -1,6 +1,55 @@
-import { getStoredJson, getStoredString, removeStoredValue, setStoredString } from './browserStorage';
+import {
+  getStoredJson,
+  getStoredString,
+  removeStoredValue,
+  setStoredString,
+} from './browserStorage';
 
 const MIRROR_SKIP_LIMIT = 100000;
+
+/**
+ * Hard upper bound for any single attachment, expressed in bytes of the
+ * original file. base64 encoding inflates by ~33% so the real footprint in
+ * IndexedDB / localStorage will be larger than this.
+ */
+export const ATTACHMENT_MAX_BYTES = 100 * 1024 * 1024;
+
+/**
+ * Soft warning threshold; attachments above this size are still allowed but
+ * the UI should remind the user they may impact persistence and backups.
+ */
+export const ATTACHMENT_WARN_BYTES = 5 * 1024 * 1024;
+
+export type AttachmentSizeVerdict = 'ok' | 'warn' | 'reject';
+
+export interface AttachmentSizeAssessment {
+  verdict: AttachmentSizeVerdict;
+  bytes: number;
+}
+
+/**
+ * Classify a candidate attachment by its raw byte size, independent of the
+ * eventual base64 encoding. Used by Dashboard upload flow to pick between
+ * silently accepting, prompting the user, or hard-rejecting.
+ */
+export const evaluateAttachmentSize = (bytes: number): AttachmentSizeAssessment => {
+  const safeBytes = Number.isFinite(bytes) && bytes > 0 ? Math.floor(bytes) : 0;
+  if (safeBytes > ATTACHMENT_MAX_BYTES) {
+    return { verdict: 'reject', bytes: safeBytes };
+  }
+  if (safeBytes >= ATTACHMENT_WARN_BYTES) {
+    return { verdict: 'warn', bytes: safeBytes };
+  }
+  return { verdict: 'ok', bytes: safeBytes };
+};
+
+/**
+ * Returns true when the entries snapshot is too large to safely mirror to
+ * localStorage. Callers can use this to drop a syncStatus warning rather than
+ * pretending the mirror succeeded silently.
+ */
+export const entriesPayloadExceedsMirror = (serializedLength: number): boolean =>
+  serializedLength > MIRROR_SKIP_LIMIT;
 
 export const DiaryStorageKeys = {
   entries: 'vector_master_vault_entries',
@@ -26,8 +75,10 @@ export const DIARY_LEGACY_KEYS = [
   'diary_entries',
 ] as const;
 
-export const getSelectedStarsStorageKey = (uid: string | undefined) => `vector_selected_stars_${uid || 'default'}`;
-export const getMaterialsStorageKey = (uid: string | undefined) => `vector_materials_${uid || 'default'}`;
+export const getSelectedStarsStorageKey = (uid: string | undefined) =>
+  `vector_selected_stars_${uid || 'default'}`;
+export const getMaterialsStorageKey = (uid: string | undefined) =>
+  `vector_materials_${uid || 'default'}`;
 
 export const getDiaryStorageKeys = (uid: string | undefined) => ({
   entries: DiaryStorageKeys.entries,
@@ -43,7 +94,10 @@ export const getDiaryStorageKeys = (uid: string | undefined) => ({
 });
 
 export function mirrorDiaryValue(key: string, value: string): boolean {
-  if (value.length > MIRROR_SKIP_LIMIT && (key === DiaryStorageKeys.entries || key === DiaryStorageKeys.backup)) {
+  if (
+    value.length > MIRROR_SKIP_LIMIT &&
+    (key === DiaryStorageKeys.entries || key === DiaryStorageKeys.backup)
+  ) {
     console.log(`Vector Vault: Data for ${key} is large, skipping localStorage mirror.`);
     return false;
   }

@@ -1,19 +1,66 @@
 /**
  * SECURITY PROTOCOL: VECTOR_ENCRYPTION_LAYER_V1
- * 
+ *
  * This service implements a Zero-Knowledge encryption path:
- * 1. Master Password -> PBKDF2 (100,000 iterations) -> Derived Key
+ * 1. Master Password -> PBKDF2 (>= 600,000 iterations, OWASP 2026) -> Derived Key
  * 2. Derived Key -> AES-GCM (256-bit) -> Encrypted Payload
  * 3. All operations are local-only using Web Crypto API.
+ *
+ * Backwards compatibility:
+ *   - The on-disk hash format (`pbkdf2-sha256:v1:<iter>:<base64>`) records
+ *     the iteration count it was minted with. `verifyPassword` always re-runs
+ *     the derivation at that recorded count, so older hashes (e.g. 100k)
+ *     keep validating without forced migration.
+ *   - When a user authenticates successfully against a hash with a lower
+ *     iteration count, callers may opportunistically re-mint at the current
+ *     `ITERATIONS` default and persist the new hash via
+ *     `useDiaryData.savePasswordHash`.
  */
 
+const PBKDF2_DEFAULT_ITERATIONS = 600_000;
+const PBKDF2_MIN_ALLOWED_ITERATIONS = 100_000;
+const PBKDF2_MAX_VERIFY_ITERATIONS = 2_000_000;
+
+const resolveIterationOverride = (): number => {
+  // Server / CI may pin a different cost via an env var so the WebCrypto
+  // derivation does not blow past test budgets. Browsers ignore process.env.
+  const raw =
+    typeof process !== 'undefined' && process.env?.VECTOR_PBKDF2_ITERATIONS
+      ? Number(process.env.VECTOR_PBKDF2_ITERATIONS)
+      : NaN;
+  if (!Number.isFinite(raw)) return PBKDF2_DEFAULT_ITERATIONS;
+  if (raw < PBKDF2_MIN_ALLOWED_ITERATIONS) return PBKDF2_MIN_ALLOWED_ITERATIONS;
+  if (raw > PBKDF2_MAX_VERIFY_ITERATIONS) return PBKDF2_MAX_VERIFY_ITERATIONS;
+  return Math.floor(raw);
+};
+
 export class SecurityService {
-  private static ITERATIONS = 100000;
+  private static ITERATIONS = resolveIterationOverride();
   private static PASSWORD_HASH_PREFIX = 'pbkdf2-sha256:v1';
   private static RECOVERY_HASH_PREFIX = 'recovery-sha256:v1';
-  private static MAX_VERIFY_ITERATIONS = 1000000;
+  private static MAX_VERIFY_ITERATIONS = PBKDF2_MAX_VERIFY_ITERATIONS;
   private static ALGO = 'AES-GCM';
   private static KEY_LEN = 256;
+
+  /** Public read-only snapshot of the cost factor in use; useful in tests. */
+  static getCurrentIterations(): number {
+    return this.ITERATIONS;
+  }
+
+  /**
+   * Returns true when the supplied stored hash was minted with fewer
+   * iterations than the current default and should be re-minted on the
+   * next successful verification. Returns false for unknown / legacy
+   * hash formats.
+   */
+  static needsRehash(storedHash: string | null): boolean {
+    if (!storedHash) return false;
+    if (!storedHash.startsWith(this.PASSWORD_HASH_PREFIX)) return true;
+    const [, , iterationsRaw] = storedHash.split(':');
+    const iterations = Number(iterationsRaw);
+    if (!Number.isInteger(iterations)) return false;
+    return iterations < this.ITERATIONS;
+  }
 
   /**
    * Derives a cryptographic key from a plain text password and salt.
@@ -25,7 +72,7 @@ export class SecurityService {
       encoder.encode(password),
       'PBKDF2',
       false,
-      ['deriveKey']
+      ['deriveKey'],
     );
 
     return window.crypto.subtle.deriveKey(
@@ -38,7 +85,7 @@ export class SecurityService {
       passwordKey,
       { name: this.ALGO, length: this.KEY_LEN },
       false,
-      ['encrypt', 'decrypt']
+      ['encrypt', 'decrypt'],
     );
   }
 
@@ -55,7 +102,7 @@ export class SecurityService {
     const encrypted = await window.crypto.subtle.encrypt(
       { name: this.ALGO, iv },
       key,
-      encoder.encode(text)
+      encoder.encode(text),
     );
 
     const encryptedArray = new Uint8Array(encrypted);
@@ -77,7 +124,7 @@ export class SecurityService {
 
     try {
       const combined = this.base64ToUint8(base64.trim());
-      
+
       // Minimum length: Salt(16) + IV(12) + GCM tag(16) = 44 bytes
       if (combined.length < 44) {
         throw new Error('CORRUPTED_DATA');
@@ -93,7 +140,7 @@ export class SecurityService {
       const decrypted = await window.crypto.subtle.decrypt(
         { name: this.ALGO, iv },
         key,
-        ciphertext
+        ciphertext,
       );
 
       return decoder.decode(decrypted);
@@ -110,7 +157,7 @@ export class SecurityService {
     let binary = '';
     const len = u8.byteLength;
     for (let i = 0; i < len; i++) {
-        binary += String.fromCharCode(u8[i]);
+      binary += String.fromCharCode(u8[i]);
     }
     return btoa(binary);
   }
@@ -123,7 +170,7 @@ export class SecurityService {
     const len = binary.length;
     const u8 = new Uint8Array(len);
     for (let i = 0; i < len; i++) {
-        u8[i] = binary.charCodeAt(i);
+      u8[i] = binary.charCodeAt(i);
     }
     return u8;
   }
@@ -138,18 +185,31 @@ export class SecurityService {
     return `${this.PASSWORD_HASH_PREFIX}:${this.ITERATIONS}:${this.uint8ToBase64(bits)}`;
   }
 
-  static async verifyPassword(password: string, salt: string, storedHash: string | null): Promise<boolean> {
+  static async verifyPassword(
+    password: string,
+    salt: string,
+    storedHash: string | null,
+  ): Promise<boolean> {
     if (!storedHash) return false;
 
     try {
       if (storedHash.startsWith(this.PASSWORD_HASH_PREFIX)) {
         const [, , iterationsRaw, expected] = storedHash.split(':');
         const iterations = Number(iterationsRaw);
-        if (!expected || !Number.isInteger(iterations) || iterations < 1 || iterations > this.MAX_VERIFY_ITERATIONS) {
+        if (
+          !expected ||
+          !Number.isInteger(iterations) ||
+          iterations < 1 ||
+          iterations > this.MAX_VERIFY_ITERATIONS
+        ) {
           return false;
         }
 
-        const actual = await this.derivePasswordHashBits(password, this.saltToBytes(salt), iterations);
+        const actual = await this.derivePasswordHashBits(
+          password,
+          this.saltToBytes(salt),
+          iterations,
+        );
         return this.constantTimeEqual(this.uint8ToBase64(actual), expected);
       }
 
@@ -162,11 +222,17 @@ export class SecurityService {
 
   static async hashRecoveryKey(recoveryKey: string): Promise<string> {
     const normalized = this.normalizeRecoveryKey(recoveryKey);
-    const digest = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(normalized));
+    const digest = await window.crypto.subtle.digest(
+      'SHA-256',
+      new TextEncoder().encode(normalized),
+    );
     return `${this.RECOVERY_HASH_PREFIX}:${this.uint8ToBase64(new Uint8Array(digest))}`;
   }
 
-  static async verifyRecoveryKey(recoveryKey: string, storedValue: string | null): Promise<boolean> {
+  static async verifyRecoveryKey(
+    recoveryKey: string,
+    storedValue: string | null,
+  ): Promise<boolean> {
     if (!storedValue) return false;
     const normalizedInput = this.normalizeRecoveryKey(recoveryKey);
 
@@ -177,22 +243,24 @@ export class SecurityService {
     }
 
     const normalizedStored = this.normalizeRecoveryKey(storedValue);
-    return normalizedInput.length === 32 && this.constantTimeEqual(normalizedInput, normalizedStored);
+    return (
+      normalizedInput.length === 32 && this.constantTimeEqual(normalizedInput, normalizedStored)
+    );
   }
 
   static recoveryKeyIsHashed(storedValue: string | null): boolean {
     return Boolean(storedValue?.startsWith(this.RECOVERY_HASH_PREFIX));
   }
 
-  private static async derivePasswordHashBits(password: string, salt: Uint8Array, iterations = this.ITERATIONS): Promise<Uint8Array> {
+  private static async derivePasswordHashBits(
+    password: string,
+    salt: Uint8Array,
+    iterations = this.ITERATIONS,
+  ): Promise<Uint8Array> {
     const passwordData = new TextEncoder().encode(password);
-    const passwordKey = await window.crypto.subtle.importKey(
-      'raw',
-      passwordData,
-      'PBKDF2',
-      false,
-      ['deriveBits']
-    );
+    const passwordKey = await window.crypto.subtle.importKey('raw', passwordData, 'PBKDF2', false, [
+      'deriveBits',
+    ]);
     const bits = await window.crypto.subtle.deriveBits(
       {
         name: 'PBKDF2',
@@ -201,7 +269,7 @@ export class SecurityService {
         hash: 'SHA-256',
       },
       passwordKey,
-      256
+      256,
     );
     this.wipeSensitive(passwordData);
     return new Uint8Array(bits);
@@ -214,12 +282,12 @@ export class SecurityService {
     const data = new Uint8Array(passwordData.length + saltData.length);
     data.set(passwordData);
     data.set(saltData, passwordData.length);
-    
+
     const hash = await window.crypto.subtle.digest('SHA-256', data);
-    
+
     this.wipeSensitive(passwordData);
     this.wipeSensitive(data);
-    
+
     return this.uint8ToBase64(new Uint8Array(hash));
   }
 
