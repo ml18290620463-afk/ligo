@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence } from 'motion/react';
-import { DiaryEntry, GroupingMode, Language, Theme, Attachment, Container } from '../types';
+import { DiaryEntry, Language, Theme, Attachment, Container } from '../types';
 import { useSearch } from '../hooks/useSearch';
 import { useTimeoutManager } from '../hooks/useTimeoutManager';
 import { TRANSLATIONS } from '../constants';
@@ -21,7 +21,8 @@ import { VaultContent } from './VaultContent';
 import { useClickOutside } from '../hooks/useClickOutside';
 import { useDashboardExport } from '../hooks/useDashboardExport';
 import { useDashboardImportConfirm } from '../hooks/useDashboardImportConfirm';
-import { groupDashboardEntries, sortDashboardGroupKeys } from '../services/dashboardGrouping';
+import { useDashboardFullscreen } from '../hooks/useDashboardFullscreen';
+import { useDashboardGroupedEntries } from '../hooks/useDashboardGroupedEntries';
 import { getActiveDashboardEntries, getBaseDashboardEntries } from '../services/dashboardFilters';
 
 interface DashboardProps {
@@ -107,7 +108,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
   syncStatus,
   loading,
 }) => {
-  const [currentPage, setCurrentPage] = useState(1);
   const { scheduleTimeout } = useTimeoutManager();
   const PAGE_SIZE = 50;
 
@@ -139,8 +139,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     }, 1000);
   };
 
-  // Fullscreen State
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const { isFullscreen, toggleFullScreen, setIsFullscreen } = useDashboardFullscreen();
 
   // Search State
   const [searchQuery, setSearchQuery] = useState('');
@@ -175,30 +174,27 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const filteredEntries = useSearch(baseFilteredEntries, searchQuery);
 
-  const paginatedEntries = React.useMemo(() => {
-    return filteredEntries.slice(0, currentPage * PAGE_SIZE);
-  }, [filteredEntries, currentPage]);
-
-  const hasMore = paginatedEntries.length < filteredEntries.length;
-
-  const handleSetGroupingMode = (mode: GroupingMode) => {
-    setGroupingMode(mode);
-    setCurrentPage(1);
-    // Smooth scroll to top when changing perspective
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
   // Settings-only state (security / stars editor / wipe / attachment +
   // media transient banners) lives inside DashboardSettingsModal so the
   // dashboard shell doesn't re-render every time those panels tick.
 
-  // Grouping State
-  const [groupingMode, setGroupingMode] = useState<GroupingMode>('none');
-
-  // Reset pagination when filters or search change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [language, selectedTag, selectedCategory, groupingMode]);
+  const {
+    groupingMode,
+    setGroupingMode: handleSetGroupingMode,
+    paginatedEntries,
+    hasMore,
+    loadMore,
+    groupedEntries,
+    groupKeys,
+    isListView,
+  } = useDashboardGroupedEntries({
+    filteredEntries,
+    pageSize: PAGE_SIZE,
+    language,
+    t,
+    selectedTag,
+    selectedCategory,
+  });
 
   const [showConfirmHome, setShowConfirmHome] = useState(false);
   const [lastClickTime, setLastClickTime] = useState(0);
@@ -242,43 +238,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
   // affordances). Until we split FilterBar to consume it from a context,
   // we surface a write-through flag here that both sides can read.
   const [isEditingStars, setIsEditingStars] = useState(false);
-
-  const toggleFullScreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement
-        .requestFullscreen()
-        .then(() => setIsFullscreen(true))
-        .catch((e) => console.error(e));
-    } else {
-      if (document.exitFullscreen) {
-        document
-          .exitFullscreen()
-          .then(() => setIsFullscreen(false))
-          .catch((e) => console.error(e));
-      }
-    }
-  };
-
-  // (dynamicVersion / handleExport / handleDownloadNotes live in
-  //  useDashboardExport now.)
-
-  // (handleSecuritySetup lives in useDashboardSecurity now.)
-
-  const groupedEntries = React.useMemo(() => {
-    return groupDashboardEntries({
-      filteredEntries,
-      paginatedEntries,
-      groupingMode,
-      language,
-      labels: t,
-    });
-  }, [filteredEntries, paginatedEntries, groupingMode, language, t]);
-
-  const groupKeys = React.useMemo(() => {
-    return sortDashboardGroupKeys(groupedEntries);
-  }, [groupedEntries]);
-
-  const isListView = filteredEntries.length > 10;
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-5xl min-h-screen flex flex-col relative z-10">
@@ -421,7 +380,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         paginatedEntries={paginatedEntries}
         filteredEntries={filteredEntries}
         hasMore={hasMore}
-        onLoadMore={() => setCurrentPage((prev) => prev + 1)}
+        onLoadMore={loadMore}
         groupingMode={groupingMode}
         groupedEntries={groupedEntries}
         groupKeys={groupKeys}
