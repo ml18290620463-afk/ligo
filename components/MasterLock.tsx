@@ -8,8 +8,6 @@ import {
   Fingerprint,
   ShieldCheck,
   AlertCircle,
-  Maximize,
-  Minimize,
   Eye,
   EyeOff,
 } from 'lucide-react';
@@ -21,6 +19,7 @@ import { useLockoutTimer } from '../hooks/useLockoutTimer';
 import { useRecoveryFlow } from '../hooks/useRecoveryFlow';
 import { createSeededRandom } from '../lib/random';
 import { MasterLockBackdrop } from './MasterLockBackdrop';
+import { MasterLockRecoveryForm } from './MasterLockRecoveryForm';
 
 interface MasterLockProps {
   language: Language;
@@ -407,119 +406,7 @@ export const MasterLock: React.FC<MasterLockProps> = ({
 
           <div className="flex flex-col items-center text-center space-y-4">
             {recovery.isRecoveryMode ? (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="w-full space-y-4"
-              >
-                <div className="space-y-2">
-                  <h2
-                    className={`text-xl font-mono font-bold tracking-widest uppercase ${theme === 'light' ? 'text-slate-900' : 'text-white'}`}
-                  >
-                    {t.resetPassword}
-                  </h2>
-                  <p
-                    className={`text-[10px] font-mono tracking-wider ${theme === 'light' ? 'text-slate-400' : 'text-cyan-600'}`}
-                  >
-                    {t.inputRecoveryKey}
-                  </p>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="flex flex-col gap-2 text-left">
-                    <label className="text-[10px] font-mono text-cyan-500 font-bold uppercase tracking-wider">
-                      {t.recoveryKeyTitle}
-                    </label>
-                    <div className="relative group">
-                      <input
-                        type={recovery.showKey ? 'text' : 'password'}
-                        value={recovery.recoveryInput}
-                        onChange={(e) => recovery.setRecoveryInput(e.target.value)}
-                        className={`w-full border p-3 font-mono text-sm focus:outline-none transition-all ${theme === 'light' ? 'bg-slate-50 border-slate-200 text-slate-900 focus:border-cyan-400' : 'bg-cyan-950/20 border-cyan-900/40 text-cyan-100 focus:border-cyan-500/50'}`}
-                        placeholder="XXXX-XXXX-XXXX-XXXX..."
-                      />
-                      <button
-                        type="button"
-                        onClick={recovery.toggleShowKey}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-cyan-700 hover:text-cyan-400"
-                      >
-                        {recovery.showKey ? (
-                          <Minimize className="w-4 h-4" />
-                        ) : (
-                          <Maximize className="w-4 h-4" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-2 text-left">
-                    <label className="text-[10px] font-mono text-cyan-500 font-bold uppercase tracking-wider">
-                      {t.newPassword}
-                    </label>
-                    <div className="relative group">
-                      <input
-                        type={recovery.showNewPassword ? 'text' : 'password'}
-                        value={recovery.newPassword}
-                        onChange={(e) => recovery.setNewPassword(e.target.value)}
-                        className={`w-full border p-3 font-mono text-sm focus:outline-none transition-all ${theme === 'light' ? 'bg-slate-50 border-slate-200 text-slate-900 focus:border-cyan-400' : 'bg-cyan-950/20 border-cyan-900/40 text-cyan-100 focus:border-cyan-500/50'}`}
-                        placeholder="••••••••"
-                      />
-                      <button
-                        type="button"
-                        onClick={recovery.toggleShowNewPassword}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-cyan-700 hover:text-cyan-400"
-                      >
-                        {recovery.showNewPassword ? (
-                          <EyeOff className="w-4 h-4" />
-                        ) : (
-                          <Eye className="w-4 h-4" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-2 text-left">
-                    <label className="text-[10px] font-mono text-cyan-500 font-bold uppercase tracking-wider">
-                      {t.confirmPassword}
-                    </label>
-                    <div className="relative group">
-                      <input
-                        type={recovery.showNewPassword ? 'text' : 'password'}
-                        value={recovery.confirmNewPassword}
-                        onChange={(e) => recovery.setConfirmNewPassword(e.target.value)}
-                        className={`w-full border p-3 font-mono text-sm focus:outline-none transition-all ${theme === 'light' ? 'bg-slate-50 border-slate-200 text-slate-900 focus:border-cyan-400' : 'bg-cyan-950/20 border-cyan-900/40 text-cyan-100 focus:border-cyan-500/50'}`}
-                        placeholder="••••••••"
-                      />
-                      <button
-                        type="button"
-                        onClick={recovery.toggleShowNewPassword}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-cyan-700 hover:text-cyan-400"
-                      >
-                        {recovery.showNewPassword ? (
-                          <EyeOff className="w-4 h-4" />
-                        ) : (
-                          <Eye className="w-4 h-4" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {recovery.resetError && (
-                  <div className="p-3 bg-[#C85F72]/5 border border-[#C85F72]/20 rounded">
-                    <p className="text-[10px] font-mono text-[#C85F72] uppercase tracking-tight neon-glow-alert">
-                      {recovery.resetError}
-                    </p>
-                  </div>
-                )}
-
-                <button
-                  onClick={recovery.submitRecovery}
-                  className={`w-full py-4 font-mono text-xs tracking-widest transition-all ${theme === 'light' ? 'bg-slate-900 text-white hover:bg-cyan-600' : 'bg-cyan-500 text-black hover:bg-cyan-400 font-bold'}`}
-                >
-                  {t.confirmAction}
-                </button>
-              </motion.div>
+              <MasterLockRecoveryForm theme={theme} t={t} recovery={recovery} />
             ) : (
               <>
                 {/* Visual Feedback Area */}
