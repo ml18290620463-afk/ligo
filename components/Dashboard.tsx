@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence } from 'motion/react';
-import { DiaryEntry, Language, Theme, Attachment, Container } from '../types';
 import { useTimeoutManager } from '../hooks/useTimeoutManager';
 import { TRANSLATIONS } from '../constants';
 import { AppStorageKeys } from '../services/appSettings';
@@ -8,9 +7,7 @@ import { getStoredString, setStoredString } from '../services/browserStorage';
 import { useBackupImport } from '../hooks/useBackupImport';
 import { useDashboardVault } from '../hooks/useDashboardVault';
 import { useBackupReminder } from '../hooks/useBackupReminder';
-import { VaultUnlockModal } from './VaultUnlockModal';
-import { BackupImportConfirmModal } from './BackupImportConfirmModal';
-import { BackupReminderBanner } from './BackupReminderBanner';
+import { DashboardOverlays } from './DashboardOverlays';
 import { FilterHub } from './FilterHub';
 import { DashboardHeader } from './DashboardHeader';
 import { FilterBar } from './FilterBar';
@@ -23,53 +20,7 @@ import { useDashboardImportConfirm } from '../hooks/useDashboardImportConfirm';
 import { useDashboardFullscreen } from '../hooks/useDashboardFullscreen';
 import { useDashboardGroupedEntries } from '../hooks/useDashboardGroupedEntries';
 import { useDashboardFilters } from '../hooks/useDashboardFilters';
-
-interface DashboardProps {
-  entries: DiaryEntry[];
-  currentUser: string | null;
-  isGuest: boolean;
-  language: Language;
-  onSetLanguage: (lang: Language) => void;
-  onSelectEntry: (entry: DiaryEntry) => void;
-  onUpdateEntry: (entry: DiaryEntry) => void;
-  onBulkUpdateEntries: (entries: DiaryEntry[]) => void;
-  onNewEntry: () => void;
-  onOpenArchive: () => void;
-  onReplayIntro: () => void;
-  onWipeData: () => void;
-  onCreateMaterialEntry: (material: Attachment, isArchived: boolean) => void;
-  isUnlocked: boolean;
-  passwordHash: string | null;
-  passwordSalt: string | null;
-  onSetPassword: (password: string) => void;
-  onClearPassword: () => void;
-  onImportBackup?: (
-    entries: DiaryEntry[],
-    mode: 'merge' | 'replace',
-  ) => Promise<{ importedCount: number; totalAfter: number; mode: 'merge' | 'replace' }>;
-  guidingStars: string[];
-  onSaveGuidingStars: (stars: string[]) => void;
-  selectedStars: string[];
-  onSaveSelectedStars: (stars: string[]) => void;
-  containers: Container[];
-  onAddContainer: (name: string) => void;
-  onDeleteContainer: (id: string) => void;
-  theme: Theme;
-  onSetTheme: (theme: Theme) => void;
-  isScanning?: boolean;
-  scanProgress?: number;
-  onTriggerScan?: () => Promise<unknown>;
-  lastScanSummary?: {
-    status: 'success' | 'error';
-    finishedAt: number;
-    mergedEntries: number;
-    mergedPrinciples: number;
-    mergedContainers: number;
-    error?: string;
-  } | null;
-  syncStatus?: 'synced' | 'local-only' | 'error' | 'merging' | 'mirror-skipped';
-  loading: boolean;
-}
+import type { DashboardProps } from './dashboardProps';
 
 export const Dashboard: React.FC<DashboardProps> = ({
   entries,
@@ -256,31 +207,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
         syncStatus={syncStatus}
       />
 
-      <BackupReminderBanner
-        active={backupReminderActive}
-        daysSinceBackup={daysSinceBackup}
-        theme={theme}
-        t={t}
-        onOpenSettings={() => setShowSettings(true)}
-      />
-
-      <BackupImportConfirmModal
-        pending={importConfirm.pending}
-        theme={theme}
-        t={t}
-        onResolve={importConfirm.resolveConfirm}
-      />
-
-      <VaultUnlockModal
-        open={isVerifyingVault}
+      <DashboardOverlays
         theme={theme}
         language={language}
         t={t}
+        backupReminderActive={backupReminderActive}
+        daysSinceBackup={daysSinceBackup}
+        onOpenSettings={() => setShowSettings(true)}
+        importPending={importConfirm.pending}
+        onResolveImport={importConfirm.resolveConfirm}
+        isVerifyingVault={isVerifyingVault}
         vaultPassword={vaultPassword}
         setVaultPassword={setVaultPassword}
         vaultError={vaultError}
-        onUnlock={handleVaultUnlock}
-        onCancel={handleVaultCancel}
+        onUnlockVault={handleVaultUnlock}
+        onCancelVault={handleVaultCancel}
       />
 
       <DashboardSettingsModal
