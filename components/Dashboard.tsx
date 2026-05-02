@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { DiaryEntry, Language, Theme, Attachment, Container } from '../types';
-import { useSearch } from '../hooks/useSearch';
 import { useTimeoutManager } from '../hooks/useTimeoutManager';
 import { TRANSLATIONS } from '../constants';
 import { AppStorageKeys } from '../services/appSettings';
@@ -23,7 +22,7 @@ import { useDashboardExport } from '../hooks/useDashboardExport';
 import { useDashboardImportConfirm } from '../hooks/useDashboardImportConfirm';
 import { useDashboardFullscreen } from '../hooks/useDashboardFullscreen';
 import { useDashboardGroupedEntries } from '../hooks/useDashboardGroupedEntries';
-import { getActiveDashboardEntries, getBaseDashboardEntries } from '../services/dashboardFilters';
+import { useDashboardFilters } from '../hooks/useDashboardFilters';
 
 interface DashboardProps {
   entries: DiaryEntry[];
@@ -141,10 +140,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const { isFullscreen, toggleFullScreen, setIsFullscreen } = useDashboardFullscreen();
 
-  // Search State
-  const [searchQuery, setSearchQuery] = useState('');
-
-  // Filter Hub State
+  // Filter Hub State (overlay z-index management; the actual
+  // filter primitives live in `useDashboardFilters`).
   const [showFilterHub, setShowFilterHub] = useState(false);
 
   const {
@@ -163,16 +160,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
     onSetPassword,
   });
 
-  const [selectedTag, setSelectedTag] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<'all' | 'uncategorized' | string>('all');
-
-  const activeEntries = React.useMemo(() => getActiveDashboardEntries(entries), [entries]);
-
-  const baseFilteredEntries = React.useMemo(() => {
-    return getBaseDashboardEntries({ entries, selectedTag, selectedCategory });
-  }, [entries, selectedCategory, selectedTag]);
-
-  const filteredEntries = useSearch(baseFilteredEntries, searchQuery);
+  const {
+    selectedTag,
+    setSelectedTag,
+    selectedCategory,
+    setSelectedCategory,
+    searchQuery,
+    setSearchQuery,
+    activeEntries,
+    baseFilteredEntries,
+    filteredEntries,
+  } = useDashboardFilters({ entries });
 
   // Settings-only state (security / stars editor / wipe / attachment +
   // media transient banners) lives inside DashboardSettingsModal so the
