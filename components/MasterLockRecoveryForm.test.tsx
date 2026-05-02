@@ -36,9 +36,6 @@ const buildRecovery = (overrides: Partial<RecoveryFlowState> = {}): RecoveryFlow
 describe('MasterLockRecoveryForm', () => {
   it('renders the three labelled inputs and the submit affordance', () => {
     render(<MasterLockRecoveryForm theme="dark" t={t} recovery={buildRecovery()} />);
-    // happy-dom doesn't load `@testing-library/jest-dom`'s extension
-    // matchers globally, so we assert via getBy* (which throws if absent)
-    // and fall back to truthy checks.
     expect(screen.getByLabelText('Recovery Key')).not.toBeNull();
     expect(screen.getByLabelText('New Password')).not.toBeNull();
     expect(screen.getByLabelText('Confirm Password')).not.toBeNull();
@@ -48,11 +45,9 @@ describe('MasterLockRecoveryForm', () => {
   it('routes input changes to the recovery setters', () => {
     const recovery = buildRecovery();
     render(<MasterLockRecoveryForm theme="dark" t={t} recovery={recovery} />);
-
     fireEvent.change(screen.getByLabelText('Recovery Key'), { target: { value: 'KEY' } });
     fireEvent.change(screen.getByLabelText('New Password'), { target: { value: 'P@ss1' } });
     fireEvent.change(screen.getByLabelText('Confirm Password'), { target: { value: 'P@ss1' } });
-
     expect(recovery.setRecoveryInput).toHaveBeenCalledWith('KEY');
     expect(recovery.setNewPassword).toHaveBeenCalledWith('P@ss1');
     expect(recovery.setConfirmNewPassword).toHaveBeenCalledWith('P@ss1');
@@ -63,7 +58,6 @@ describe('MasterLockRecoveryForm', () => {
       <MasterLockRecoveryForm theme="dark" t={t} recovery={buildRecovery({ showKey: false })} />,
     );
     expect((screen.getByLabelText('Recovery Key') as HTMLInputElement).type).toBe('password');
-
     rerender(
       <MasterLockRecoveryForm theme="dark" t={t} recovery={buildRecovery({ showKey: true })} />,
     );
@@ -73,10 +67,7 @@ describe('MasterLockRecoveryForm', () => {
   it('toggles password visibility on both new + confirm via the same handler', () => {
     const recovery = buildRecovery();
     render(<MasterLockRecoveryForm theme="dark" t={t} recovery={recovery} />);
-
     const toggles = screen.getAllByRole('button', { name: /Show password|Hide password/ });
-    // One toggle per password field (new + confirm) — both call the same
-    // bound handler so flipping them behaves as a single boolean.
     expect(toggles).toHaveLength(2);
     fireEvent.click(toggles[0]);
     fireEvent.click(toggles[1]);
@@ -88,7 +79,6 @@ describe('MasterLockRecoveryForm', () => {
       <MasterLockRecoveryForm theme="dark" t={t} recovery={buildRecovery()} />,
     );
     expect(screen.queryByRole('alert')).toBeNull();
-
     rerender(
       <MasterLockRecoveryForm
         theme="dark"
