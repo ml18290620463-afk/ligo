@@ -334,4 +334,17 @@ export const ko = {
   argon2ToggleDisabled: '사용 안함 (기본값: PBKDF2)',
   argon2ToggleHint:
     'Argon2id는 메모리 집약적이며 GPU/ASIC 공격에 강합니다. 기존 PBKDF2 비밀번호는 그대로 작동합니다. 새 비밀번호만 새 알고리즘으로 생성됩니다. 변경 후 첫 잠금 해제 시 약 100ms의 wasm 로딩 비용이 발생합니다.',
+  // Phase 4 §W3.1 — 명령 팔레트 (⌘K / Ctrl+K)
+  commandPaletteTitle: '명령 팔레트',
+  commandPaletteSearch: '명령 또는 항목 검색…',
+  commandPaletteEmpty: '일치하는 명령이 없습니다.',
+  commandPaletteNavigation: '탐색',
+  commandPaletteAppearance: '모양',
+  commandPaletteRecent: '최근 항목',
+  commandPaletteLanguage: '언어',
+  commandPaletteDanger: '위험 영역',
+  toggleTheme: '테마 전환',
+  switchLanguage: '언어 변경…',
+  lockVault: '보관함 잠금',
+  dashboard: '대시보드로 돌아가기',
 } satisfies TranslationDictionary;

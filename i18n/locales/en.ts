@@ -417,4 +417,17 @@ export const en = {
   argon2ToggleDisabled: 'Disabled (PBKDF2 default)',
   argon2ToggleHint:
     'Argon2id is memory-hard and resists GPU/ASIC attacks. Existing PBKDF2 passwords keep working unchanged; only NEW passwords are minted under the new algorithm. The first unlock after the change has a small wasm-load cost (~100 ms).',
+  // Phase 4 §W3.1 — command palette (⌘K / Ctrl+K)
+  commandPaletteTitle: 'Command palette',
+  commandPaletteSearch: 'Search commands or entries…',
+  commandPaletteEmpty: 'No matching command.',
+  commandPaletteNavigation: 'Navigation',
+  commandPaletteAppearance: 'Appearance',
+  commandPaletteRecent: 'Recent entries',
+  commandPaletteLanguage: 'Language',
+  commandPaletteDanger: 'Danger zone',
+  toggleTheme: 'Toggle theme',
+  switchLanguage: 'Switch language…',
+  lockVault: 'Lock the vault',
+  dashboard: 'Back to dashboard',
 } satisfies TranslationDictionary;

@@ -339,4 +339,17 @@ export const ja = {
   argon2ToggleDisabled: '無効（既定: PBKDF2）',
   argon2ToggleHint:
     'Argon2id はメモリハードで GPU/ASIC 攻撃に耐性があります。既存の PBKDF2 パスワードはそのまま動作し続け、新しいパスワードのみ新アルゴリズムで生成されます。切り替え後の最初のアンロックには ~100 ms の wasm 読込みコストが発生します。',
+  // Phase 4 §W3.1 — コマンドパレット (⌘K / Ctrl+K)
+  commandPaletteTitle: 'コマンドパレット',
+  commandPaletteSearch: 'コマンドや日記タイトルを検索…',
+  commandPaletteEmpty: '一致するコマンドがありません。',
+  commandPaletteNavigation: 'ナビゲーション',
+  commandPaletteAppearance: '外観',
+  commandPaletteRecent: '最近の日記',
+  commandPaletteLanguage: '言語',
+  commandPaletteDanger: '危険な操作',
+  toggleTheme: 'テーマを切り替え',
+  switchLanguage: '言語を切り替え…',
+  lockVault: 'ヴォルトをロック',
+  dashboard: 'ダッシュボードへ戻る',
 } satisfies TranslationDictionary;

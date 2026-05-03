@@ -407,4 +407,17 @@ export const zh = {
   argon2ToggleDisabled: '已关闭（默认 PBKDF2）',
   argon2ToggleHint:
     'Argon2id 是抗 GPU/ASIC 暴力破解的内存型算法。开启后仅影响新创建的密码——已有 PBKDF2 哈希继续按原样验证。开启后第一次解锁会有约 100 ms 的 wasm 加载开销。',
+  // Phase 4 §W3.1 — 命令面板（⌘K / Ctrl+K）
+  commandPaletteTitle: '命令面板',
+  commandPaletteSearch: '输入命令或日记标题以搜索…',
+  commandPaletteEmpty: '没有匹配的命令。',
+  commandPaletteNavigation: '导航',
+  commandPaletteAppearance: '外观',
+  commandPaletteRecent: '最近的日记',
+  commandPaletteLanguage: '语言',
+  commandPaletteDanger: '危险操作',
+  toggleTheme: '切换主题',
+  switchLanguage: '切换语言…',
+  lockVault: '锁定保险库',
+  dashboard: '返回主面板',
 } satisfies TranslationDictionary;

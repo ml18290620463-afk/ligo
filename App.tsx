@@ -1,4 +1,4 @@
-import React, { useEffect, lazy, Suspense } from 'react';
+import React, { useEffect, useState, lazy, Suspense } from 'react';
 import { MotionConfig } from 'motion/react';
 import { useShallow } from 'zustand/react/shallow';
 import { AppState, DiaryEntry, Language, Theme } from './types';
@@ -9,6 +9,7 @@ import { CoverScreen } from './components/CoverScreen';
 import { MasterLock } from './components/MasterLock';
 import { Onboarding } from './components/Onboarding';
 import { SpaceTimeBackground } from './components/SpaceTimeBackground';
+import { CommandPalette } from './components/CommandPalette';
 import { TRANSLATIONS } from './constants';
 import { SecurityService } from './services/securityService';
 import { useAppStore } from './stores/appStore';
@@ -80,6 +81,22 @@ const App: React.FC = () => {
   useEffect(() => {
     setCurrentUser(TRANSLATIONS[language].localUser);
   }, [language, setCurrentUser]);
+
+  // W3.1 — global command palette toggle. Bound to ⌘K / Ctrl+K
+  // unconditionally so the shortcut works from every screen (cover,
+  // editor, viewer, etc.). The handler stops propagation so it never
+  // double-fires when a child surface also wires the same key.
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setPaletteOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   // Data Layer Hook
   const {
@@ -223,6 +240,25 @@ const App: React.FC = () => {
           className={`min-h-screen font-sans relative transition-colors duration-1000 ${theme === 'light' ? 'bg-[#f0f4f7] text-[#1a202c] selection:bg-[#007a8c]/20 selection:text-[#007a8c]' : 'bg-[#030303] text-gray-100 selection:bg-cyan-500 selection:text-white'}`}
         >
           {showGlobalBackground && <SpaceTimeBackground theme={theme} />}
+
+          <CommandPalette
+            open={paletteOpen}
+            onOpenChange={setPaletteOpen}
+            theme={theme}
+            language={language}
+            appState={appState}
+            t={TRANSLATIONS[language]}
+            entries={entries}
+            onNewEntry={() => setAppState(AppState.EDITOR)}
+            onOpenArchive={() => setAppState(AppState.ARCHIVE)}
+            onBackToDashboard={handleBackToDashboard}
+            onReplayIntro={() => setAppState(AppState.COVER)}
+            onSelectEntry={handleSelectEntry}
+            onSetTheme={(t: Theme) => setTheme(t)}
+            onSetLanguage={(lang: Language) => setLanguage(lang)}
+            onLockVault={passwordHash ? () => setIsUnlocked(false) : undefined}
+            onWipeData={passwordHash ? handleWipeData : undefined}
+          />
 
           {loading && (
             <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm">

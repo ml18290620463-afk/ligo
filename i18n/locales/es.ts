@@ -338,4 +338,17 @@ export const es = {
   argon2ToggleDisabled: 'Desactivado (PBKDF2 por defecto)',
   argon2ToggleHint:
     'Argon2id es resistente a ataques GPU/ASIC gracias a su uso intensivo de memoria. Las contraseñas PBKDF2 existentes siguen funcionando sin cambios; solo las contraseñas nuevas usan el algoritmo nuevo. El primer desbloqueo tras el cambio implica un coste de carga wasm de unos 100 ms.',
+  // Phase 4 §W3.1 — paleta de comandos (⌘K / Ctrl+K)
+  commandPaletteTitle: 'Paleta de comandos',
+  commandPaletteSearch: 'Buscar comandos o entradas…',
+  commandPaletteEmpty: 'Sin coincidencias.',
+  commandPaletteNavigation: 'Navegación',
+  commandPaletteAppearance: 'Apariencia',
+  commandPaletteRecent: 'Entradas recientes',
+  commandPaletteLanguage: 'Idioma',
+  commandPaletteDanger: 'Zona peligrosa',
+  toggleTheme: 'Cambiar tema',
+  switchLanguage: 'Cambiar idioma…',
+  lockVault: 'Bloquear la bóveda',
+  dashboard: 'Volver al panel',
 } satisfies TranslationDictionary;
