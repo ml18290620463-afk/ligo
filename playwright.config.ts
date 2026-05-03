@@ -10,6 +10,14 @@ export default defineConfig({
   timeout: 30_000,
   expect: {
     timeout: 10_000,
+    // Phase 3 §3.f visual regression baselines. We pin the diff
+    // tolerance to 2 % pixels so subpixel font rendering between
+    // macOS / Linux CI doesn't trip the suite while still catching
+    // any layout / colour regression. Per-test overrides
+    // (`maxDiffPixelRatio: 0.05` etc.) are still allowed.
+    toHaveScreenshot: {
+      maxDiffPixelRatio: 0.02,
+    },
   },
   use: {
     baseURL,
