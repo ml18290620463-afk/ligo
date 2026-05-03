@@ -83,7 +83,7 @@ export default defineConfig(({ mode }) => {
         // so the plugin doesn't generate a competing one.
         manifest: false,
         workbox: {
-          globPatterns: ['**/*.{js,css,html,svg,png,webmanifest}'],
+          globPatterns: ['**/*.{js,css,html,svg,png,webmanifest,woff,woff2}'],
           // Don't precache .map files (we already strip them post-build
           // for production but local dev shouldn't pre-cache them either).
           globIgnores: ['**/*.map'],

@@ -33,10 +33,11 @@
     />
     <meta name="twitter:image" content="/og.png" />
 
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
-      rel="stylesheet"
-    />
+    <!-- Phase 4 §W4.2 — Inter + JetBrains Mono are self-hosted via
+         @fontsource (imported at the top of index.css) so the strict
+         production CSP (fontSrc 'self') can actually serve them.
+         No more 3rd-party Google Fonts request from the critical
+         path. -->
     <style>
       body {
         overflow-x: hidden;
