@@ -325,8 +325,11 @@ Goal: improve perceived AI quality, observability and code health within
       → done as part of the §2.h Dashboard split — `useDashboardWipeFlow`,
       `useDashboardImportConfirm` and the agent-extracted Settings
       sub-hooks all use functional updates.
-- [ ] `App.tsx` consumes `useAppStore` via `useShallow` selector(s) or
+- [x] `App.tsx` consumes `useAppStore` via `useShallow` selector(s) or
       narrow custom hooks.
+      → done — `App.tsx:60` reads the 14-field store slice via
+      `useAppStore(useShallow((state) => ({ … })))`. Re-renders are
+      now reference-stable for unrelated `selectedEntry` flips.
 - [x] Vitest coverage thresholds: lines ≥ 70%, branches ≥ 60%.
       → done — `vitest.config.ts` ratchets at lines 78 / branches 54
       today, with the §2.j+§2.k+§2.l history annotated in-line.
