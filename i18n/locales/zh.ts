@@ -401,4 +401,10 @@ export const zh = {
   pwaInstallBody: '安装到桌面后可离线使用、秒级启动，并保留主屏图标。所有数据仍仅保存在本机。',
   pwaInstallAction: '立即安装',
   pwaInstallDismiss: '稍后再说',
+  // Phase 4 §W2.2 — Argon2id 默认 minter toggle
+  argon2ToggleTitle: '使用 Argon2id 加固新密码（实验性）',
+  argon2ToggleEnabled: '已开启（实验性）',
+  argon2ToggleDisabled: '已关闭（默认 PBKDF2）',
+  argon2ToggleHint:
+    'Argon2id 是抗 GPU/ASIC 暴力破解的内存型算法。开启后仅影响新创建的密码——已有 PBKDF2 哈希继续按原样验证。开启后第一次解锁会有约 100 ms 的 wasm 加载开销。',
 } satisfies TranslationDictionary;

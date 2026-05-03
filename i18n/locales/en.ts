@@ -398,8 +398,7 @@ export const en = {
   shareCardShowTags: 'Show tags',
   shareCardShowTagsHint: 'Tag chips below the title. Usually safe to share.',
   shareCardShowAttachment: 'Show attachment badge',
-  shareCardShowAttachmentHint:
-    'Adds a "📎 attachment" badge — does not include the file itself.',
+  shareCardShowAttachmentHint: 'Adds a "📎 attachment" badge — does not include the file itself.',
   shareCardTheme: 'Card theme',
   shareCardSavePng: 'Save PNG',
   shareCardRendering: 'Rendering…',
@@ -412,4 +411,10 @@ export const en = {
     'Install the app for offline access, instant launches, and a homescreen icon. Your data stays local.',
   pwaInstallAction: 'Install app',
   pwaInstallDismiss: 'Not now',
+  // Phase 4 §W2.2 — Argon2id default minter toggle
+  argon2ToggleTitle: 'Use Argon2id for new passwords (experimental)',
+  argon2ToggleEnabled: 'Enabled (experimental)',
+  argon2ToggleDisabled: 'Disabled (PBKDF2 default)',
+  argon2ToggleHint:
+    'Argon2id is memory-hard and resists GPU/ASIC attacks. Existing PBKDF2 passwords keep working unchanged; only NEW passwords are minted under the new algorithm. The first unlock after the change has a small wasm-load cost (~100 ms).',
 } satisfies TranslationDictionary;

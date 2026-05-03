@@ -3,6 +3,7 @@ import { ArrowLeft } from 'lucide-react';
 import type { Theme } from '../types';
 import type { TranslationDictionary } from '../i18n/translations';
 import { CyberButton } from './CyberButton';
+import { SettingsArgon2idToggle } from './SettingsArgon2idToggle';
 
 interface SettingsSecurityFormProps {
   theme: Theme;
@@ -56,9 +57,7 @@ export const SettingsSecurityForm: React.FC<SettingsSecurityFormProps> = ({
       >
         <ArrowLeft className="w-5 h-5" />
       </button>
-      <h4
-        className={`text-lg font-bold ${theme === 'light' ? 'text-slate-800' : 'text-cyan-100'}`}
-      >
+      <h4 className={`text-lg font-bold ${theme === 'light' ? 'text-slate-800' : 'text-cyan-100'}`}>
         {t.securityCalibration}
       </h4>
     </div>
@@ -127,6 +126,7 @@ export const SettingsSecurityForm: React.FC<SettingsSecurityFormProps> = ({
           {securitySuccess}
         </div>
       )}
+      <SettingsArgon2idToggle theme={theme} t={t} />
       <div className="pt-4 flex gap-4">
         <button
           onClick={onCancel}

@@ -330,4 +330,10 @@ export const de = {
   requirementLower: 'Kleinbuchstabe',
   requirementNumber: 'Zahl',
   requirementSpecial: 'Sonderzeichen',
+  // Phase 4 §W2.2 — Argon2id default minter toggle
+  argon2ToggleTitle: 'Argon2id für neue Passwörter verwenden (experimentell)',
+  argon2ToggleEnabled: 'Aktiviert (experimentell)',
+  argon2ToggleDisabled: 'Deaktiviert (PBKDF2 als Standard)',
+  argon2ToggleHint:
+    'Argon2id ist speicherintensiv und widersteht GPU/ASIC-Angriffen. Bestehende PBKDF2-Passwörter funktionieren unverändert weiter; nur NEUE Passwörter verwenden den neuen Algorithmus. Die erste Entsperrung nach der Umstellung verursacht eine kleine wasm-Ladezeit (~100 ms).',
 } satisfies TranslationDictionary;

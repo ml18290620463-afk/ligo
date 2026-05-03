@@ -332,4 +332,10 @@ export const es = {
   requirementLower: 'Minúscula',
   requirementNumber: 'Número',
   requirementSpecial: 'Símbolo especial',
+  // Phase 4 §W2.2 — Argon2id default minter toggle
+  argon2ToggleTitle: 'Usar Argon2id para contraseñas nuevas (experimental)',
+  argon2ToggleEnabled: 'Activado (experimental)',
+  argon2ToggleDisabled: 'Desactivado (PBKDF2 por defecto)',
+  argon2ToggleHint:
+    'Argon2id es resistente a ataques GPU/ASIC gracias a su uso intensivo de memoria. Las contraseñas PBKDF2 existentes siguen funcionando sin cambios; solo las contraseñas nuevas usan el algoritmo nuevo. El primer desbloqueo tras el cambio implica un coste de carga wasm de unos 100 ms.',
 } satisfies TranslationDictionary;

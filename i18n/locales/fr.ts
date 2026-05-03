@@ -331,4 +331,10 @@ export const fr = {
   requirementLower: 'Minuscule',
   requirementNumber: 'Chiffre',
   requirementSpecial: 'Caractère spécial',
+  // Phase 4 §W2.2 — Argon2id default minter toggle
+  argon2ToggleTitle: 'Utiliser Argon2id pour les nouveaux mots de passe (expérimental)',
+  argon2ToggleEnabled: 'Activé (expérimental)',
+  argon2ToggleDisabled: 'Désactivé (PBKDF2 par défaut)',
+  argon2ToggleHint:
+    "Argon2id est résistant aux attaques GPU/ASIC grâce à son utilisation intensive de la mémoire. Les mots de passe PBKDF2 existants continuent de fonctionner sans changement ; seuls les nouveaux mots de passe utilisent le nouvel algorithme. Le premier déverrouillage après le changement entraîne un coût de chargement wasm d'environ 100 ms.",
 } satisfies TranslationDictionary;

@@ -328,4 +328,10 @@ export const ko = {
   requirementLower: '소문자 포함',
   requirementNumber: '숫자 포함',
   requirementSpecial: '특수문자 포함',
+  // Phase 4 §W2.2 — Argon2id default minter toggle
+  argon2ToggleTitle: '새 비밀번호에 Argon2id 사용 (실험)',
+  argon2ToggleEnabled: '사용함 (실험)',
+  argon2ToggleDisabled: '사용 안함 (기본값: PBKDF2)',
+  argon2ToggleHint:
+    'Argon2id는 메모리 집약적이며 GPU/ASIC 공격에 강합니다. 기존 PBKDF2 비밀번호는 그대로 작동합니다. 새 비밀번호만 새 알고리즘으로 생성됩니다. 변경 후 첫 잠금 해제 시 약 100ms의 wasm 로딩 비용이 발생합니다.',
 } satisfies TranslationDictionary;

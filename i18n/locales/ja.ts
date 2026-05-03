@@ -333,4 +333,10 @@ export const ja = {
   reflectionPlaceholder: '書き留めて...',
   saveReflection: '保存',
   reflectionSaved: '保存しました',
+  // Phase 4 §W2.2 — Argon2id default minter toggle
+  argon2ToggleTitle: '新しいパスワードに Argon2id を使用（実験的）',
+  argon2ToggleEnabled: '有効（実験的）',
+  argon2ToggleDisabled: '無効（既定: PBKDF2）',
+  argon2ToggleHint:
+    'Argon2id はメモリハードで GPU/ASIC 攻撃に耐性があります。既存の PBKDF2 パスワードはそのまま動作し続け、新しいパスワードのみ新アルゴリズムで生成されます。切り替え後の最初のアンロックには ~100 ms の wasm 読込みコストが発生します。',
 } satisfies TranslationDictionary;
