@@ -6,11 +6,19 @@ import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { existsSync, readFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
-import { GoogleGenAI } from '@google/genai';
 import { createAiProxyAuth } from './server/aiProxyAuth';
 import { containsInjection } from './server/promptEnvelope';
 import { formatLogError } from './server/scrubLog';
 import { captureServerError, initServerObservability } from './server/observability';
+import {
+  callGemini,
+  callOpenRouter,
+  chooseProvider,
+  fetchOpenRouterFreeModels,
+  resolveProviderModel,
+  type Provider,
+  type ProviderConfig,
+} from './server/aiProviders';
 
 // Initialise the optional Sentry SDK as early as possible so that any
 // startup-time crash is captured. This is a no-op when SENTRY_DSN is unset,
@@ -45,8 +53,6 @@ function loadEnvFileSafe(filePath: string) {
 
 loadEnvFileSafe('.env.local');
 loadEnvFileSafe('.env');
-
-type Provider = 'openrouter' | 'gemini';
 
 const sanitizeEnv = (value: string | undefined) => value?.trim().replace(/^['"]|['"]$/g, '') || '';
 
@@ -91,130 +97,20 @@ const allowedOriginSet = new Set(
     : buildDefaultAllowedOrigins(),
 );
 
-function chooseProvider(): Provider | null {
-  if (env.forcedProvider === 'openrouter' && env.openrouterKey) return 'openrouter';
-  if (env.forcedProvider === 'gemini' && env.geminiKey) return 'gemini';
-  if (env.openrouterKey) return 'openrouter';
-  if (env.geminiKey) return 'gemini';
-  return null;
-}
-
-async function callOpenRouter(prompt: string, signal?: AbortSignal): Promise<string> {
-  const body: Record<string, unknown> = {
-    model: env.openrouterModel,
-    messages: [{ role: 'user', content: prompt }],
-  };
-  if (env.openrouterJsonMode) {
-    body.response_format = { type: 'json_object' };
-  }
-
-  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    signal,
-    headers: {
-      Authorization: `Bearer ${env.openrouterKey}`,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': env.openrouterReferer,
-      'X-Title': env.openrouterTitle,
-    },
-    body: JSON.stringify(body),
-  });
-
-  if (!response.ok) {
-    const detail = await response.text().catch(() => '');
-    throw new Error(`OpenRouter ${response.status}: ${detail.slice(0, 300)}`);
-  }
-
-  const data = await response.json();
-  const content = data?.choices?.[0]?.message?.content;
-  if (typeof content !== 'string' || !content) {
-    throw new Error('Empty OpenRouter response');
-  }
-  return content;
-}
-
-async function callGemini(prompt: string, signal?: AbortSignal): Promise<string> {
-  const client = new GoogleGenAI({ apiKey: env.geminiKey });
-  const generation = client.models.generateContent({
-    model: env.geminiModel,
-    contents: prompt,
-    config: { responseMimeType: 'application/json' },
-  });
-
-  if (!signal) {
-    const response = await generation;
-    return response.text || '';
-  }
-
-  if (signal.aborted) {
-    throw Object.assign(new Error('Aborted'), { name: 'AbortError' });
-  }
-
-  const response = await new Promise<Awaited<typeof generation>>((resolve, reject) => {
-    const onAbort = () => {
-      signal.removeEventListener('abort', onAbort);
-      reject(Object.assign(new Error('Aborted'), { name: 'AbortError' }));
-    };
-    signal.addEventListener('abort', onAbort, { once: true });
-    generation
-      .then((value) => {
-        signal.removeEventListener('abort', onAbort);
-        resolve(value);
-      })
-      .catch((error) => {
-        signal.removeEventListener('abort', onAbort);
-        reject(error);
-      });
-  });
-
-  return response.text || '';
-}
-
-interface FreeModelSummary {
-  id: string;
-  name: string;
-  context_length: number | null;
-  description: string;
-}
-
-interface OpenRouterModelEntry {
-  id?: unknown;
-  name?: unknown;
-  context_length?: unknown;
-  description?: unknown;
-  pricing?: { prompt?: unknown; completion?: unknown };
-}
-
-async function fetchOpenRouterFreeModels(): Promise<FreeModelSummary[]> {
-  const headers: Record<string, string> = {};
-  if (env.openrouterKey) {
-    headers.Authorization = `Bearer ${env.openrouterKey}`;
-  }
-
-  const response = await fetch('https://openrouter.ai/api/v1/models', { headers });
-  if (!response.ok) {
-    throw new Error(`Upstream ${response.status}`);
-  }
-  const data = await response.json();
-  const items: OpenRouterModelEntry[] = Array.isArray(data?.data) ? data.data : [];
-
-  return items
-    .filter((model) => {
-      const id = String(model?.id || '');
-      const promptPrice = Number(model?.pricing?.prompt ?? 1);
-      const completionPrice = Number(model?.pricing?.completion ?? 1);
-      return id.endsWith(':free') || (promptPrice === 0 && completionPrice === 0);
-    })
-    .map(
-      (model): FreeModelSummary => ({
-        id: String(model?.id || ''),
-        name: String(model?.name || model?.id || ''),
-        context_length: typeof model?.context_length === 'number' ? model.context_length : null,
-        description: String(model?.description || '').slice(0, 220),
-      }),
-    )
-    .sort((a, b) => a.id.localeCompare(b.id));
-}
+// Provider config snapshot — derived once at module load. Passed into
+// every server/aiProviders.ts helper so those modules don't have to
+// reach into process.env themselves (makes them unit-testable in
+// isolation).
+const providerConfig: ProviderConfig = {
+  forcedProvider: env.forcedProvider,
+  openrouterKey: env.openrouterKey,
+  openrouterModel: env.openrouterModel,
+  openrouterReferer: env.openrouterReferer,
+  openrouterTitle: env.openrouterTitle,
+  openrouterJsonMode: env.openrouterJsonMode,
+  geminiKey: env.geminiKey,
+  geminiModel: env.geminiModel,
+};
 
 const requireAiProxyAuth = createAiProxyAuth({
   allowedOrigins: allowedOriginSet,
@@ -272,13 +168,8 @@ async function startServer() {
   app.use(express.json({ limit: '128kb' }));
 
   app.get('/api/health', (_req, res) => {
-    const provider = chooseProvider();
-    const model =
-      provider === 'openrouter'
-        ? env.openrouterModel
-        : provider === 'gemini'
-          ? env.geminiModel
-          : null;
+    const provider = chooseProvider(providerConfig);
+    const model = provider ? resolveProviderModel(providerConfig, provider) : null;
     res.json({ status: 'ok', provider, model });
   });
 
@@ -294,7 +185,7 @@ async function startServer() {
     }
 
     try {
-      const models = await fetchOpenRouterFreeModels();
+      const models = await fetchOpenRouterFreeModels(providerConfig);
       res.json({
         provider: 'openrouter',
         defaultModel: env.openrouterModel,
@@ -318,7 +209,7 @@ async function startServer() {
     const requestId = randomUUID();
     res.setHeader('X-Request-Id', requestId);
 
-    const provider = chooseProvider();
+    const provider = chooseProvider(providerConfig);
     if (!provider) {
       res.status(503).json({ error: 'AI backend is not configured', requestId });
       return;
@@ -356,8 +247,8 @@ async function startServer() {
     try {
       const text =
         provider === 'openrouter'
-          ? await callOpenRouter(prompt, controller.signal)
-          : await callGemini(prompt, controller.signal);
+          ? await callOpenRouter(prompt, providerConfig, controller.signal)
+          : await callGemini(prompt, providerConfig, controller.signal);
       console.info(
         JSON.stringify({
           level: 'info',
@@ -425,7 +316,7 @@ async function startServer() {
   }
 
   const httpServer: Server = app.listen(port, env.host, () => {
-    const provider = chooseProvider();
+    const provider = chooseProvider(providerConfig);
     console.log(`Server running on http://${env.host}:${port}`);
     if (env.host === '0.0.0.0') {
       console.warn(
