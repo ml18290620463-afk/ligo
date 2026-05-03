@@ -26,6 +26,10 @@ export default [
       // freely; running the same TS/JSX rule set against them adds
       // no signal and tripped `no-undef` warnings.
       'scripts/**',
+      // CommonJS tool configs (commitlint, eventual prettier or
+      // postcss configs). They use `module.exports` which the
+      // browser-flavoured rule set flags as `no-undef`.
+      '**/*.cjs',
     ],
   },
   js.configs.recommended,
