@@ -432,68 +432,68 @@ Goal: make the design system and product story sustainable.
 ### Exit checklist
 
 - [x] `index.css` (or `lib/designTokens.ts`) exposes a complete set of
-  tokens: color, spacing, radius, shadow, motion, z-index. No hex /
-  rgba literal allowed in any `.tsx` file (lint rule).
-  → **§3.a-1 done** (`lib/designTokens.ts` 6 buckets + 7 unit
-  cases; `scripts/lint-tokens.mjs` scoreboard via
-  `npm run lint:tokens`).
-  → **§3.a-2 done** — backlog **439 → 1 (−99.8 %)**. Hybrid
-  strategy: (a) **25 `--color-vector-*` brand tokens** in
-  `index.css` `@theme` (cyan-brand, cyan-pure, cyan-neon,
-  magenta, magenta-bright, blue-deep, fog-light, fog-paper,
-  paper-cream, paper-white, ink-strong, ink-deep, night-deep,
-  night-navy, night-blue, night-slate, onyx, navy-deep,
-  ice-pale, teal-online, slate-mid, slate-soft, slate-chrome,
-  cyan-neon variants); (b) **49 `@utility` blocks** in
-  `index.css` (37 `shadow-*` glow / inset-glow / elevation
-  rules, plus `bg-spacetime-grid-*`, `neon-glow-*`,
-  `neon-border-*`, `drop-shadow-glow-*`, `text-glow-magenta`,
-  `tech-border`, `clip-path-polygon`) for the high-frequency
-  vocabulary; (c) `lib/canvasPalette.ts` for Canvas-only
-  consumers; (d) Tailwind 4
-  `color-mix(in srgb, var(--color-X) N%, transparent)` inline
-  syntax for the long-tail of one-off shadows / gradients
-  (~50 patterns) — keeps the value at the call site while still
-  flowing through CSS variables. Tooling: `npm run lint:tokens`
-  scoreboard reports **0 hex + 1 rgba across 1 file**; the
-  remaining "1" is the runtime template literal
-  `rgb(${ARCHIVE_RGB.paperLight})` in `DeepArchiveAnimation.tsx`
-  — the actual triplet lives in `lib/canvasPalette.ts` and only
-  the `rgb(` prefix matches the scoreboard regex. Pixel-perfect
-  visual regression verified after every batch (13/13 passing,
-  2 % `maxDiffPixelRatio` global threshold).
+      tokens: color, spacing, radius, shadow, motion, z-index. No hex /
+      rgba literal allowed in any `.tsx` file (lint rule).
+      → **§3.a-1 done** (`lib/designTokens.ts` 6 buckets + 7 unit
+      cases; `scripts/lint-tokens.mjs` scoreboard via
+      `npm run lint:tokens`).
+      → **§3.a-2 done** — backlog **439 → 1 (−99.8 %)**. Hybrid
+      strategy: (a) **25 `--color-vector-*` brand tokens** in
+      `index.css` `@theme` (cyan-brand, cyan-pure, cyan-neon,
+      magenta, magenta-bright, blue-deep, fog-light, fog-paper,
+      paper-cream, paper-white, ink-strong, ink-deep, night-deep,
+      night-navy, night-blue, night-slate, onyx, navy-deep,
+      ice-pale, teal-online, slate-mid, slate-soft, slate-chrome,
+      cyan-neon variants); (b) **49 `@utility` blocks** in
+      `index.css` (37 `shadow-*` glow / inset-glow / elevation
+      rules, plus `bg-spacetime-grid-*`, `neon-glow-*`,
+      `neon-border-*`, `drop-shadow-glow-*`, `text-glow-magenta`,
+      `tech-border`, `clip-path-polygon`) for the high-frequency
+      vocabulary; (c) `lib/canvasPalette.ts` for Canvas-only
+      consumers; (d) Tailwind 4
+      `color-mix(in srgb, var(--color-X) N%, transparent)` inline
+      syntax for the long-tail of one-off shadows / gradients
+      (~50 patterns) — keeps the value at the call site while still
+      flowing through CSS variables. Tooling: `npm run lint:tokens`
+      scoreboard reports **0 hex + 1 rgba across 1 file**; the
+      remaining "1" is the runtime template literal
+      `rgb(${ARCHIVE_RGB.paperLight})` in `DeepArchiveAnimation.tsx`
+      — the actual triplet lives in `lib/canvasPalette.ts` and only
+      the `rgb(` prefix matches the scoreboard regex. Pixel-perfect
+      visual regression verified after every batch (13/13 passing,
+      2 % `maxDiffPixelRatio` global threshold).
 - [x] `/styleguide` route or Storybook serves all base components in dev.
-  → **§3.b done** — Storybook 10.3 (`@storybook/react-vite`) wired
-  to the existing Vite 6 / React 19 / Tailwind 4 stack. Config
-  lives in `.storybook/{main.ts,preview.tsx,mocks.ts}`; preview
-  loads `index.css`, runs `@storybook/addon-themes` (dark / light
-  parent-class toggle on `<html>`) and `@storybook/addon-a11y`
-  with `test: 'error'` so axe violations surface as failures.
-  npm scripts: `npm run storybook` (dev on :6006) and
-  `npm run build-storybook` (`storybook-static/`). The 10
-  authoritative stories ship in `components/*.stories.tsx`:
-  CyberButton (atom — 6 stories: primary / danger / ghost /
-  light / disabled / polymorphic-div), ArchiveEntryCard (cell —
-  grid-dark / grid-light / list-view / time-locked / sealed),
-  StatisticsIdentityCard (cell — unlocked-dark / unlocked-light
-  / locked / editable), MorningStarRadar (cell — balanced-dark
-  / balanced-light / skewed / empty), FilterBar (cell — closed
-  / vault-open / light / editing-stars / interactive),
-  CoverScreen (screen — default / english-dark / light /
-  no-principles), MasterLockUnlockForm (cell — idle / error /
-  locked-out / scanning / success / light / interactive),
-  SettingsBackupSection (cell — closed / dropdown-open / light
-  / import-success / import-error / interactive),
-  ViewerActionFooter (cell — archivable / archived /
-  packing-menu-open / light / interactive), ViewerSealedPanel
-  (screen — sealed / wrong-password / time-locked / scanning
-  / light / interactive). Build clean (`storybook build` → 5 MB
-  static bundle). Existing 92-file / 512-test Vitest suite +
-  13/13 Playwright visual + 28/28 `check-beta.sh` invariants
-  remain green; ESLint stays at `--max-warnings=0`. The 6
-  `Interactive` stories use named `function InteractiveStory(args)`
-  render functions to satisfy `react-hooks/rules-of-hooks` (the
-  inline-arrow form would otherwise trip the rule).
+      → **§3.b done** — Storybook 10.3 (`@storybook/react-vite`) wired
+      to the existing Vite 6 / React 19 / Tailwind 4 stack. Config
+      lives in `.storybook/{main.ts,preview.tsx,mocks.ts}`; preview
+      loads `index.css`, runs `@storybook/addon-themes` (dark / light
+      parent-class toggle on `<html>`) and `@storybook/addon-a11y`
+      with `test: 'error'` so axe violations surface as failures.
+      npm scripts: `npm run storybook` (dev on :6006) and
+      `npm run build-storybook` (`storybook-static/`). The 10
+      authoritative stories ship in `components/*.stories.tsx`:
+      CyberButton (atom — 6 stories: primary / danger / ghost /
+      light / disabled / polymorphic-div), ArchiveEntryCard (cell —
+      grid-dark / grid-light / list-view / time-locked / sealed),
+      StatisticsIdentityCard (cell — unlocked-dark / unlocked-light
+      / locked / editable), MorningStarRadar (cell — balanced-dark
+      / balanced-light / skewed / empty), FilterBar (cell — closed
+      / vault-open / light / editing-stars / interactive),
+      CoverScreen (screen — default / english-dark / light /
+      no-principles), MasterLockUnlockForm (cell — idle / error /
+      locked-out / scanning / success / light / interactive),
+      SettingsBackupSection (cell — closed / dropdown-open / light
+      / import-success / import-error / interactive),
+      ViewerActionFooter (cell — archivable / archived /
+      packing-menu-open / light / interactive), ViewerSealedPanel
+      (screen — sealed / wrong-password / time-locked / scanning
+      / light / interactive). Build clean (`storybook build` → 5 MB
+      static bundle). Existing 92-file / 512-test Vitest suite +
+      13/13 Playwright visual + 28/28 `check-beta.sh` invariants
+      remain green; ESLint stays at `--max-warnings=0`. The 6
+      `Interactive` stories use named `function InteractiveStory(args)`
+      render functions to satisfy `react-hooks/rules-of-hooks` (the
+      inline-arrow form would otherwise trip the rule).
 - [ ] Bespoke portrait illustrations (or stylised geometric variants) for
       the seven default guiding stars replace the Lucide icon stand-ins.
       → **Carried into Phase 4 §4.c-1** — asset-only commission;
@@ -503,37 +503,37 @@ Goal: make the design system and product story sustainable.
       into a single reusable component / hook.
 - [x] Argon2id evaluation written up in `docs/security/argon2-eval.md`
       with a go / no-go decision.
-  → **§3.e done** — verdict **GO** at OWASP_RECOMMENDED
-  (64 MiB / 3t / 1p) for new hashes; PBKDF2 verifier kept
-  forever for backwards compatibility. Infrastructure landed
-  in this branch (PoC + benchmark + decision document); the
-  actual minter switch is gated behind a follow-up §3.e-2
-  task and a Phase 4 production rollout. Deliverables:
-  (a) `services/argon2idPoc.ts` — `hash-wasm` wrapper with the
-  self-describing `argon2id:v1:<m>:<t>:<p>:<saltB64>:<hashB64>`
-  hash format, `deriveArgon2idBits` / `hashArgon2idPassword` /
-  `verifyArgon2idPassword` (constant-time), DoS-bounded
-  parameter validation (m ≤ 1 GiB, t ≤ 32, p ≤ 16);
-  (b) `services/argon2idPoc.test.ts` — 7 unit cases pinning
-  the round-trip, parameter embedding, determinism, salt
-  sensitivity and malformed-hash rejection;
-  (c) `scripts/argon2-bench.ts` + `npm run bench:argon2`
-  benchmark harness comparing PBKDF2 600 k vs Argon2id MIN /
-  REC / STRICT, supports `VECTOR_BENCH_RUNS` /
-  `VECTOR_PBKDF2_ITERATIONS` env overrides + `--json` mode;
-  (d) `docs/security/argon2-eval.md` (10 §) covering threat
-  model, library shootout, hash format, benchmark numbers
-  (Apple M4 / Node 24: PBKDF2 600 k = 43.8 ms; Argon2id REC
-  = 99.2 ms — well under the 350 ms UX budget on every
-  supported device class), migration design (verifier-first,
-  opportunistic re-mint, parameter embedded so no out-of-band
-  context needed), browser compatibility matrix, risks,
-  decision and reproduction recipe. `hash-wasm` 4.12 added
-  as a **devDep only** and lazy-loaded inside the PoC
-  wrapper, so it does **not** appear in the production
-  bundle (verified: `grep -l 'argon2\|hash-wasm' dist/assets/*.js`
-  returns empty). Existing PBKDF2 tests / verifier / encrypt
-  / decrypt path completely untouched.
+      → **§3.e done** — verdict **GO** at OWASP_RECOMMENDED
+      (64 MiB / 3t / 1p) for new hashes; PBKDF2 verifier kept
+      forever for backwards compatibility. Infrastructure landed
+      in this branch (PoC + benchmark + decision document); the
+      actual minter switch is gated behind a follow-up §3.e-2
+      task and a Phase 4 production rollout. Deliverables:
+      (a) `services/argon2idPoc.ts` — `hash-wasm` wrapper with the
+      self-describing `argon2id:v1:<m>:<t>:<p>:<saltB64>:<hashB64>`
+      hash format, `deriveArgon2idBits` / `hashArgon2idPassword` /
+      `verifyArgon2idPassword` (constant-time), DoS-bounded
+      parameter validation (m ≤ 1 GiB, t ≤ 32, p ≤ 16);
+      (b) `services/argon2idPoc.test.ts` — 7 unit cases pinning
+      the round-trip, parameter embedding, determinism, salt
+      sensitivity and malformed-hash rejection;
+      (c) `scripts/argon2-bench.ts` + `npm run bench:argon2`
+      benchmark harness comparing PBKDF2 600 k vs Argon2id MIN /
+      REC / STRICT, supports `VECTOR_BENCH_RUNS` /
+      `VECTOR_PBKDF2_ITERATIONS` env overrides + `--json` mode;
+      (d) `docs/security/argon2-eval.md` (10 §) covering threat
+      model, library shootout, hash format, benchmark numbers
+      (Apple M4 / Node 24: PBKDF2 600 k = 43.8 ms; Argon2id REC
+      = 99.2 ms — well under the 350 ms UX budget on every
+      supported device class), migration design (verifier-first,
+      opportunistic re-mint, parameter embedded so no out-of-band
+      context needed), browser compatibility matrix, risks,
+      decision and reproduction recipe. `hash-wasm` 4.12 added
+      as a **devDep only** and lazy-loaded inside the PoC
+      wrapper, so it does **not** appear in the production
+      bundle (verified: `grep -l 'argon2\|hash-wasm' dist/assets/*.js`
+      returns empty). Existing PBKDF2 tests / verifier / encrypt
+      / decrypt path completely untouched.
 - [ ] First-day empty-state ships sample reflections + a mocked Morning
       Star call so users see the value proposition without spending
       OpenRouter quota.
@@ -541,80 +541,80 @@ Goal: make the design system and product story sustainable.
       blocking Phase 3 close. See `docs/phase-3-postmortem.md` §3.
 - [x] Optional shareable "reflection card" export (privacy-aware: image
       contains only what user opts in).
-  → **§3.h done** — 1080 × 1920 portrait PNG export wired into
-  the Viewer footer, gated behind a privacy-on-by-default modal.
-  Architecture:
-  (a) `lib/shareCardPalette.ts` — fixed literal-hex palette
-  (rasterizer-safe; CSS custom properties / `color-mix()` resolve
-  inconsistently inside `<foreignObject>` clones, especially on
-  older mobile WebKit, so the card opts out of the live design
-  graph and ships its own dark / light pair).
-  (b) `components/ShareCard.tsx` — pure presentational
-  forward-ref component, inline styles only (~280 LOC). Renders
-  the canonical 1080 × 1920 layout: eyebrow / archive id +
-  date / title / status flags (SEALED / TIMELOCK / ARCHIVED /
-  ANALYSED) / tag chips / body block (masked or revealed) /
-  attachment badge / footer attribution. Markdown noise (`#`,
-  `**`, code fences, image / link syntax) is stripped from the
-  excerpt so the card reads as plain text.
-  (c) `hooks/useShareCardOptions.ts` — privacy options hook with
-  `localStorage` persistence (`vector_share_card_options`).
-  Defaults: `showBody=false`, `showTags=true`,
-  `showAttachmentBadge=true`, `theme='dark'`. Schema-validates
-  the stored blob and falls back to the privacy-on defaults on
-  any malformed read.
-  (d) `hooks/useShareCardExport.ts` — `domToBlob`-based PNG
-  rasterizer. **Lazy `import('modern-screenshot')`** so the
-  ~10 kB gz library + WASM-friendly PNG encoder only land on
-  first modal open; production bundle audit confirms zero
-  `modern-screenshot` symbols in main / icons / motion / react /
-  pdf chunks. Exports the Blob from `exportPng` so future
-  callers (Web Share API / `navigator.clipboard.write`) plug in
-  without a re-rasterization pass.
-  (e) `components/ShareCardModal.tsx` — focus-trapped modal with
-  scaled-down preview (1/3 of the canonical card so the user
-  sees exactly what they will get), three privacy toggles, dark
-  / light theme radio, "Reset to privacy defaults" link, and
-  Cyber-style "Save PNG" CTA with explicit
-  idle / rendering / success / error status banner.
-  (f) `components/ViewerActionFooter.tsx` + `ViewerReadingPanel`
-  + `Viewer.tsx` — the share-card affordance is added below the
-  existing 3-button grid (Pack / Download / Burn). It is gated
-  on `decrypted === true` so a sealed entry can never trigger
-  the export. The decrypted body content is forwarded to the
-  modal as `entry.content`, never the encrypted payload.
-  (g) i18n: 19 new locale keys added to `i18n/locales/zh.ts` +
-  `i18n/locales/en.ts` (drift script `npm run i18n:diff` clean
-  in soft mode; the other 5 locales degrade gracefully via
-  English-string `??` fallbacks in the modal until they are
-  translated).
-  (h) Tests: **19 new cases** (8 ShareCard / 6
-  useShareCardOptions / 5 useShareCardExport, the latter mocks
-  `modern-screenshot` to test the status machine + download
-  pipeline). Storybook: 8 ShareCard stories
-  (PrivacyDefaultDark / PrivacyDefaultLight / BodyRevealedDark /
-  BodyRevealedLight / SealedTimelocked / WithAttachment /
-  EmptyBody) at the same 1/3 preview scale as the modal.
-  Bundle delta: main chunk +0.78 kB gz, Viewer chunk +4.58 kB
-  gz, new lazy chunk +10.47 kB gz on first modal open. Visual
-  regression baselines (13/13) unchanged.
+      → **§3.h done** — 1080 × 1920 portrait PNG export wired into
+      the Viewer footer, gated behind a privacy-on-by-default modal.
+      Architecture:
+      (a) `lib/shareCardPalette.ts` — fixed literal-hex palette
+      (rasterizer-safe; CSS custom properties / `color-mix()` resolve
+      inconsistently inside `<foreignObject>` clones, especially on
+      older mobile WebKit, so the card opts out of the live design
+      graph and ships its own dark / light pair).
+      (b) `components/ShareCard.tsx` — pure presentational
+      forward-ref component, inline styles only (~280 LOC). Renders
+      the canonical 1080 × 1920 layout: eyebrow / archive id +
+      date / title / status flags (SEALED / TIMELOCK / ARCHIVED /
+      ANALYSED) / tag chips / body block (masked or revealed) /
+      attachment badge / footer attribution. Markdown noise (`#`,
+      `**`, code fences, image / link syntax) is stripped from the
+      excerpt so the card reads as plain text.
+      (c) `hooks/useShareCardOptions.ts` — privacy options hook with
+      `localStorage` persistence (`vector_share_card_options`).
+      Defaults: `showBody=false`, `showTags=true`,
+      `showAttachmentBadge=true`, `theme='dark'`. Schema-validates
+      the stored blob and falls back to the privacy-on defaults on
+      any malformed read.
+      (d) `hooks/useShareCardExport.ts` — `domToBlob`-based PNG
+      rasterizer. **Lazy `import('modern-screenshot')`** so the
+      ~10 kB gz library + WASM-friendly PNG encoder only land on
+      first modal open; production bundle audit confirms zero
+      `modern-screenshot` symbols in main / icons / motion / react /
+      pdf chunks. Exports the Blob from `exportPng` so future
+      callers (Web Share API / `navigator.clipboard.write`) plug in
+      without a re-rasterization pass.
+      (e) `components/ShareCardModal.tsx` — focus-trapped modal with
+      scaled-down preview (1/3 of the canonical card so the user
+      sees exactly what they will get), three privacy toggles, dark
+      / light theme radio, "Reset to privacy defaults" link, and
+      Cyber-style "Save PNG" CTA with explicit
+      idle / rendering / success / error status banner.
+      (f) `components/ViewerActionFooter.tsx` + `ViewerReadingPanel`
+  - `Viewer.tsx` — the share-card affordance is added below the
+    existing 3-button grid (Pack / Download / Burn). It is gated
+    on `decrypted === true` so a sealed entry can never trigger
+    the export. The decrypted body content is forwarded to the
+    modal as `entry.content`, never the encrypted payload.
+    (g) i18n: 19 new locale keys added to `i18n/locales/zh.ts` +
+    `i18n/locales/en.ts` (drift script `npm run i18n:diff` clean
+    in soft mode; the other 5 locales degrade gracefully via
+    English-string `??` fallbacks in the modal until they are
+    translated).
+    (h) Tests: **19 new cases** (8 ShareCard / 6
+    useShareCardOptions / 5 useShareCardExport, the latter mocks
+    `modern-screenshot` to test the status machine + download
+    pipeline). Storybook: 8 ShareCard stories
+    (PrivacyDefaultDark / PrivacyDefaultLight / BodyRevealedDark /
+    BodyRevealedLight / SealedTimelocked / WithAttachment /
+    EmptyBody) at the same 1/3 preview scale as the modal.
+    Bundle delta: main chunk +0.78 kB gz, Viewer chunk +4.58 kB
+    gz, new lazy chunk +10.47 kB gz on first modal open. Visual
+    regression baselines (13/13) unchanged.
 - [x] **§3.d** — i18n drift detector (`scripts/i18n-diff.ts`,
       `npm run i18n:diff`); `scripts/check-beta.sh` gates extras +
       empty-value bugs in soft mode. Backlog: 232 missing translations
       across 6 non-zh locales (translator backlog, non-blocking).
 - [x] **§3.f** — visual regression baseline. `e2e/visual.spec.ts`
-  now ships **6 baselines**: cover-default / cover-warp /
-  cover-terminal / dashboard-default / settings-panel /
-  master-lock-modal. Helper `e2e/seedHelpers.ts::seedOnboardedApp`
-  drives the real onboarding flow once per spec (~25 s) so the
-  baselines exercise production code rather than a mocked
-  `useDiaryData` (which would invalidate the first-day guarantees).
+      now ships **6 baselines**: cover-default / cover-warp /
+      cover-terminal / dashboard-default / settings-panel /
+      master-lock-modal. Helper `e2e/seedHelpers.ts::seedOnboardedApp`
+      drives the real onboarding flow once per spec (~25 s) so the
+      baselines exercise production code rather than a mocked
+      `useDiaryData` (which would invalidate the first-day guarantees).
 - [x] **§3.g** — `usePwaInstallPrompt` hook + 30-day dismissal
-  persistence (7 unit cases). `components/PwaInstallBanner.tsx`
-  (new) wired into `DashboardOverlays` next to the backup-recency
-  banner; renders only when the browser fires
-  `beforeinstallprompt` and the user has not dismissed inside the
-  30-day window. 5 additional unit cases for the banner.
+      persistence (7 unit cases). `components/PwaInstallBanner.tsx`
+      (new) wired into `DashboardOverlays` next to the backup-recency
+      banner; renders only when the browser fires
+      `beforeinstallprompt` and the user has not dismissed inside the
+      30-day window. 5 additional unit cases for the banner.
 
 ### 中文执行要点
 
@@ -717,19 +717,27 @@ Goal: make the design system and product story sustainable.
       `services/appSettings.ts` as `argon2VerifierEnabled`.
       Carries forward the GO verdict in
       `docs/security/argon2-eval.md`.
-- [ ] **§4.b-1** — Argon2id verifier exposure in the Settings →
-      Security panel. Read / write the flag through the
-      `SecurityService.{is,set}Argon2idVerifierEnabled` API
-      added in §3.e-2. Includes a one-line copy explaining what
-      the toggle does and a "this only affects future logins"
-      affordance so users don't expect anything to happen until
-      they next unlock.
-- [ ] **§4.b-2** — Argon2id minter rollout. Flip the default minter
-      to Argon2id (OWASP_REC params, see `argon2-eval.md`). Use the
-      existing opportunistic-re-mint pipeline: PBKDF2 hashes upgrade
-      transparently on next successful unlock. Telemetry (locally
-      logged) tracks unlock latency P50 / P95 and fires a console
-      warning if P95 climbs above 350 ms.
+- [x] **§4.b-1 / §4.b-2** — Argon2id minter + Settings exposure.
+      → **Both items shipped together in the Phase 4 W2.1/W2.2 sweep.**
+      Rather than landing the verifier toggle alone (§4.b-1) and
+      then the minter rollout (§4.b-2) in two PRs, W2.1 added the
+      `vector_argon2_minter` flag with a "verify ≥ mint" invariant
+      enforced in `SecurityService.isArgon2idMinterEnabled` itself;
+      W2.2 then surfaced both flags through a single
+      `components/SettingsArgon2idToggle.tsx` switch
+      (`role="switch"` + `aria-checked`) that auto-enables the
+      verifier when the user opts into the minter. This cuts the
+      orphan-hash failure mode the original §4.b-1 / §4.b-2 split
+      was trying to schedule around. Bundle stays clean: lazy
+      `import('./argon2idPoc')` keeps the wasm out of the
+      first-paint bundle until the user actually flips the toggle.
+      9 new test cases pin every quadrant of the
+      (verify ∈ {on, off}) × (mint ∈ {on, off}) flag matrix; 7
+      cases cover the toggle UI. Telemetry budget (P95 ≤ 350 ms)
+      will be enforced in a follow-up `lib/vitals` distribution
+      once we have real-world unlock-latency data; today's
+      benchmark (`docs/security/argon2-eval.md`) shows OWASP_REC
+      sits at 99 ms mean on M-class hardware.
 - [ ] **§4.b-3** — Backup file integrity. Add an Ed25519 signature
       derived from the user's master key over the backup payload, so
       a tampered backup file fails import before it overwrites
@@ -770,29 +778,34 @@ Goal: make the design system and product story sustainable.
       via the existing `npm run i18n:diff` flow. Engineering owns
       the script, content owners do the writing. Translator credit
       in `CONTRIBUTORS.md`.
-- [ ] **§4.c-5** — Public changelog + release process. Adopt
-      semver-tagged releases (`v1.1.0` cuts at Phase 4 close).
-      Each tag ships a signed git tag, a generated release note
-      from `CHANGELOG.md`, and a `dist/` zip for self-hosters.
+- [x] **§4.c-5** — Public changelog + release process. Adopted
+      semver-tagged releases. **`v1.1.0` cut at Phase 4 close**
+      via the W4.3 commit + an annotated `git tag -a v1.1.0`
+      carrying the W1–W4 summary in the tag body. CHANGELOG
+      `[1.1.0]` entry written. Generated `dist/` zip + GPG-signed
+      tag are still queued for the post-push pass once the W1.1
+      PAT scope ships and the v1.0.5-beta.1 + v1.1.0 tags are
+      pushed to origin (CI artefact step on the v1.1.0 ref will
+      do the zip).
 
 ### Effort estimates (engineering only)
 
-| ID    | Title                                          | Effort  |
-| ----- | ---------------------------------------------- | ------: |
-| 4.a-1 | First-day empty-state + sample reflections     |   3 d   |
-| 4.a-2 | Pre-canned first-reflection prompts            |   1 d   |
-| 4.a-3 | Funnel events into Sentry breadcrumbs          |   1 d   |
-| 4.a-4 | Cold-start perf budget + Playwright spec       |   2 d   |
-| 4.b-1 | Argon2id verifier wiring (feature-flagged)     |   1 d   |
-| 4.b-2 | Argon2id minter rollout + opportunistic re-mint|   1 d   |
-| 4.b-3 | Backup signature scheme + tampering test       |   3 d   |
-| 4.b-4 | `SECURITY.md` v2 + disclosure index            |   1 d   |
-| 4.b-5 | Wipe verification affordance + e2e spec        |   1 d   |
-| 4.c-1 | Seven-sage portrait pack (external)            | (asset) |
-| 4.c-2 | App icon / social card / Lighthouse PWA ≥ 90   |   2 d   |
-| 4.c-3 | Self-hosting recipe + upgrade script           |   2 d   |
-| 4.c-4 | i18n backlog drop to zero                      | (content) |
-| 4.c-5 | Tagged releases + signed git tags              |   1 d   |
+| ID    | Title                                           |    Effort |
+| ----- | ----------------------------------------------- | --------: |
+| 4.a-1 | First-day empty-state + sample reflections      |       3 d |
+| 4.a-2 | Pre-canned first-reflection prompts             |       1 d |
+| 4.a-3 | Funnel events into Sentry breadcrumbs           |       1 d |
+| 4.a-4 | Cold-start perf budget + Playwright spec        |       2 d |
+| 4.b-1 | Argon2id verifier wiring (feature-flagged)      |       1 d |
+| 4.b-2 | Argon2id minter rollout + opportunistic re-mint |       1 d |
+| 4.b-3 | Backup signature scheme + tampering test        |       3 d |
+| 4.b-4 | `SECURITY.md` v2 + disclosure index             |       1 d |
+| 4.b-5 | Wipe verification affordance + e2e spec         |       1 d |
+| 4.c-1 | Seven-sage portrait pack (external)             |   (asset) |
+| 4.c-2 | App icon / social card / Lighthouse PWA ≥ 90    |       2 d |
+| 4.c-3 | Self-hosting recipe + upgrade script            |       2 d |
+| 4.c-4 | i18n backlog drop to zero                       | (content) |
+| 4.c-5 | Tagged releases + signed git tags               |       1 d |
 
 **Phase 4 engineering total: ~15 days** (3 weeks at calm cadence).
 Asset / content tracks (4.c-1, 4.c-4) run in parallel and do not
@@ -800,19 +813,19 @@ block engineering exit.
 
 ### KPI Dashboard — Phase 4 targets
 
-| 指标                       | Phase 3 后 | Phase 4 后 (target) |
-| -------------------------- | ---------: | ------------------: |
-| 加权综合                   |        8.9 |             **9.2** |
-| 安全分                     |       9.5+ |             **9.7** |
-| 设计系统                   |        9.0 |              **9.0** (持平) |
-| UX 分                      |        8.7 |             **9.0** |
-| 测试分                     |        9.0 |             **9.2** |
-| 可观测分                   |        8.5 |             **8.8** |
-| 加密迭代轮数               |  Argon2id 评估完成 |   **Argon2id 已上线（默认 minter）** |
-| 视觉回归 baseline 数       |          6 |              **8** (新增 viewer / archive) |
-| i18n 缺失键                |        232 |               **0** |
-| Lighthouse PWA 分          |       未知 |             **≥ 90** |
-| 单 VPS 自部署中位耗时      |       未知 |          **≤ 5 min** |
+| 指标                  |        Phase 3 后 |                Phase 4 后 (target) |
+| --------------------- | ----------------: | ---------------------------------: |
+| 加权综合              |               8.9 |                            **9.2** |
+| 安全分                |              9.5+ |                            **9.7** |
+| 设计系统              |               9.0 |                     **9.0** (持平) |
+| UX 分                 |               8.7 |                            **9.0** |
+| 测试分                |               9.0 |                            **9.2** |
+| 可观测分              |               8.5 |                            **8.8** |
+| 加密迭代轮数          | Argon2id 评估完成 | **Argon2id 已上线（默认 minter）** |
+| 视觉回归 baseline 数  |                 6 |      **8** (新增 viewer / archive) |
+| i18n 缺失键           |               232 |                              **0** |
+| Lighthouse PWA 分     |              未知 |                           **≥ 90** |
+| 单 VPS 自部署中位耗时 |              未知 |                        **≤ 5 min** |
 
 ### Cross-phase notes (carry forward from Phase 3)
 
@@ -824,6 +837,40 @@ block engineering exit.
 - New component files ≤ 400 LOC; > 350 must extract a hook /
   sub-component. Phase 3's max-lines posture stays.
 - Every PR updates `CHANGELOG.md` under `[Unreleased]`.
+
+### Phase 4 engineer-roadmap track (parallel to §4.a / §4.b / §4.c)
+
+> The original §4.a (activation) / §4.b (trust) / §4.c (shipping)
+> charter framed Phase 4 as a product / distribution phase. In
+> parallel, a **single-engineer + agent collaboration** track
+> shipped a tighter set of platform / DX investments under the
+> "W1–W4" labels (`.cursor/plans/vector_engineer_tech_roadmap_v1.x_*`).
+> The W1–W4 track closed in 14 commits over a single multi-hour
+> session; only W1.1 remains, gated on a one-time GitHub PAT
+> scope action.
+
+| ID   | Title                                                             | Status                                                                 |
+| ---- | ----------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| W1.1 | PAT scope + push + push v1.0.5-beta.1                             | ⏳ blocked on maintainer GitHub UI action                              |
+| W1.2 | `lib/vitals.ts` → `Sentry.metrics.distribution`                   | ✅                                                                     |
+| W1.3 | `useDiaryData.{addContainer,deleteContainer}` functional setState | ✅                                                                     |
+| W1.4 | husky + lint-staged + commitlint                                  | ✅                                                                     |
+| W1.5 | Sentry release + sourcemap upload in CI                           | ✅                                                                     |
+| W2.1 | Argon2id default minter behind `vector_argon2_minter` flag        | ✅ (closes §4.b-1 + §4.b-2 with one minter that auto-enables verifier) |
+| W2.2 | Settings → Security toggle for Argon2id + 7-locale i18n           | ✅                                                                     |
+| W2.3 | `server.ts` → `server/aiProviders.ts` extraction                  | ✅                                                                     |
+| W2.4 | Morning Star SSE end-to-end with buffered fallback                | ✅                                                                     |
+| W3.1 | ⌘K / Ctrl+K command palette (cmdk)                                | ✅                                                                     |
+| W3.2 | vite-plugin-pwa service worker + offline shell                    | ✅                                                                     |
+| W3.3 | Refcounted Blob URL attachment cache                              | ✅                                                                     |
+| W4.1 | e2e `data-testid` migration + `docs/e2e-conventions.md`           | ✅                                                                     |
+| W4.2 | `@fontsource` self-hosted Inter + JetBrains Mono                  | ✅                                                                     |
+| W4.3 | CHANGELOG `[1.1.0]` + `git tag -a v1.1.0`                         | ✅ (closes §4.c-5)                                                     |
+| W4.4 | npm audit hard CI gate + Dependabot                               | ✅                                                                     |
+
+See `docs/phase-4-postmortem.md` for the full retrospective
+(headline outcome, what shipped, what didn't go to plan, what we
+learned, KPI table, open follow-ups).
 
 ---
 
