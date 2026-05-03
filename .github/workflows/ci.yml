@@ -80,6 +80,21 @@ jobs:
         if: always()
         run: find dist -name '*.map' -delete
 
-      - name: Audit (production deps, advisory only)
+      # Phase 4 §W4.4 — production-deps audit is now a HARD gate.
+      # Was advisory (`continue-on-error: true`) until release;
+      # now a high/critical CVE in any production dep fails the
+      # build so we can never silently ship a known-vulnerable
+      # bundle to users. Dev-only deps are still allowed to carry
+      # advisories — they don't end up in the user-facing surface.
+      #
+      # If a legitimate false positive blocks a release, override
+      # locally with `npm audit --omit=dev --audit-level=critical`
+      # to confirm what's reported, then either:
+      #   - upgrade the affected dep,
+      #   - add an `overrides` entry in package.json with a fixed
+      #     transitive version, or
+      #   - if neither is possible AND the advisory doesn't apply
+      #     to our usage, document the rationale in a hot-fix
+      #     commit before reverting the gate change.
+      - name: Audit (production deps, hard gate)
         run: npm audit --omit=dev --audit-level=high
-        continue-on-error: true
