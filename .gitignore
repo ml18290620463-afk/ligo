@@ -16,6 +16,7 @@ dist-ssr
 coverage/
 test-results/
 playwright-report/
+storybook-static/
 
 # Editor directories and files
 .vscode/*
