@@ -30,6 +30,17 @@ export const AppStorageKeys = {
    * sensitive content.
    */
   shareCardOptions: 'vector_share_card_options',
+  /**
+   * Phase 3 §3.e-2 — per-installation feature flag for the Argon2id
+   * verifier branch in `SecurityService.verifyPassword`. Stored as
+   * the literal string `"1"` when on, removed when off.
+   *
+   * Default minter (`hashPassword`) stays on PBKDF2 even when the
+   * flag is on. Promotion to default minter is tracked as
+   * Phase 4 §4.b-1 — see `docs/security/argon2-eval.md` for the
+   * rollout plan.
+   */
+  argon2VerifierEnabled: 'vector_argon2_verify',
 } as const;
 
 /** How stale a backup must be before the Dashboard banner appears. */

@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { webcrypto } from 'node:crypto';
 import { SecurityService } from './securityService';
+import { ARGON2_OWASP_MIN, hashArgon2idPassword } from './argon2idPoc';
 
 if (!globalThis.crypto) {
   Object.defineProperty(globalThis, 'crypto', {
@@ -94,5 +95,105 @@ describe('SecurityService', () => {
     // the next successful login.
     expect(SecurityService.needsRehash('legacy-base64==')).toBe(true);
     expect(SecurityService.needsRehash(null)).toBe(false);
+  });
+});
+
+describe('SecurityService — Phase 3 §3.e-2 Argon2id verifier branch', () => {
+  // Pin to OWASP_MIN throughout — the same call lives behind a lazy
+  // import in production so per-test latency dominates the suite.
+  // OWASP_MIN keeps a single derive at ~50 ms on Node 20.
+  const argonParams = ARGON2_OWASP_MIN;
+  const correctPassword = 'right-pw-Φ7';
+  const wrongPassword = 'right-pw-Φ8';
+
+  /**
+   * Cached Argon2id hash so we only pay the WASM derive cost once
+   * for the entire branch suite. Generated lazily by the first test
+   * that needs it.
+   */
+  let cachedArgon2idHash: string | null = null;
+  const getArgon2idHash = async (): Promise<string> => {
+    if (!cachedArgon2idHash) {
+      cachedArgon2idHash = await hashArgon2idPassword(correctPassword, argonParams);
+    }
+    return cachedArgon2idHash;
+  };
+
+  beforeEach(() => {
+    // Default state: flag unset. Each test opts in explicitly.
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('vector_argon2_verify');
+    }
+  });
+
+  afterEach(() => {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('vector_argon2_verify');
+    }
+  });
+
+  it('isArgon2idVerifierEnabled defaults to false when the storage key is absent', () => {
+    expect(SecurityService.isArgon2idVerifierEnabled()).toBe(false);
+  });
+
+  it('setArgon2idVerifierEnabled(true) flips the flag on; passing false flips it off', () => {
+    expect(SecurityService.setArgon2idVerifierEnabled(true)).toBe(true);
+    expect(SecurityService.isArgon2idVerifierEnabled()).toBe(true);
+
+    SecurityService.setArgon2idVerifierEnabled(false);
+    expect(SecurityService.isArgon2idVerifierEnabled()).toBe(false);
+  });
+
+  it('isArgon2idVerifierEnabled accepts both "1" and "true" as truthy', () => {
+    localStorage.setItem('vector_argon2_verify', '1');
+    expect(SecurityService.isArgon2idVerifierEnabled()).toBe(true);
+
+    localStorage.setItem('vector_argon2_verify', 'true');
+    expect(SecurityService.isArgon2idVerifierEnabled()).toBe(true);
+
+    localStorage.setItem('vector_argon2_verify', 'TRUE');
+    expect(SecurityService.isArgon2idVerifierEnabled()).toBe(true);
+
+    localStorage.setItem('vector_argon2_verify', 'no');
+    expect(SecurityService.isArgon2idVerifierEnabled()).toBe(false);
+  });
+
+  it('verifyPassword refuses to validate Argon2id hashes when the flag is OFF', async () => {
+    const hash = await getArgon2idHash();
+    // Salt argument is ignored for Argon2id (the hash carries its own).
+    expect(await SecurityService.verifyPassword(correctPassword, '', hash)).toBe(false);
+  });
+
+  it('verifyPassword validates Argon2id hashes against the correct password when flag is ON', async () => {
+    SecurityService.setArgon2idVerifierEnabled(true);
+    const hash = await getArgon2idHash();
+    expect(await SecurityService.verifyPassword(correctPassword, '', hash)).toBe(true);
+  });
+
+  it('verifyPassword rejects the wrong password against an Argon2id hash when flag is ON', async () => {
+    SecurityService.setArgon2idVerifierEnabled(true);
+    const hash = await getArgon2idHash();
+    expect(await SecurityService.verifyPassword(wrongPassword, '', hash)).toBe(false);
+  });
+
+  it('verifyPassword rejects malformed Argon2id strings (wrong segment count) without throwing', async () => {
+    SecurityService.setArgon2idVerifierEnabled(true);
+    expect(await SecurityService.verifyPassword('pw', '', 'argon2id:v1:not-enough-fields')).toBe(
+      false,
+    );
+  });
+
+  it('PBKDF2 hashes still verify normally while the Argon2id flag is on', async () => {
+    SecurityService.setArgon2idVerifierEnabled(true);
+    const salt = 'shared-salt-A';
+    const pwd = 'PbkdfSurvives@1';
+    const stored = await SecurityService.hashPassword(pwd, salt);
+    expect(await SecurityService.verifyPassword(pwd, salt, stored)).toBe(true);
+    expect(await SecurityService.verifyPassword('wrong', salt, stored)).toBe(false);
+  });
+
+  it('needsRehash returns false for Argon2id hashes (already strongest)', async () => {
+    const argon = await getArgon2idHash();
+    expect(SecurityService.needsRehash(argon)).toBe(false);
   });
 });

@@ -306,10 +306,14 @@ loop more than the original target anticipated.
 These are **not** blockers for Phase 4 entry; they are
 nice-to-haves that emerged during execution:
 
-1. **§3.e-2** — Wire the Argon2id branch into
-   `SecurityService.verifyPassword` (verifier-only, behind a
-   `localStorage` feature flag). Default minter still PBKDF2.
-   ETA: 0.5 day. Owner: any maintainer.
+1. ✅ **§3.e-2** — Argon2id branch wired into
+   `SecurityService.verifyPassword` (verifier-only, behind the
+   `vector_argon2_verify` `localStorage` feature flag, default
+   off). Default minter still PBKDF2 — promotion to default
+   minter is the new §4.b-2 entry. Hash-wasm blob stays out of
+   the production bundle thanks to a lazy dynamic import on the
+   verifier path. 8 new test cases pin the contract. Landed
+   shortly after the postmortem was first written.
 2. **i18n translation backlog** — 232 missing keys across
    `ja / ko / fr / es / de`. The drift script catches new
    additions; the existing backlog is a translator queue, not an

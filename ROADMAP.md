@@ -690,12 +690,40 @@ Goal: make the design system and product story sustainable.
 
 #### B · Trust (security posture + transparency)
 
-- [ ] **§4.b-1 / §3.e-2** — Wire the Argon2id branch into
+- [x] **§3.e-2** — Wire the Argon2id branch into
       `SecurityService.verifyPassword` (**verifier-only**, no minter
       change). Behind a `localStorage` feature flag
-      (`vector_argon2_minter`) defaulting to `false`. Existing
+      (`vector_argon2_verify`) defaulting to `false`. Existing
       PBKDF2 hashes keep verifying without user-visible change.
-      Carries forward the GO verdict in `docs/security/argon2-eval.md`.
+      → **§3.e-2 done** — `services/securityService.ts`:
+      (a) `ARGON2_HASH_PREFIX` recognised in `verifyPassword`,
+      routed through a lazy `import('./argon2idPoc')` so the
+      `hash-wasm` blob (~52 kB) stays out of the bundle until the
+      flag is on; (b) `isArgon2idVerifierEnabled()` /
+      `setArgon2idVerifierEnabled()` public accessors — the latter
+      is the hook that a future Settings → Security panel will
+      wire to its toggle; (c) `needsRehash()` returns false for
+      Argon2id hashes (already strongest, downgrading would be a
+      regression); (d) salt argument is ignored on the Argon2id
+      branch — the hash format embeds its own salt; (e) malformed
+      Argon2id strings return false rather than throwing so the
+      caller can't time-distinguish "wrong password" from
+      "corrupted record". 8 new test cases land in
+      `services/securityService.test.ts` covering flag default /
+      flag toggle / "1" + "true" parsing / off-flag refusal /
+      on-flag accept / on-flag reject-wrong / malformed-hash
+      rejection / PBKDF2 still works while flag on / no-rehash on
+      Argon2id. Storage key is registered in
+      `services/appSettings.ts` as `argon2VerifierEnabled`.
+      Carries forward the GO verdict in
+      `docs/security/argon2-eval.md`.
+- [ ] **§4.b-1** — Argon2id verifier exposure in the Settings →
+      Security panel. Read / write the flag through the
+      `SecurityService.{is,set}Argon2idVerifierEnabled` API
+      added in §3.e-2. Includes a one-line copy explaining what
+      the toggle does and a "this only affects future logins"
+      affordance so users don't expect anything to happen until
+      they next unlock.
 - [ ] **§4.b-2** — Argon2id minter rollout. Flip the default minter
       to Argon2id (OWASP_REC params, see `argon2-eval.md`). Use the
       existing opportunistic-re-mint pipeline: PBKDF2 hashes upgrade

@@ -15,6 +15,21 @@
  *     iteration count, callers may opportunistically re-mint at the current
  *     `ITERATIONS` default and persist the new hash via
  *     `useDiaryData.savePasswordHash`.
+ *
+ * Forwards compatibility — Argon2id verifier (Phase 3 §3.e-2):
+ *   - Hashes minted by `services/argon2idPoc.ts` carry the
+ *     `argon2id:v1:<m>:<t>:<p>:<saltB64>:<hashB64>` prefix and are
+ *     recognised by `verifyPassword` ONLY when the per-installation
+ *     feature flag at `localStorage["vector_argon2_verify"] === "1"`
+ *     is set. Without the flag the branch returns false (treated as
+ *     "wrong password") so a misconfigured rollout cannot leak data.
+ *   - The minter (`hashPassword`) intentionally STAYS on PBKDF2 so we
+ *     don't generate any argon2id hashes the rest of the codebase
+ *     can't reason about until the flag becomes default. Real
+ *     promotion to default is tracked as Phase 4 §4.b-1.
+ *   - The `hash-wasm` blob (~52 kB gzipped) is loaded lazily through
+ *     a dynamic import so disabling the flag keeps it out of the
+ *     production bundle.
  */
 
 const PBKDF2_DEFAULT_ITERATIONS = 600_000;
@@ -37,6 +52,8 @@ const resolveIterationOverride = (): number => {
 export class SecurityService {
   private static ITERATIONS = resolveIterationOverride();
   private static PASSWORD_HASH_PREFIX = 'pbkdf2-sha256:v1';
+  private static ARGON2_HASH_PREFIX = 'argon2id:v1';
+  private static ARGON2_VERIFIER_FLAG_KEY = 'vector_argon2_verify';
   private static RECOVERY_HASH_PREFIX = 'recovery-sha256:v1';
   private static MAX_VERIFY_ITERATIONS = PBKDF2_MAX_VERIFY_ITERATIONS;
   private static ALGO = 'AES-GCM';
@@ -48,13 +65,60 @@ export class SecurityService {
   }
 
   /**
+   * Returns true when the per-installation feature flag at
+   * `localStorage["vector_argon2_verify"]` is set to `"1"` / `"true"`.
+   * `verifyPassword` consults this when it sees an Argon2id-prefixed
+   * hash and refuses to verify when the flag is off so a corrupted /
+   * accidentally-promoted Argon2id record cannot accept any password.
+   *
+   * Wraps the storage read in a try/catch so quota / disabled-storage
+   * environments degrade safely to "feature off".
+   */
+  static isArgon2idVerifierEnabled(): boolean {
+    try {
+      if (typeof localStorage === 'undefined') return false;
+      const value = localStorage.getItem(this.ARGON2_VERIFIER_FLAG_KEY);
+      if (value === null) return false;
+      return value === '1' || value.toLowerCase() === 'true';
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Settings-screen helper. Pass `true` to opt this installation into
+   * the Argon2id verifier branch (still PBKDF2 for new mints — this
+   * only affects hashes the user has already migrated by other means).
+   */
+  static setArgon2idVerifierEnabled(enabled: boolean): boolean {
+    try {
+      if (typeof localStorage === 'undefined') return false;
+      if (enabled) {
+        localStorage.setItem(this.ARGON2_VERIFIER_FLAG_KEY, '1');
+      } else {
+        localStorage.removeItem(this.ARGON2_VERIFIER_FLAG_KEY);
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
    * Returns true when the supplied stored hash was minted with fewer
    * iterations than the current default and should be re-minted on the
    * next successful verification. Returns false for unknown / legacy
    * hash formats.
+   *
+   * Argon2id-prefixed hashes always return false here: Argon2id is
+   * already the strongest algorithm we recognise and re-minting one
+   * back to PBKDF2 would be a downgrade. (When Phase 4 §4.b-1 makes
+   * Argon2id the default minter, this function will start ratcheting
+   * Argon2id parameters too.)
    */
   static needsRehash(storedHash: string | null): boolean {
     if (!storedHash) return false;
+    if (storedHash.startsWith(this.ARGON2_HASH_PREFIX)) return false;
     if (!storedHash.startsWith(this.PASSWORD_HASH_PREFIX)) return true;
     const [, , iterationsRaw] = storedHash.split(':');
     const iterations = Number(iterationsRaw);
@@ -193,6 +257,16 @@ export class SecurityService {
     if (!storedHash) return false;
 
     try {
+      // Argon2id branch (Phase 3 §3.e-2, behind feature flag).
+      // Lazy import keeps the `hash-wasm` blob out of the production
+      // bundle until the flag is on. Salt argument is ignored — the
+      // Argon2id self-describing hash format embeds its own salt.
+      if (storedHash.startsWith(this.ARGON2_HASH_PREFIX)) {
+        if (!this.isArgon2idVerifierEnabled()) return false;
+        const { verifyArgon2idPassword } = await import('./argon2idPoc');
+        return verifyArgon2idPassword(password, storedHash);
+      }
+
       if (storedHash.startsWith(this.PASSWORD_HASH_PREFIX)) {
         const [, , iterationsRaw, expected] = storedHash.split(':');
         const iterations = Number(iterationsRaw);

@@ -6,6 +6,51 @@ versioning follows [SemVer](https://semver.org/).
 
 ## [Unreleased]
 
+### Added (Phase 3 §3.e-2 — Argon2id verifier branch in SecurityService)
+
+- **`services/securityService.ts`** — `verifyPassword` now recognises
+  the `argon2id:v1:` prefix and routes through a lazy
+  `import('./argon2idPoc')`. The lazy import keeps the `hash-wasm`
+  blob (~52 kB gzip) out of the production bundle until the
+  per-installation feature flag is on.
+  - **Feature flag**: `localStorage["vector_argon2_verify"]`. Set to
+    `"1"` (or `"true"` / `"TRUE"`) to enable; remove to disable.
+    Default off so a misconfigured rollout cannot accept any
+    password.
+  - **API**: `SecurityService.isArgon2idVerifierEnabled()` /
+    `setArgon2idVerifierEnabled(boolean)` for the future Settings →
+    Security toggle. Both wrapped in `try/catch` so quota / disabled-
+    storage environments degrade safely to "feature off".
+  - **`needsRehash`** returns `false` for Argon2id hashes — they are
+    already the strongest algorithm we recognise, so the
+    opportunistic re-mint pipeline does not downgrade them back to
+    PBKDF2.
+  - **Behavioural guarantees**: salt argument is ignored on the
+    Argon2id branch (the hash format embeds its own salt); malformed
+    `argon2id:v1:…` strings return `false` rather than throwing so
+    callers cannot timing-distinguish "wrong password" from
+    "corrupted record"; the existing PBKDF2 + legacy SHA-256
+    branches are untouched and continue to verify normally even when
+    the Argon2id flag is on.
+- **`services/appSettings.ts`** — registers the new key under
+  `AppStorageKeys.argon2VerifierEnabled` so a future Settings UI
+  can read / write it through the canonical constant.
+- **`services/securityService.test.ts`** — 8 new test cases:
+  flag-default-off, set/clear toggle, accept both `"1"` and
+  `"true"` as truthy, off-flag refusal of Argon2id hashes, on-flag
+  accept-correct, on-flag reject-wrong, malformed-string rejection,
+  PBKDF2 path still works while Argon2id flag is on, `needsRehash`
+  returns false for Argon2id.
+
+### Notes
+
+- Default minter (`hashPassword`) intentionally stays on PBKDF2.
+  Promotion to default minter is tracked as Phase 4 §4.b-2; rollout
+  plan is documented in `docs/security/argon2-eval.md`.
+- This change closes the only engineering follow-up listed in
+  `docs/phase-3-postmortem.md` §6 — `i18n` translator backlog and
+  the asset-only seven-sage portrait commission remain.
+
 ### Added (Phase 3 close — §3.f baselines + §3.g install banner + postmortem + Phase 4 charter)
 
 #### §3.g · PWA install banner
