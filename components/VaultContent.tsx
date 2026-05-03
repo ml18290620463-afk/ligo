@@ -1,12 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Lock } from 'lucide-react';
-import type {
-  DiaryEntry,
-  GroupingMode,
-  Language,
-  Theme,
-} from '../types';
+import type { DiaryEntry, GroupingMode, Language, Theme } from '../types';
 import type { TranslationDictionary } from '../i18n/translations';
 import { EntryGrid } from './EntryGrid';
 import { VaultListView } from './VaultListView';

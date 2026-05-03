@@ -2,11 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { useBackupReminder } from './useBackupReminder';
 import { AppStorageKeys, BACKUP_REMINDER_MS } from '../services/appSettings';
-import {
-  removeStoredValue,
-  setStoredString,
-  getStoredString,
-} from '../services/browserStorage';
+import { removeStoredValue, setStoredString, getStoredString } from '../services/browserStorage';
 
 beforeEach(() => {
   removeStoredValue(AppStorageKeys.lastBackupAt);
@@ -37,10 +33,7 @@ describe('useBackupReminder', () => {
   });
 
   it('flags overdue when the last export is older than BACKUP_REMINDER_MS', () => {
-    setStoredString(
-      AppStorageKeys.lastBackupAt,
-      String(Date.now() - BACKUP_REMINDER_MS - 1_000),
-    );
+    setStoredString(AppStorageKeys.lastBackupAt, String(Date.now() - BACKUP_REMINDER_MS - 1_000));
     const { result } = renderHook(() => useBackupReminder(3));
     expect(result.current.backupReminderActive).toBe(true);
     expect(result.current.daysSinceBackup).not.toBeNull();
@@ -48,10 +41,7 @@ describe('useBackupReminder', () => {
   });
 
   it('recordBackup() persists the new timestamp and clears the overdue state immediately', () => {
-    setStoredString(
-      AppStorageKeys.lastBackupAt,
-      String(Date.now() - BACKUP_REMINDER_MS - 1_000),
-    );
+    setStoredString(AppStorageKeys.lastBackupAt, String(Date.now() - BACKUP_REMINDER_MS - 1_000));
     const { result } = renderHook(() => useBackupReminder(3));
     expect(result.current.backupReminderActive).toBe(true);
     act(() => result.current.recordBackup());

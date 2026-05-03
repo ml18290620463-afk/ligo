@@ -235,11 +235,7 @@ export const ArchiveEntryCard: React.FC<ArchiveEntryCardProps> = ({
           <div
             className={`p-1.5 rounded transition-colors ${isTimeLocked ? 'bg-vector-magenta/10 text-vector-magenta shadow-glow-vector-magenta-soft' : 'bg-cyan-500/5 text-cyan-600'}`}
           >
-            {isTimeLocked ? (
-              <Lock className="w-3.5 h-3.5" />
-            ) : (
-              <Shield className="w-3.5 h-3.5" />
-            )}
+            {isTimeLocked ? <Lock className="w-3.5 h-3.5" /> : <Shield className="w-3.5 h-3.5" />}
           </div>
           {entry.attachment && <Paperclip className="w-3 h-3 text-cyan-500" />}
         </div>

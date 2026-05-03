@@ -10,18 +10,18 @@
 
 ## 1 · Headline outcome
 
-| KPI | Phase 2 exit | **Phase 3 exit** | Target |
-|---|---:|---:|---:|
-| Test files / cases | 78 / 432 | **97 / 543** | (no target) |
-| ESLint warnings (`--max-warnings=0`) | 0 | **0** | 0 |
-| `check-beta.sh` invariants | 27/27 | **28/28** | 28/28 |
-| Raw colour literals in `components/**/*.tsx` | 439 | **1** | ≤ 5 |
-| `--color-vector-*` brand tokens | 0 | **25** | — |
-| `@utility` blocks in `index.css` | 5 | **49** | — |
-| Visual-regression baselines | 0 | **6** | 5+ |
-| Storybook stories | 0 | **57** (10 components) | 10+ |
-| Production main bundle (gz) | 96.43 kB | **97.21 kB** | ≤ +2 kB |
-| KDF migration documented | — | **`argon2-eval.md` GO** | written-up |
+| KPI                                          | Phase 2 exit |        **Phase 3 exit** |      Target |
+| -------------------------------------------- | -----------: | ----------------------: | ----------: |
+| Test files / cases                           |     78 / 432 |            **97 / 543** | (no target) |
+| ESLint warnings (`--max-warnings=0`)         |            0 |                   **0** |           0 |
+| `check-beta.sh` invariants                   |        27/27 |               **28/28** |       28/28 |
+| Raw colour literals in `components/**/*.tsx` |          439 |                   **1** |         ≤ 5 |
+| `--color-vector-*` brand tokens              |            0 |                  **25** |           — |
+| `@utility` blocks in `index.css`             |            5 |                  **49** |           — |
+| Visual-regression baselines                  |            0 |                   **6** |          5+ |
+| Storybook stories                            |            0 |  **57** (10 components) |         10+ |
+| Production main bundle (gz)                  |     96.43 kB |            **97.21 kB** |     ≤ +2 kB |
+| KDF migration documented                     |            — | **`argon2-eval.md` GO** |  written-up |
 
 The headline number: design-token migration backlog cratered from
 **439 → 1** (−99.8 %), with **zero pixel-level regressions** on
@@ -219,6 +219,7 @@ grep -lE 'hash-wasm|modern-screenshot' dist/assets/*.js
 ```
 
 Adopt for any future "user might never trigger this" surface:
+
 - Sentry session replay
 - PDF.js / OCR
 - Web-Worker-backed search
@@ -270,6 +271,7 @@ all landed in one branch. Phase 4 (or §3.e-2) can pick it up
 without re-litigating the decision.
 
 Adopt for any future "load-bearing security change":
+
 - Ed25519 signing for backup files
 - WebAuthn user-presence enforcement
 - Server-side proxy egress hardening
@@ -279,21 +281,21 @@ Adopt for any future "load-bearing security change":
 
 ## 5 · KPI table — Phase 3 close
 
-| 指标                 | Phase 2 后 | **Phase 3 后** | Target |
-| -------------------- | ---------: | -------------: | -----: |
-| 安全分               |        9.2 |       **9.5+** |    9.5 |
-| a11y 分              |        8.2 |       **8.5+** |    8.5 |
-| 合规分               |        8.0 |        **8.0** |    8.0 |
-| 可观测分             |        8.5 |        **8.5** |    8.5 |
-| 测试分               |        8.5 |        **9.0** |    9.0 |
-| UX 分                |        8.5 |        **8.7** |    8.7 |
-| 架构分               |        8.0 |        **8.5** |    8.5 |
-| 设计系统             |        6.5 |        **9.0** |    8.5 |
-| **加权综合**         |    **8.5** |        **8.9** |    8.8 |
-| 4 大组件最大行数     |       ≤350 |        ≤350    |   ≤350 |
-| 组件 jsx-a11y 违规   |          0 |          **0** |      0 |
-| 加密迭代轮数         |       600k |  **Argon2id 评估完成 GO** | 评估完成 |
-| 仓库公开 markdown 数 |          7 |          **9** |      9 |
+| 指标                 | Phase 2 后 |           **Phase 3 后** |   Target |
+| -------------------- | ---------: | -----------------------: | -------: |
+| 安全分               |        9.2 |                 **9.5+** |      9.5 |
+| a11y 分              |        8.2 |                 **8.5+** |      8.5 |
+| 合规分               |        8.0 |                  **8.0** |      8.0 |
+| 可观测分             |        8.5 |                  **8.5** |      8.5 |
+| 测试分               |        8.5 |                  **9.0** |      9.0 |
+| UX 分                |        8.5 |                  **8.7** |      8.7 |
+| 架构分               |        8.0 |                  **8.5** |      8.5 |
+| 设计系统             |        6.5 |                  **9.0** |      8.5 |
+| **加权综合**         |    **8.5** |                  **8.9** |      8.8 |
+| 4 大组件最大行数     |       ≤350 |                     ≤350 |     ≤350 |
+| 组件 jsx-a11y 违规   |          0 |                    **0** |        0 |
+| 加密迭代轮数         |       600k | **Argon2id 评估完成 GO** | 评估完成 |
+| 仓库公开 markdown 数 |          7 |                    **9** |        9 |
 
 Design-system score overshot 8.5 → **9.0** because the §3.a-2
 sweep + Storybook + visual baselines together changed the daily

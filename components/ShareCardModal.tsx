@@ -6,10 +6,7 @@ import type { TranslationDictionary } from '../i18n/translations';
 import { CyberButton } from './CyberButton';
 import { ShareCard, type ShareCardLabels } from './ShareCard';
 import { useShareCardOptions } from '../hooks/useShareCardOptions';
-import {
-  useShareCardExport,
-  type ShareCardExportStatus,
-} from '../hooks/useShareCardExport';
+import { useShareCardExport, type ShareCardExportStatus } from '../hooks/useShareCardExport';
 import { SHARE_CARD_DIMENSIONS } from '../lib/shareCardPalette';
 
 interface ShareCardModalProps {
@@ -90,8 +87,7 @@ export const ShareCardModal: React.FC<ShareCardModalProps> = ({
     theme === 'light'
       ? 'bg-vector-paper-white border-slate-200 text-vector-ink-strong'
       : 'bg-vector-night-navy border-cyan-950/60 text-cyan-100';
-  const subtleText =
-    theme === 'light' ? 'text-vector-slate-soft' : 'text-vector-slate-chrome';
+  const subtleText = theme === 'light' ? 'text-vector-slate-soft' : 'text-vector-slate-chrome';
 
   return (
     <AnimatePresence>
@@ -175,8 +171,7 @@ export const ShareCardModal: React.FC<ShareCardModalProps> = ({
                     icon={Tag}
                     label={t.shareCardShowTags ?? 'Show tags'}
                     description={
-                      t.shareCardShowTagsHint ??
-                      'Tag chips below the title. Usually safe to share.'
+                      t.shareCardShowTagsHint ?? 'Tag chips below the title. Usually safe to share.'
                     }
                     checked={options.showTags}
                     onChange={(v) => updateOption('showTags', v)}
@@ -220,8 +215,8 @@ export const ShareCardModal: React.FC<ShareCardModalProps> = ({
                   >
                     <Download className="w-4 h-4 mr-2" aria-hidden="true" />
                     {status === 'rendering'
-                      ? t.shareCardRendering ?? 'Rendering…'
-                      : t.shareCardSavePng ?? 'Save PNG'}
+                      ? (t.shareCardRendering ?? 'Rendering…')
+                      : (t.shareCardSavePng ?? 'Save PNG')}
                   </CyberButton>
                 </div>
               </div>

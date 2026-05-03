@@ -48,8 +48,7 @@ export const MasterLockHeader: React.FC<MasterLockHeaderProps> = ({
           onClick={onBackFromRecovery}
           className={`text-[10px] font-mono uppercase tracking-widest flex items-center gap-2 ${theme === 'light' ? 'text-slate-400 hover:text-slate-900' : 'text-cyan-600 hover:text-cyan-400'}`}
         >
-          <ArrowRight className="w-3 h-3 rotate-180" />{' '}
-          {language === 'zh' ? '返回解锁' : 'BACK'}
+          <ArrowRight className="w-3 h-3 rotate-180" /> {language === 'zh' ? '返回解锁' : 'BACK'}
         </button>
       )}
     </div>

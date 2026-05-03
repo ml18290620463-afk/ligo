@@ -40,15 +40,12 @@ export const useDashboardImportConfirm = (): DashboardImportConfirmState => {
     [],
   );
 
-  const resolveConfirm = useCallback(
-    (ok: boolean) => {
-      setPending((current) => {
-        current?.resolve(ok);
-        return null;
-      });
-    },
-    [],
-  );
+  const resolveConfirm = useCallback((ok: boolean) => {
+    setPending((current) => {
+      current?.resolve(ok);
+      return null;
+    });
+  }, []);
 
   return { pending, confirm, resolveConfirm };
 };

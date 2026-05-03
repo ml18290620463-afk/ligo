@@ -143,9 +143,7 @@ describe('useRecoveryFlow', () => {
     );
 
     const onUnlock = vi.fn();
-    const { result } = renderHook(() =>
-      useRecoveryFlow({ language: 'en', t: baseT, onUnlock }),
-    );
+    const { result } = renderHook(() => useRecoveryFlow({ language: 'en', t: baseT, onUnlock }));
 
     act(() => result.current.setRecoveryInput(VALID_RECOVERY));
     act(() => result.current.setNewPassword(VALID_PASSWORD));

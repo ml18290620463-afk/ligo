@@ -37,9 +37,7 @@ export const SettingsRecoveryView: React.FC<SettingsRecoveryViewProps> = ({
       >
         <ArrowLeft className="w-5 h-5" />
       </button>
-      <h4
-        className={`text-lg font-bold ${theme === 'light' ? 'text-slate-800' : 'text-cyan-100'}`}
-      >
+      <h4 className={`text-lg font-bold ${theme === 'light' ? 'text-slate-800' : 'text-cyan-100'}`}>
         {t.emergencyAnchor}
       </h4>
     </div>

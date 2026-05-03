@@ -20,7 +20,12 @@ interface StatisticsIdentityCardProps {
  * statistics widget. Pure SVG, no DOM events.
  */
 const Sailboat: React.FC<{ className?: string; theme: Theme }> = ({ className, theme }) => (
-  <svg viewBox="0 0 100 100" className={className} xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <svg
+    viewBox="0 0 100 100"
+    className={className}
+    xmlns="http://www.w3.org/2000/svg"
+    aria-hidden="true"
+  >
     <polygon
       points="20,70 80,70 65,85 35,85"
       fill="none"

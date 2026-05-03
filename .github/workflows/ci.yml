@@ -76,9 +76,19 @@ jobs:
           sourcemaps: ./dist/assets
           url_prefix: '~/assets'
 
+      # `if: always()` so the cleanup runs even when the upload step
+      # itself failed — defensive: we do NOT want to ship .map files
+      # publicly. Wrapped in an existence check so the step is a
+      # no-op when an earlier failure (lint / typecheck / test /
+      # audit) skipped the build and dist/ doesn't exist.
       - name: Strip sourcemaps from deployable artefact
         if: always()
-        run: find dist -name '*.map' -delete
+        run: |
+          if [ -d dist ]; then
+            find dist -name '*.map' -delete
+          else
+            echo "dist/ not present; nothing to strip"
+          fi
 
       # Phase 4 §W4.4 — production-deps audit is now a HARD gate.
       # Was advisory (`continue-on-error: true`) until release;

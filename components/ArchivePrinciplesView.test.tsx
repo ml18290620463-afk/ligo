@@ -41,7 +41,9 @@ describe('ArchivePrinciplesView', () => {
     render(<ArchivePrinciplesView {...baseProps} onAddPrinciple={onAddPrinciple} />);
     // The label and the submit button share the same localised string;
     // pick the actual <button>.
-    const button = screen.getAllByRole('button').find((b) => b.textContent?.includes(t.addPrinciple));
+    const button = screen
+      .getAllByRole('button')
+      .find((b) => b.textContent?.includes(t.addPrinciple));
     expect(button).toBeTruthy();
     fireEvent.click(button!);
     expect(onAddPrinciple).not.toHaveBeenCalled();
@@ -53,7 +55,9 @@ describe('ArchivePrinciplesView', () => {
     fireEvent.change(screen.getByLabelText(t.addPrinciple), {
       target: { value: 'Be water, friend' },
     });
-    const button = screen.getAllByRole('button').find((b) => b.textContent?.includes(t.addPrinciple));
+    const button = screen
+      .getAllByRole('button')
+      .find((b) => b.textContent?.includes(t.addPrinciple));
     fireEvent.click(button!);
     expect(onAddPrinciple).toHaveBeenCalledTimes(1);
     const [text, year, showOnHome] = onAddPrinciple.mock.calls[0];

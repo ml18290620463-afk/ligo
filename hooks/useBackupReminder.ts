@@ -50,9 +50,7 @@ export const useBackupReminder = (entriesCount: number): BackupReminder => {
   })();
 
   const daysSinceBackup =
-    lastBackupAt != null
-      ? Math.floor((Date.now() - lastBackupAt) / (24 * 60 * 60 * 1000))
-      : null;
+    lastBackupAt != null ? Math.floor((Date.now() - lastBackupAt) / (24 * 60 * 60 * 1000)) : null;
 
   const recordBackup = useCallback((timestamp: number = Date.now()) => {
     setStoredString(AppStorageKeys.lastBackupAt, String(timestamp));

@@ -49,12 +49,6 @@ export const Locked: Story = {
 export const Editable: Story = {
   render: function EditableStory(args) {
     const [value, setValue] = useState(args.customIdentity);
-    return (
-      <StatisticsIdentityCard
-        {...args}
-        customIdentity={value}
-        setCustomIdentity={setValue}
-      />
-    );
+    return <StatisticsIdentityCard {...args} customIdentity={value} setCustomIdentity={setValue} />;
   },
 };

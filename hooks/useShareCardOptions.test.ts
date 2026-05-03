@@ -1,10 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { AppStorageKeys } from '../services/appSettings';
-import {
-  SHARE_CARD_DEFAULT_OPTIONS,
-  useShareCardOptions,
-} from './useShareCardOptions';
+import { SHARE_CARD_DEFAULT_OPTIONS, useShareCardOptions } from './useShareCardOptions';
 
 describe('useShareCardOptions (Phase 3 §3.h)', () => {
   beforeEach(() => {

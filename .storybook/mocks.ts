@@ -53,9 +53,27 @@ export const sampleMorningStarMetrics: Record<string, number> = {
 };
 
 export const samplePrinciples = [
-  { id: 'p-1', text: '记录优先于灵感', year: 2024, createdAt: Date.UTC(2024, 0, 1), showOnHome: true },
-  { id: 'p-2', text: '怀疑你最相信的事', year: 2024, createdAt: Date.UTC(2024, 5, 1), showOnHome: true },
-  { id: 'p-3', text: '速度第二，方向第一', year: 2025, createdAt: Date.UTC(2025, 1, 1), showOnHome: true },
+  {
+    id: 'p-1',
+    text: '记录优先于灵感',
+    year: 2024,
+    createdAt: Date.UTC(2024, 0, 1),
+    showOnHome: true,
+  },
+  {
+    id: 'p-2',
+    text: '怀疑你最相信的事',
+    year: 2024,
+    createdAt: Date.UTC(2024, 5, 1),
+    showOnHome: true,
+  },
+  {
+    id: 'p-3',
+    text: '速度第二，方向第一',
+    year: 2025,
+    createdAt: Date.UTC(2025, 1, 1),
+    showOnHome: true,
+  },
 ];
 
-export const noopRef = <T,>(): RefObject<T | null> => ({ current: null });
+export const noopRef = <T>(): RefObject<T | null> => ({ current: null });

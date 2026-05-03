@@ -318,10 +318,7 @@ const ShareCardBody: React.FC<{
           textAlign: 'center',
         }}
       >
-        <span
-          aria-hidden="true"
-          style={{ fontSize: '64px', color: palette.textMuted }}
-        >
+        <span aria-hidden="true" style={{ fontSize: '64px', color: palette.textMuted }}>
           ✦
         </span>
         <p
@@ -392,6 +389,8 @@ const ShareCardFooter: React.FC<{
     }}
   >
     <span style={{ color: palette.textSecondary }}>@{identity}</span>
-    <span>{attribution} · v{APP_VERSION}</span>
+    <span>
+      {attribution} · v{APP_VERSION}
+    </span>
   </div>
 );

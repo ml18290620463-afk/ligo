@@ -22,9 +22,7 @@ describe('useGuidingStarsEditor', () => {
   });
 
   it('toggleTempStar adds and removes within the maxSelected cap', () => {
-    const { result } = renderHook(() =>
-      useGuidingStarsEditor(baseArgs({ maxSelected: 2 })),
-    );
+    const { result } = renderHook(() => useGuidingStarsEditor(baseArgs({ maxSelected: 2 })));
     act(() => result.current.toggleTempStar('A'));
     act(() => result.current.toggleTempStar('B'));
     expect(result.current.tempSelected).toEqual(['A', 'B']);

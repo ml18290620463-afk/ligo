@@ -42,10 +42,7 @@ export const PwaInstallBanner: React.FC<PwaInstallBannerProps> = ({
     theme === 'light'
       ? 'border-vector-cyan-brand/30 hover:bg-vector-cyan-brand hover:text-white'
       : 'border-cyan-400/40 hover:bg-cyan-500/20';
-  const dismiss =
-    theme === 'light'
-      ? 'hover:bg-vector-cyan-brand/10'
-      : 'hover:bg-cyan-500/10';
+  const dismiss = theme === 'light' ? 'hover:bg-vector-cyan-brand/10' : 'hover:bg-cyan-500/10';
   return (
     <div
       role="status"

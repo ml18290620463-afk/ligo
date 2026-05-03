@@ -17,10 +17,7 @@ interface StatisticsRecoveryRowProps {
 const buildStatusCopy = (language: Language, passwordHash: string | null) => {
   if (passwordHash) {
     return {
-      hint:
-        language === 'zh'
-          ? '32位唯一凭证已备案'
-          : '32-char logic anchor secured',
+      hint: language === 'zh' ? '32位唯一凭证已备案' : '32-char logic anchor secured',
       cta: language === 'zh' ? '点击检视' : 'Click to View',
     };
   }
@@ -55,7 +52,9 @@ export const StatisticsRecoveryRow: React.FC<StatisticsRecoveryRowProps> = ({
       className={`w-full flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition-all text-left ${theme === 'light' ? 'bg-cyan-50/50 border-cyan-100/50 hover:bg-cyan-100/50' : 'bg-vector-cyan-neon/5 border-vector-navy-deep/30 hover:border-vector-cyan-neon/30'}`}
     >
       <div className="flex items-center gap-3">
-        <Anchor className={`w-5 h-5 ${theme === 'light' ? 'text-cyan-500' : 'text-vector-cyan-neon'}`} />
+        <Anchor
+          className={`w-5 h-5 ${theme === 'light' ? 'text-cyan-500' : 'text-vector-cyan-neon'}`}
+        />
         <span
           className={`text-sm font-bold ${theme === 'light' ? 'text-cyan-700' : 'text-vector-ice-pale'}`}
         >

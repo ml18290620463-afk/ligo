@@ -28,10 +28,7 @@ export interface UseShareCardExportResult {
    *  share-card root) and trigger a PNG download. Resolves with
    *  the produced Blob so callers can wire "Copy" / "Share via
    *  Web Share API" alongside "Save". */
-  exportPng: (
-    node: HTMLElement | null,
-    options?: ShareCardExportOptions,
-  ) => Promise<Blob | null>;
+  exportPng: (node: HTMLElement | null, options?: ShareCardExportOptions) => Promise<Blob | null>;
   /** Reset to `idle` so consumers can dismiss an error / success
    *  state without a follow-up export. */
   reset: () => void;

@@ -99,11 +99,7 @@ export const ArchiveVaultEntries: React.FC<ArchiveVaultEntriesProps> = ({
                   <span
                     className={`text-[10px] font-mono opacity-40 uppercase tracking-widest ${theme === 'light' ? 'text-slate-500' : 'text-green-500'}`}
                   >
-                    {groupingMode === 'year'
-                      ? t.year
-                      : groupingMode === 'month'
-                        ? t.month
-                        : t.day}
+                    {groupingMode === 'year' ? t.year : groupingMode === 'month' ? t.month : t.day}
                   </span>
                   <span
                     className={`text-4xl font-bold transition-colors ${theme === 'light' ? 'text-vector-ink-strong/80 group-hover:text-vector-cyan-brand' : 'text-green-500/80 group-hover:text-green-400'}`}

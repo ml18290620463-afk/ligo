@@ -81,12 +81,6 @@ export const Light: Story = {
 export const Interactive: Story = {
   render: function InteractiveStory(args) {
     const [pw, setPw] = useState(args.decryptionPassword);
-    return (
-      <ViewerSealedPanel
-        {...args}
-        decryptionPassword={pw}
-        setDecryptionPassword={setPw}
-      />
-    );
+    return <ViewerSealedPanel {...args} decryptionPassword={pw} setDecryptionPassword={setPw} />;
   },
 };

@@ -19,11 +19,7 @@ export interface UseMasterPasswordVerifyArgs {
   /** Called whenever the Enter-key path consumes a failure attempt. */
   onEnterFailure?: () => void;
   /** Override `SecurityService.verifyPassword` for tests. */
-  verifyPassword?: (
-    password: string,
-    salt: string,
-    hash: string,
-  ) => Promise<boolean>;
+  verifyPassword?: (password: string, salt: string, hash: string) => Promise<boolean>;
   /** Time the parent should display the success ritual before the
    *  `onUnlock` callback fires. Defaults to 800 ms (auto-verify) /
    *  500 ms (Enter key) — the original MasterLock UX. */
@@ -129,12 +125,7 @@ export const useMasterPasswordVerify = ({
   ]);
 
   const submitNow = useCallback(async (): Promise<boolean> => {
-    if (
-      password.length < minLength ||
-      isRitualActive ||
-      disabled ||
-      isSuccess
-    ) {
+    if (password.length < minLength || isRitualActive || disabled || isSuccess) {
       return false;
     }
     try {

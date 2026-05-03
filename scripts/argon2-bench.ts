@@ -89,7 +89,11 @@ const benchPbkdf2 = async (iterations: number): Promise<BenchRow> => {
   };
 };
 
-const benchArgon2id = async (label: string, params: Argon2idParams, notes: string): Promise<BenchRow> => {
+const benchArgon2id = async (
+  label: string,
+  params: Argon2idParams,
+  notes: string,
+): Promise<BenchRow> => {
   const samples: number[] = [];
   // Warm-up — first call also pays the WASM instantiation cost
   // (~30 ms on a modern laptop), which we deliberately exclude.

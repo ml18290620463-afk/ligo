@@ -58,9 +58,7 @@ export const ArchiveVaultHeader: React.FC<ArchiveVaultHeaderProps> = ({
         >
           {t.appTitle}
         </h1>
-        <p
-          className={`text-xs mt-1 ${theme === 'light' ? 'text-slate-400' : 'text-slate-500'}`}
-        >
+        <p className={`text-xs mt-1 ${theme === 'light' ? 'text-slate-400' : 'text-slate-500'}`}>
           {t.archiveStatus}
         </p>
       </div>

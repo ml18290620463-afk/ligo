@@ -91,7 +91,8 @@ const uint8ToBase64 = (u8: Uint8Array): string => {
 };
 
 const base64ToUint8 = (base64: string): Uint8Array => {
-  const binary = typeof atob === 'function' ? atob(base64) : Buffer.from(base64, 'base64').toString('binary');
+  const binary =
+    typeof atob === 'function' ? atob(base64) : Buffer.from(base64, 'base64').toString('binary');
   const u8 = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i += 1) u8[i] = binary.charCodeAt(i);
   return u8;

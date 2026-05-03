@@ -78,9 +78,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   // Go Home Animation State
   const [isSailingHome, setIsSailingHome] = useState(false);
 
-  const { backupReminderActive, daysSinceBackup, recordBackup } = useBackupReminder(
-    entries.length,
-  );
+  const { backupReminderActive, daysSinceBackup, recordBackup } = useBackupReminder(entries.length);
 
   const pwaInstall = usePwaInstallPrompt();
 

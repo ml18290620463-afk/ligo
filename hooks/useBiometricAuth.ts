@@ -9,9 +9,7 @@ export interface UseBiometricAuthArgs {
   /** Disable scanning entirely (e.g. while the lockout timer is armed). */
   disabled?: boolean;
   /** Override `navigator.credentials.create` for tests. */
-  createCredential?: (
-    options: CredentialCreationOptions,
-  ) => Promise<Credential | null>;
+  createCredential?: (options: CredentialCreationOptions) => Promise<Credential | null>;
   /** Override `PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable`
    *  for tests. */
   probeAvailable?: () => Promise<boolean>;
@@ -134,8 +132,7 @@ export const useBiometricAuth = ({
         publicKey: { ...DEFAULT_OPTIONS.publicKey!, challenge },
       };
 
-      const create =
-        createCredential ?? ((opts) => navigator.credentials.create(opts));
+      const create = createCredential ?? ((opts) => navigator.credentials.create(opts));
       await create(options);
 
       setIsSuccess(true);

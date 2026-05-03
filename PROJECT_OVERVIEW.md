@@ -32,14 +32,14 @@ reflection. Three things make it different:
 
 ## 2 · Where to Start (5-minute tour)
 
-| Order | File | What you'll learn |
-|---|---|---|
-| 1 | `README.md` | How to install + run locally |
-| 2 | `EVALUATION.md` | Multi-dimension production-readiness scorecard (the original brief that drove everything below) |
-| 3 | `ROADMAP.md` | Phase 1/2/3/4 charter, with checkboxes that mirror commit reality (37/61 ✅, 24 unticked are intentional v1.x post-launch items) |
-| 4 | `CHANGELOG.md` | Per-commit highlights for every Phase since v1.0.5 baseline |
-| 5 | `docs/phase-3-postmortem.md` | Honest "what we shipped vs what we set out to do" delta + open follow-ups |
-| 6 | `docs/security/argon2-eval.md` | Argon2id GO/NO-GO writeup with benchmark numbers |
+| Order | File                           | What you'll learn                                                                                                                |
+| ----- | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | `README.md`                    | How to install + run locally                                                                                                     |
+| 2     | `EVALUATION.md`                | Multi-dimension production-readiness scorecard (the original brief that drove everything below)                                  |
+| 3     | `ROADMAP.md`                   | Phase 1/2/3/4 charter, with checkboxes that mirror commit reality (37/61 ✅, 24 unticked are intentional v1.x post-launch items) |
+| 4     | `CHANGELOG.md`                 | Per-commit highlights for every Phase since v1.0.5 baseline                                                                      |
+| 5     | `docs/phase-3-postmortem.md`   | Honest "what we shipped vs what we set out to do" delta + open follow-ups                                                        |
+| 6     | `docs/security/argon2-eval.md` | Argon2id GO/NO-GO writeup with benchmark numbers                                                                                 |
 
 ---
 
@@ -85,25 +85,25 @@ Tag: `v1.0.5-beta.1` exists locally (annotated, not yet pushed
 because of PAT issue). Every Phase 1 invariant validated by
 `scripts/check-beta.sh` (28/28 PASS).
 
-| Section | Highlight |
-|---|---|
-| Security | PBKDF2 100k → 600k (env-overridable, with min/max guards); hash mirror removed from localStorage; PDF worker localised; prompt envelope; helmet + Origin allowlist + optional bearer; SIGTERM/SIGINT graceful shutdown; @sentry/node lazy init |
-| A11y | viewport `maximum-scale=1.0` removed; `eslint-plugin-jsx-a11y --max-warnings=0`; global `:focus-visible`; `useReducedMotion` adopted via `useMotionPreference`; axe-playwright spec on cover/onboarding |
-| Legal | LICENSE / PRIVACY / TERMS / SECURITY / CHANGELOG; package.json metadata; Morning Star AI disclaimer in all 7 locales |
-| Observability | server-side Sentry; SIGTERM; immutable cache for `dist/assets/*`; web-vitals → Sentry custom metrics |
-| Brand | 1200×630 OG image; 192/512 maskable PNG icons; OG/Twitter card meta |
+| Section       | Highlight                                                                                                                                                                                                                                      |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Security      | PBKDF2 100k → 600k (env-overridable, with min/max guards); hash mirror removed from localStorage; PDF worker localised; prompt envelope; helmet + Origin allowlist + optional bearer; SIGTERM/SIGINT graceful shutdown; @sentry/node lazy init |
+| A11y          | viewport `maximum-scale=1.0` removed; `eslint-plugin-jsx-a11y --max-warnings=0`; global `:focus-visible`; `useReducedMotion` adopted via `useMotionPreference`; axe-playwright spec on cover/onboarding                                        |
+| Legal         | LICENSE / PRIVACY / TERMS / SECURITY / CHANGELOG; package.json metadata; Morning Star AI disclaimer in all 7 locales                                                                                                                           |
+| Observability | server-side Sentry; SIGTERM; immutable cache for `dist/assets/*`; web-vitals → Sentry custom metrics                                                                                                                                           |
+| Brand         | 1200×630 OG image; 192/512 maskable PNG icons; OG/Twitter card meta                                                                                                                                                                            |
 
 ### Phase 2 — Code Health (12 commits, 6 component split tracks)
 
-| Component | Before | After | Reduction |
-|---|---:|---:|---:|
-| `Viewer.tsx` | 1247 | 312 | −75% |
-| `MasterLock.tsx` | 866 | 190 | −78% |
-| `SettingsPanel.tsx` | 988 | 282 | −71% |
-| `ArchiveVault.tsx` | 805 | 143 | −82% |
-| `Dashboard.tsx` | 983 | 350 | −64% |
-| `StatisticsWidget.tsx` | 354 | 124 | −65% |
-| **Total** | **5243** | **1413** | **−73%** |
+| Component              |   Before |    After | Reduction |
+| ---------------------- | -------: | -------: | --------: |
+| `Viewer.tsx`           |     1247 |      312 |      −75% |
+| `MasterLock.tsx`       |      866 |      190 |      −78% |
+| `SettingsPanel.tsx`    |      988 |      282 |      −71% |
+| `ArchiveVault.tsx`     |      805 |      143 |      −82% |
+| `Dashboard.tsx`        |      983 |      350 |      −64% |
+| `StatisticsWidget.tsx` |      354 |      124 |      −65% |
+| **Total**              | **5243** | **1413** |  **−73%** |
 
 Plus: 30+ extracted hooks (each with ≥5 test cases), 20+ extracted
 sub-components, all under 350 LOC. Coverage thresholds ratchet from
@@ -111,17 +111,17 @@ sub-components, all under 350 LOC. Coverage thresholds ratchet from
 
 ### Phase 3 — Long-Term Investments (10 commits)
 
-| ID | Item | Where to look |
-|---|---|---|
-| §3.a | Design tokens + lint scoreboard + first-wave migration | `lib/designTokens.ts`, `index.css` `@theme` block, `scripts/lint-tokens.mjs` |
-| §3.b | Storybook 10 + 11 stories | `.storybook/`, `components/*.stories.tsx` |
-| §3.c | Seven-sage portraits | **Pending** — external commission |
-| §3.d | i18n drift detector + CI gate | `scripts/i18n-diff.ts` (also wired into `check-beta.sh`) |
-| §3.e | Argon2id PoC + benchmark + writeup | `services/argon2idPoc.ts`, `scripts/argon2-bench.ts`, `docs/security/argon2-eval.md` |
-| §3.e-2 | Argon2id verifier wired into `verifyPassword` (flag-gated) | `services/securityService.ts:188`, 8 new test cases |
-| §3.f | Visual regression with seeded baselines | `e2e/visual.spec.ts`, `e2e/seedHelpers.ts`, `e2e/visual.spec.ts-snapshots/` (6 PNG baselines) |
-| §3.g | PWA install banner + dismissal hook | `components/PwaInstallBanner.tsx`, `hooks/usePwaInstallPrompt.ts` |
-| §3.h | Privacy-first ShareCard PNG export | `components/ShareCard*.tsx`, `hooks/useShareCard*.ts`, `lib/{canvas,shareCard}Palette.ts` |
+| ID     | Item                                                       | Where to look                                                                                 |
+| ------ | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| §3.a   | Design tokens + lint scoreboard + first-wave migration     | `lib/designTokens.ts`, `index.css` `@theme` block, `scripts/lint-tokens.mjs`                  |
+| §3.b   | Storybook 10 + 11 stories                                  | `.storybook/`, `components/*.stories.tsx`                                                     |
+| §3.c   | Seven-sage portraits                                       | **Pending** — external commission                                                             |
+| §3.d   | i18n drift detector + CI gate                              | `scripts/i18n-diff.ts` (also wired into `check-beta.sh`)                                      |
+| §3.e   | Argon2id PoC + benchmark + writeup                         | `services/argon2idPoc.ts`, `scripts/argon2-bench.ts`, `docs/security/argon2-eval.md`          |
+| §3.e-2 | Argon2id verifier wired into `verifyPassword` (flag-gated) | `services/securityService.ts:188`, 8 new test cases                                           |
+| §3.f   | Visual regression with seeded baselines                    | `e2e/visual.spec.ts`, `e2e/seedHelpers.ts`, `e2e/visual.spec.ts-snapshots/` (6 PNG baselines) |
+| §3.g   | PWA install banner + dismissal hook                        | `components/PwaInstallBanner.tsx`, `hooks/usePwaInstallPrompt.ts`                             |
+| §3.h   | Privacy-first ShareCard PNG export                         | `components/ShareCard*.tsx`, `hooks/useShareCard*.ts`, `lib/{canvas,shareCard}Palette.ts`     |
 
 ---
 
@@ -255,13 +255,13 @@ npm run bench:argon2
 
 Per `docs/phase-3-postmortem.md` §6:
 
-| # | Item | Owner | Why it's not done |
-|---|---|---|---|
-| 1 | ~~§3.e-2 Argon2id verifier wiring~~ | — | ✅ DONE (commit `01b922e`) |
-| 2 | i18n translator backlog (232 keys across ja/ko/fr/es/de) | translator queue | Not engineering — drift script in CI catches new additions |
-| 3 | First-day empty-state with sample reflections | Phase 4 §4.a-1 | Substantial UX work; consolidated into Phase 4 activation track |
-| 4 | Seven-sage portrait illustrations | external commission | Asset-only |
-| 5 | PWA install banner mounted in App | — | ✅ already wired in `Dashboard` via `DashboardOverlays` (see `Dashboard.tsx:85`) |
+| #   | Item                                                     | Owner               | Why it's not done                                                                |
+| --- | -------------------------------------------------------- | ------------------- | -------------------------------------------------------------------------------- |
+| 1   | ~~§3.e-2 Argon2id verifier wiring~~                      | —                   | ✅ DONE (commit `01b922e`)                                                       |
+| 2   | i18n translator backlog (232 keys across ja/ko/fr/es/de) | translator queue    | Not engineering — drift script in CI catches new additions                       |
+| 3   | First-day empty-state with sample reflections            | Phase 4 §4.a-1      | Substantial UX work; consolidated into Phase 4 activation track                  |
+| 4   | Seven-sage portrait illustrations                        | external commission | Asset-only                                                                       |
+| 5   | PWA install banner mounted in App                        | —                   | ✅ already wired in `Dashboard` via `DashboardOverlays` (see `Dashboard.tsx:85`) |
 
 ROADMAP unchecked items (24/61) all map to either Phase 4
 activation tracks, post-launch v1.x improvements, or items

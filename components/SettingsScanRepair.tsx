@@ -25,10 +25,8 @@ interface SettingsScanRepairProps {
   onTriggerScan?: () => Promise<unknown>;
 }
 
-const SCAN_PROMPT_ZH =
-  '这将启动数据深度扫描程序，可能需要几秒钟。确定吗？';
-const SCAN_PROMPT_EN =
-  'This will start a deep data scan, which may take a few seconds. Continue?';
+const SCAN_PROMPT_ZH = '这将启动数据深度扫描程序，可能需要几秒钟。确定吗？';
+const SCAN_PROMPT_EN = 'This will start a deep data scan, which may take a few seconds. Continue?';
 
 /**
  * "Data scan & repair" widget shown inside the Storage section of the
@@ -50,9 +48,7 @@ export const SettingsScanRepair: React.FC<SettingsScanRepairProps> = ({
   >
     <div className="flex items-center justify-between gap-4">
       <div className="flex items-center gap-3">
-        <RefreshCcw
-          className={`w-5 h-5 text-cyan-500 ${isScanning ? 'animate-spin' : ''}`}
-        />
+        <RefreshCcw className={`w-5 h-5 text-cyan-500 ${isScanning ? 'animate-spin' : ''}`} />
         <div className="flex flex-col">
           <span
             className={`text-xs font-bold uppercase tracking-widest ${theme === 'light' ? 'text-slate-800' : 'text-cyan-100'}`}
@@ -91,9 +87,7 @@ export const SettingsScanRepair: React.FC<SettingsScanRepairProps> = ({
     {isScanning && (
       <div className="space-y-2 animate-in fade-in duration-300">
         <div className="flex justify-between items-center text-[9px] font-mono uppercase tracking-widest text-cyan-500">
-          <span>
-            {language === 'zh' ? '正在解析时空节点' : 'Parsing temporal nodes'}...
-          </span>
+          <span>{language === 'zh' ? '正在解析时空节点' : 'Parsing temporal nodes'}...</span>
           <span>{scanProgress}%</span>
         </div>
         <div

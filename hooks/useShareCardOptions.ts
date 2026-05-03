@@ -54,10 +54,7 @@ export interface UseShareCardOptionsResult {
   /** Patch a subset; the rest of the options keep their value.
    *  The hook persists immediately, so reopening the modal in the
    *  same session restores the latest toggles. */
-  updateOption: <K extends keyof ShareCardOptions>(
-    key: K,
-    value: ShareCardOptions[K],
-  ) => void;
+  updateOption: <K extends keyof ShareCardOptions>(key: K, value: ShareCardOptions[K]) => void;
   /** Restore the privacy-on defaults; useful when sharing a brand
    *  new entry where the previous-session toggles might be too
    *  permissive. */

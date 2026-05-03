@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { DiaryEntry, GroupingMode, Language } from '../types';
 import { TranslationDictionary } from '../i18n/translations';
-import {
-  groupDashboardEntries,
-  sortDashboardGroupKeys,
-} from '../services/dashboardGrouping';
+import { groupDashboardEntries, sortDashboardGroupKeys } from '../services/dashboardGrouping';
 
 interface UseDashboardGroupedEntriesOptions {
   /** Entries already passed through filter + search; the hook just

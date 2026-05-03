@@ -71,7 +71,11 @@ export const MorningStarRadar: React.FC<MorningStarRadarProps> = ({ metrics, t, 
               cy={center}
               r={radius * tick}
               fill="none"
-              stroke={theme === 'light' ? 'color-mix(in srgb, var(--color-vector-cyan-brand) 10%, transparent)' : 'color-mix(in srgb, var(--color-vector-cyan-pure) 10%, transparent)'}
+              stroke={
+                theme === 'light'
+                  ? 'color-mix(in srgb, var(--color-vector-cyan-brand) 10%, transparent)'
+                  : 'color-mix(in srgb, var(--color-vector-cyan-pure) 10%, transparent)'
+              }
               strokeWidth="1"
             />
           ))}
@@ -85,7 +89,11 @@ export const MorningStarRadar: React.FC<MorningStarRadarProps> = ({ metrics, t, 
                 y1={center}
                 x2={p.x}
                 y2={p.y}
-                stroke={theme === 'light' ? 'color-mix(in srgb, var(--color-vector-cyan-brand) 15%, transparent)' : 'color-mix(in srgb, var(--color-vector-cyan-pure) 20%, transparent)'}
+                stroke={
+                  theme === 'light'
+                    ? 'color-mix(in srgb, var(--color-vector-cyan-brand) 15%, transparent)'
+                    : 'color-mix(in srgb, var(--color-vector-cyan-pure) 20%, transparent)'
+                }
                 strokeWidth="1"
               />
             );
@@ -95,8 +103,14 @@ export const MorningStarRadar: React.FC<MorningStarRadarProps> = ({ metrics, t, 
             initial={{ opacity: 0, scale: 0 }}
             animate={{ opacity: 1, scale: 1 }}
             points={polygonPath}
-            fill={theme === 'light' ? 'color-mix(in srgb, var(--color-vector-cyan-brand) 10%, transparent)' : 'color-mix(in srgb, var(--color-vector-cyan-pure) 20%, transparent)'}
-            stroke={theme === 'light' ? 'var(--color-vector-cyan-brand)' : 'var(--color-vector-cyan-pure)'}
+            fill={
+              theme === 'light'
+                ? 'color-mix(in srgb, var(--color-vector-cyan-brand) 10%, transparent)'
+                : 'color-mix(in srgb, var(--color-vector-cyan-pure) 20%, transparent)'
+            }
+            stroke={
+              theme === 'light' ? 'var(--color-vector-cyan-brand)' : 'var(--color-vector-cyan-pure)'
+            }
             strokeWidth="2"
           />
 
@@ -106,7 +120,11 @@ export const MorningStarRadar: React.FC<MorningStarRadarProps> = ({ metrics, t, 
               cx={p.x}
               cy={p.y}
               r="3"
-              fill={theme === 'light' ? 'var(--color-vector-cyan-brand)' : 'var(--color-vector-cyan-pure)'}
+              fill={
+                theme === 'light'
+                  ? 'var(--color-vector-cyan-brand)'
+                  : 'var(--color-vector-cyan-pure)'
+              }
             />
           ))}
         </svg>

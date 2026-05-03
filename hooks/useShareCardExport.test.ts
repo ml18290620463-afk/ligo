@@ -24,12 +24,13 @@ describe('useShareCardExport (Phase 3 §3.h)', () => {
     clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
     if (!URL.createObjectURL) {
       // happy-dom does not implement URL.createObjectURL by default.
-      Object.defineProperty(URL, 'createObjectURL', { value: () => 'blob:mock', configurable: true });
+      Object.defineProperty(URL, 'createObjectURL', {
+        value: () => 'blob:mock',
+        configurable: true,
+      });
       Object.defineProperty(URL, 'revokeObjectURL', { value: () => {}, configurable: true });
     }
-    createObjectUrlSpy = vi
-      .spyOn(URL, 'createObjectURL')
-      .mockReturnValue('blob:mock-share-card');
+    createObjectUrlSpy = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-share-card');
     revokeObjectUrlSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
   });
 

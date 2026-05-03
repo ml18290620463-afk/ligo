@@ -37,13 +37,13 @@ VECTOR is **local-first / zero-knowledge**: ciphertext never
 leaves the device unless the user explicitly exports it. The
 threats Argon2id buys real protection against are:
 
-| # | Threat | Plausibility | PBKDF2 600k | Argon2id 64 MiB |
-|---|---|---|---|---|
-| T1 | Lost / stolen device, encrypted vault still on disk | High | GPU offline brute-force feasible (~10⁹/s) | Memory-bound to ~10⁵/s/GPU |
-| T2 | Device exfiltration via OS-level malware | Medium | Same as T1 | Same as T1 |
-| T3 | Cloud sync incident (future, opt-in) | Low (no sync today) | Same as T1 | Same as T1 |
-| T4 | Server-side break-in | N/A | Server holds no secrets | Server holds no secrets |
-| T5 | Side-channel timing attack on `verify` | Low | `constantTimeEqual` already in place | Same |
+| #   | Threat                                              | Plausibility        | PBKDF2 600k                               | Argon2id 64 MiB            |
+| --- | --------------------------------------------------- | ------------------- | ----------------------------------------- | -------------------------- |
+| T1  | Lost / stolen device, encrypted vault still on disk | High                | GPU offline brute-force feasible (~10⁹/s) | Memory-bound to ~10⁵/s/GPU |
+| T2  | Device exfiltration via OS-level malware            | Medium              | Same as T1                                | Same as T1                 |
+| T3  | Cloud sync incident (future, opt-in)                | Low (no sync today) | Same as T1                                | Same as T1                 |
+| T4  | Server-side break-in                                | N/A                 | Server holds no secrets                   | Server holds no secrets    |
+| T5  | Side-channel timing attack on `verify`              | Low                 | `constantTimeEqual` already in place      | Same                       |
 
 The dominant attack is **T1 + T2**: an attacker who has the
 encrypted blob plus unbounded offline compute. PBKDF2 at 600 k
@@ -62,12 +62,12 @@ slowdown for the attacker.
 **`hash-wasm` 4.12** (devDep, [npm/hash-wasm](https://www.npmjs.com/package/hash-wasm))
 was selected over the alternatives:
 
-| Lib | Type | ↓Bundle (gz) | ↑Speed | Audit | Maintained | Verdict |
-|---|---|---:|:---:|:---:|:---:|:---:|
-| **`hash-wasm`** 4.12 | WASM (32 KB) | ~12 KB | best | informal | ✅ | **chosen** |
-| `argon2-browser` | WASM | ~28 KB | good | informal | ⚠️ stale (2y) | reject |
-| `@noble/hashes/argon2` | pure JS | ~10 KB | 8–15× slower | formal (Cure53) | ✅ | reject (UX) |
-| `node:crypto.argon2id` | native | 0 KB | best | formal | ✅ | server only |
+| Lib                    | Type         | ↓Bundle (gz) |    ↑Speed    |      Audit      |  Maintained   |   Verdict   |
+| ---------------------- | ------------ | -----------: | :----------: | :-------------: | :-----------: | :---------: |
+| **`hash-wasm`** 4.12   | WASM (32 KB) |       ~12 KB |     best     |    informal     |      ✅       | **chosen**  |
+| `argon2-browser`       | WASM         |       ~28 KB |     good     |    informal     | ⚠️ stale (2y) |   reject    |
+| `@noble/hashes/argon2` | pure JS      |       ~10 KB | 8–15× slower | formal (Cure53) |      ✅       | reject (UX) |
+| `node:crypto.argon2id` | native       |         0 KB |     best     |     formal      |      ✅       | server only |
 
 `@noble/hashes` is closest to ideologically right (no WASM, no
 binary blob), but at OWASP_REC parameters it derives a key in
@@ -88,13 +88,13 @@ fetched after the user opts into the new vault format
 argon2id:v1:<m>:<t>:<p>:<saltB64>:<hashB64>
 ```
 
-| Field | Type | Range | Notes |
-|---|---|---|---|
-| `m` | int | 8 — 1 048 576 | Memory cost in **KiB** |
-| `t` | int | 1 — 32 | Iteration count |
-| `p` | int | 1 — 16 | Parallelism (always 1 in WASM) |
-| `saltB64` | base64 | 16 bytes | Per-mint random salt |
-| `hashB64` | base64 | 32 bytes | Derived key bits |
+| Field     | Type   | Range         | Notes                          |
+| --------- | ------ | ------------- | ------------------------------ |
+| `m`       | int    | 8 — 1 048 576 | Memory cost in **KiB**         |
+| `t`       | int    | 1 — 32        | Iteration count                |
+| `p`       | int    | 1 — 16        | Parallelism (always 1 in WASM) |
+| `saltB64` | base64 | 16 bytes      | Per-mint random salt           |
+| `hashB64` | base64 | 32 bytes      | Derived key bits               |
 
 This mirrors the existing
 `pbkdf2-sha256:v1:<iter>:<base64>` shape so the verifier can
@@ -126,11 +126,11 @@ iterations (current production).
 Translation to user-perceived latency under realistic field
 conditions (browser, ARM mobile, ~2× the M4 wall time):
 
-| Cost factor | Mac M4 | Pixel 6 / iPhone 12 (est.) | Pixel 4a / iPhone SE (est.) |
-|---|---:|---:|---:|
-| PBKDF2 600k (current) | ~44 ms | ~80 ms | ~150 ms |
-| **Argon2id OWASP_REC** | **~99 ms** | **~180 ms** | **~340 ms** |
-| Argon2id STRICT | ~200 ms | ~360 ms | ~700 ms |
+| Cost factor            |     Mac M4 | Pixel 6 / iPhone 12 (est.) | Pixel 4a / iPhone SE (est.) |
+| ---------------------- | ---------: | -------------------------: | --------------------------: |
+| PBKDF2 600k (current)  |     ~44 ms |                     ~80 ms |                     ~150 ms |
+| **Argon2id OWASP_REC** | **~99 ms** |                **~180 ms** |                 **~340 ms** |
+| Argon2id STRICT        |    ~200 ms |                    ~360 ms |                     ~700 ms |
 
 **OWASP_REC is the operating point.** It buys ~5× the attacker's
 memory-bound cost vs PBKDF2 and stays under the 350 ms UX
@@ -180,6 +180,7 @@ hashes default to Argon2id.
 ### 6.3 `needsRehash` extension
 
 `needsRehash()` is extended to return `true` when:
+
 - the stored hash starts with `pbkdf2-sha256:v1` (any iteration
   count) — i.e. **every** PBKDF2 hash is "stale" once Argon2id
   is the default;
@@ -221,15 +222,15 @@ the embedded parameters), so no data loss is possible.
 
 ## 7 · Browser compatibility matrix
 
-| Browser | WebCrypto PBKDF2 | WASM | Notes |
-|---|:---:|:---:|---|
-| Chrome 100+ | ✅ | ✅ | green |
-| Firefox 100+ | ✅ | ✅ | green |
-| Safari 15+ | ✅ | ✅ | green |
-| iOS Safari 15+ | ✅ | ✅ | green |
-| Chrome on Android (any modern) | ✅ | ✅ | green |
-| Sandboxed iframe + CSP `wasm-unsafe-eval` denied | ✅ | ❌ | falls back to PBKDF2 minter |
-| `data:` URL embed | ⚠️ | ⚠️ | not a supported deployment surface |
+| Browser                                          | WebCrypto PBKDF2 | WASM | Notes                              |
+| ------------------------------------------------ | :--------------: | :--: | ---------------------------------- |
+| Chrome 100+                                      |        ✅        |  ✅  | green                              |
+| Firefox 100+                                     |        ✅        |  ✅  | green                              |
+| Safari 15+                                       |        ✅        |  ✅  | green                              |
+| iOS Safari 15+                                   |        ✅        |  ✅  | green                              |
+| Chrome on Android (any modern)                   |        ✅        |  ✅  | green                              |
+| Sandboxed iframe + CSP `wasm-unsafe-eval` denied |        ✅        |  ❌  | falls back to PBKDF2 minter        |
+| `data:` URL embed                                |        ⚠️        |  ⚠️  | not a supported deployment surface |
 
 Coverage gaps are the same set already documented for the
 existing WebAuthn / IndexedDB usage; no new capability cliff.
@@ -238,13 +239,13 @@ existing WebAuthn / IndexedDB usage; no new capability cliff.
 
 ## 8 · Risks
 
-| Risk | Likelihood | Mitigation |
-|---|---|---|
-| WASM fetch blocked by CSP | Low | Lazy-load + PBKDF2 minter fallback (§6.2) |
-| `hash-wasm` becomes unmaintained | Low | Switch to `@noble/hashes/argon2` (slower; same hash format) |
-| Tail-latency spike on low-end Android | Medium | OWASP_REC stays under 350 ms on tested devices; can downgrade to OWASP_MIN per device cohort if telemetry says otherwise |
-| Forgotten parameter at verify-time | None | Parameters are embedded in the stored hash (§4) |
-| Parameter-set DoS (`m=1 GiB` injected) | Low | `verifyArgon2idPassword` clamps `m ≤ 1 048 576` (1 GiB) before calling the KDF |
+| Risk                                   | Likelihood | Mitigation                                                                                                               |
+| -------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------ |
+| WASM fetch blocked by CSP              | Low        | Lazy-load + PBKDF2 minter fallback (§6.2)                                                                                |
+| `hash-wasm` becomes unmaintained       | Low        | Switch to `@noble/hashes/argon2` (slower; same hash format)                                                              |
+| Tail-latency spike on low-end Android  | Medium     | OWASP_REC stays under 350 ms on tested devices; can downgrade to OWASP_MIN per device cohort if telemetry says otherwise |
+| Forgotten parameter at verify-time     | None       | Parameters are embedded in the stored hash (§4)                                                                          |
+| Parameter-set DoS (`m=1 GiB` injected) | Low        | `verifyArgon2idPassword` clamps `m ≤ 1 048 576` (1 GiB) before calling the KDF                                           |
 
 ---
 

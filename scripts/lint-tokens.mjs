@@ -91,9 +91,7 @@ const main = async () => {
     const rgbaMatches = source.match(RGBA_PATTERN) || [];
     const total = hexMatches.length + rgbaMatches.length;
     if (total === 0) continue;
-    const samples = Array.from(
-      new Set([...hexMatches.slice(0, 4), ...rgbaMatches.slice(0, 2)]),
-    );
+    const samples = Array.from(new Set([...hexMatches.slice(0, 4), ...rgbaMatches.slice(0, 2)]));
     reports.push({
       file: path.relative(ROOT, file),
       hex: hexMatches.length,
@@ -120,9 +118,7 @@ const main = async () => {
       process.stdout.write(
         `${DIM}(rule '${`no raw colour literals in .tsx`}' — ROADMAP §3.a-2)${RESET}\n\n`,
       );
-      process.stdout.write(
-        `  ${'hex'.padStart(4)} ${'rgba'.padStart(5)}  file\n`,
-      );
+      process.stdout.write(`  ${'hex'.padStart(4)} ${'rgba'.padStart(5)}  file\n`);
       for (const r of reports.slice(0, 30)) {
         process.stdout.write(
           `  ${String(r.hex).padStart(4)} ${String(r.rgba).padStart(5)}  ${r.file}\n`,

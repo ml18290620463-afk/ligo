@@ -160,7 +160,9 @@ export const ArchivePrinciplesView: React.FC<ArchivePrinciplesViewProps> = ({
           <Shield
             className={`w-12 h-12 mb-4 opacity-30 ${theme === 'light' ? 'text-vector-slate-soft/20' : 'text-green-900'}`}
           />
-          <p className={`text-sm ${theme === 'light' ? 'text-vector-slate-soft' : 'text-green-800'}`}>
+          <p
+            className={`text-sm ${theme === 'light' ? 'text-vector-slate-soft' : 'text-green-800'}`}
+          >
             {t.noPrinciples}
           </p>
         </div>

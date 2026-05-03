@@ -42,33 +42,33 @@ export interface ShareCardPalette {
 }
 
 export const SHARE_CARD_DARK: ShareCardPalette = {
-  background: colors.ink.panelDeep,         // #05070a
-  surface: colors.ink.panel,                // #0a0d12
-  borderStrong: colors.cyan.brand,          // #007a8c
-  borderSubtle: colors.slate[800],          // #1e293b
-  textPrimary: colors.slate[50],            // #f8fafc
-  textSecondary: colors.slate[300],         // #cbd5e1
-  textMuted: colors.slate[500],             // #64748b
-  accent: colors.cyan.neon,                 // #12d8ff
-  accentSoft: colors.cyan[400],             // #22d3ee
-  brand: colors.cyan.brand,                 // #007a8c
-  divider: colors.slate[700],               // #334155
-  watermark: colors.slate[600],             // #475569
+  background: colors.ink.panelDeep, // #05070a
+  surface: colors.ink.panel, // #0a0d12
+  borderStrong: colors.cyan.brand, // #007a8c
+  borderSubtle: colors.slate[800], // #1e293b
+  textPrimary: colors.slate[50], // #f8fafc
+  textSecondary: colors.slate[300], // #cbd5e1
+  textMuted: colors.slate[500], // #64748b
+  accent: colors.cyan.neon, // #12d8ff
+  accentSoft: colors.cyan[400], // #22d3ee
+  brand: colors.cyan.brand, // #007a8c
+  divider: colors.slate[700], // #334155
+  watermark: colors.slate[600], // #475569
 };
 
 export const SHARE_CARD_LIGHT: ShareCardPalette = {
-  background: colors.ink.skyLight,          // #f0f4f7
-  surface: colors.ink.parchment,            // #faf9f6
-  borderStrong: colors.cyan.brand,          // #007a8c
-  borderSubtle: colors.slate[200],          // #e2e8f0
-  textPrimary: colors.ink.text,             // #1a202c
-  textSecondary: colors.ink.muted,          // #4a5568
-  textMuted: colors.ink.placeholder,        // #718096
-  accent: colors.cyan[600],                 // #0891b2
-  accentSoft: colors.cyan[500],             // #06b6d4
-  brand: colors.cyan.brand,                 // #007a8c
-  divider: colors.slate[300],               // #cbd5e1
-  watermark: colors.slate[400],             // #94a3b8
+  background: colors.ink.skyLight, // #f0f4f7
+  surface: colors.ink.parchment, // #faf9f6
+  borderStrong: colors.cyan.brand, // #007a8c
+  borderSubtle: colors.slate[200], // #e2e8f0
+  textPrimary: colors.ink.text, // #1a202c
+  textSecondary: colors.ink.muted, // #4a5568
+  textMuted: colors.ink.placeholder, // #718096
+  accent: colors.cyan[600], // #0891b2
+  accentSoft: colors.cyan[500], // #06b6d4
+  brand: colors.cyan.brand, // #007a8c
+  divider: colors.slate[300], // #cbd5e1
+  watermark: colors.slate[400], // #94a3b8
 };
 
 export const getShareCardPalette = (theme: ShareCardTheme): ShareCardPalette =>

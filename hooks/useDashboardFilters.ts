@@ -1,9 +1,6 @@
 import { useMemo, useState } from 'react';
 import { DiaryEntry } from '../types';
-import {
-  getActiveDashboardEntries,
-  getBaseDashboardEntries,
-} from '../services/dashboardFilters';
+import { getActiveDashboardEntries, getBaseDashboardEntries } from '../services/dashboardFilters';
 import { useSearch } from './useSearch';
 
 interface UseDashboardFiltersOptions {
@@ -43,9 +40,7 @@ export const useDashboardFilters = ({
   entries,
 }: UseDashboardFiltersOptions): DashboardFiltersState => {
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<'all' | 'uncategorized' | string>(
-    'all',
-  );
+  const [selectedCategory, setSelectedCategory] = useState<'all' | 'uncategorized' | string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   const activeEntries = useMemo(() => getActiveDashboardEntries(entries), [entries]);

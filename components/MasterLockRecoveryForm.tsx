@@ -76,7 +76,11 @@ export const MasterLockRecoveryForm: React.FC<MasterLockRecoveryFormProps> = ({
               aria-pressed={recovery.showKey}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-cyan-700 hover:text-cyan-400"
             >
-              {recovery.showKey ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+              {recovery.showKey ? (
+                <Minimize className="w-4 h-4" />
+              ) : (
+                <Maximize className="w-4 h-4" />
+              )}
             </button>
           </div>
         </div>
@@ -105,7 +109,11 @@ export const MasterLockRecoveryForm: React.FC<MasterLockRecoveryFormProps> = ({
               aria-pressed={recovery.showNewPassword}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-cyan-700 hover:text-cyan-400"
             >
-              {recovery.showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              {recovery.showNewPassword ? (
+                <EyeOff className="w-4 h-4" />
+              ) : (
+                <Eye className="w-4 h-4" />
+              )}
             </button>
           </div>
         </div>
@@ -134,14 +142,21 @@ export const MasterLockRecoveryForm: React.FC<MasterLockRecoveryFormProps> = ({
               aria-pressed={recovery.showNewPassword}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-cyan-700 hover:text-cyan-400"
             >
-              {recovery.showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              {recovery.showNewPassword ? (
+                <EyeOff className="w-4 h-4" />
+              ) : (
+                <Eye className="w-4 h-4" />
+              )}
             </button>
           </div>
         </div>
       </div>
 
       {recovery.resetError && (
-        <div role="alert" className="p-3 bg-vector-magenta/5 border border-vector-magenta/20 rounded">
+        <div
+          role="alert"
+          className="p-3 bg-vector-magenta/5 border border-vector-magenta/20 rounded"
+        >
           <p className="text-[10px] font-mono text-vector-magenta uppercase tracking-tight neon-glow-alert">
             {recovery.resetError}
           </p>
