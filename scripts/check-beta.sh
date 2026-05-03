@@ -101,6 +101,13 @@ else
   check "npm run build"     "npm run build --silent"
 fi
 
+bold "==> Phase 3 §3.d — i18n drift (soft mode)"
+# Soft-mode counts only typo / empty-value bugs as failures; the existing
+# 232-key translator backlog is reported as a non-blocking warning so we
+# can ratchet down without blocking releases. When that backlog is empty
+# this guard switches to strict mode (drop the `-- --soft` argument).
+check "i18n: no extras / empty-value bugs"  "npm run i18n:diff --silent -- --soft"
+
 bold "==> Summary"
 echo  "PASS=$PASS_COUNT  FAIL=$FAIL_COUNT"
 
