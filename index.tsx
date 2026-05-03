@@ -4,6 +4,7 @@ import App from './App';
 import './index.css';
 import * as Sentry from '@sentry/react';
 import { initWebVitalsReporter } from './lib/vitals';
+import { registerVectorServiceWorker } from './lib/pwaRegister';
 
 const SENTRY_REDACT_PATTERNS: readonly RegExp[] = [
   /\b(?:sk|pk|api|access|secret|bearer)[\s_:=-]+[A-Za-z0-9._\-+/=]{12,}/gi,
@@ -61,6 +62,10 @@ if (!rootElement) {
 // chance to init. The reporter is a no-op when Sentry is disabled, so
 // this is safe to call unconditionally.
 initWebVitalsReporter();
+
+// W3.2 — register the PWA service worker. No-ops in dev (unless
+// VITE_PWA_DEV=1) and in environments without serviceWorker support.
+registerVectorServiceWorker();
 
 const root = ReactDOM.createRoot(rootElement);
 root.render(

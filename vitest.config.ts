@@ -1,6 +1,16 @@
 import { defineConfig } from 'vitest/config';
+import path from 'path';
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      // The vite-plugin-pwa virtual module is only available when the
+      // pwa plugin is loaded in vite.config.ts; vitest doesn't load
+      // that plugin, so we stub it here so `import('virtual:pwa-register')`
+      // resolves to a deterministic no-op `registerSW`.
+      'virtual:pwa-register': path.resolve(__dirname, 'lib/__mocks__/virtual-pwa-register.ts'),
+    },
+  },
   test: {
     globals: true,
     environment: 'happy-dom',
