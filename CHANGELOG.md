@@ -4,7 +4,173 @@ All notable changes to this project are documented in this file. Format
 loosely follows [Keep a Changelog](https://keepachangelog.com/) and
 versioning follows [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [1.1.0] — 2026-05-03
+
+> Phase 4 (1-month engineer roadmap) close. Ships the W1–W4 task set
+> agreed in `.cursor/plans/vector_engineer_tech_roadmap_v1.x_*.plan.md`:
+> Sentry release pipeline, husky/lint-staged guard rails, Argon2id
+> default minter, AI provider extraction, Morning Star SSE streaming,
+> ⌘K command palette, PWA service worker, Blob URL attachments, e2e
+> testid migration, self-hosted fonts, hard-gated production audit
+> and Dependabot weekly surveillance.
+>
+> Verified: `scripts/check-beta.sh` 28/28; full `lint / typecheck /
+tests / build` green; `npm audit --omit=dev --audit-level=high` →
+> 0 vulnerabilities.
+
+### Security
+
+- **Argon2id default minter** (`services/securityService.ts`) behind a
+  separate `vector_argon2_minter` feature flag, with a "verify ≥ mint"
+  invariant enforced in code so a rogue process cannot write the
+  minter key while the verifier is off (which would lock the user out
+  of their own hash). `setArgon2idMinterEnabled(true)` auto-enables
+  the verifier; turning the minter off leaves the verifier on so any
+  Argon2id hashes that were already written keep working.
+- **Settings → Security toggle** (`components/SettingsArgon2idToggle.tsx`)
+  surfaces the Argon2id minter as a real switch with `role="switch"`
+  - `aria-checked` semantics, full 7-locale i18n, and a `storage`
+    event listener so a future ⌘K palette command can flip it
+    consistently across surfaces.
+- **Production npm audit is now a hard CI gate**
+  (`.github/workflows/ci.yml` W4.4). High / critical CVEs in any
+  production dependency fail the build; dev-only deps stay
+  advisory.
+- **Self-hosted fonts** (W4.2 — `@fontsource/inter`,
+  `@fontsource/jetbrains-mono`). Removes the broken
+  `<link href="fonts.googleapis.com">` from `index.html` (the strict
+  production CSP `fontSrc 'self'` was already silently blocking it,
+  so the designed type wasn't actually rendering in production
+  before this fix).
+
+### Performance
+
+- **Morning Star SSE streaming** (W2.4 — `server/aiProviders.ts`,
+  `services/geminiService.ts`, `hooks/useMorningStarPipeline.ts`,
+  `components/MorningStarPanel.tsx`). New
+  `POST /api/morning-star/stream` endpoint emits `event: chunk` /
+  `event: done` / `event: error` SSE frames; the client parses them
+  into a live `streamingPreview` so users see the AI's reply forming
+  in real time instead of staring at a 30-60 s spinner. Opt-in via
+  `localStorage[vector_morning_star_stream]`. Any transport / SSE
+  failure transparently falls back to the buffered endpoint.
+- **Refcounted Blob URL attachments** (W3.3 —
+  `lib/blobUrlCache.ts`, `hooks/useAttachmentBlobUrl.ts`). Persists
+  attachments as base64 data URLs (portable across IndexedDB / backup
+  JSON / share-card export) but promotes them to runtime `blob:`
+  URLs at render time. Cuts per-paint cost dramatically for large
+  PDFs / images / videos and lets PDF.js stream partial bytes
+  instead of decoding the full base64 blob on every layout pass.
+- **Service worker + offline shell** (W3.2 — `vite-plugin-pwa`).
+  Precaches every hashed JS / CSS / font / icon. Runtime cache
+  rules: static assets `CacheFirst`, `/api/*` `NetworkFirst` with a
+  5 s timeout, `openrouter.ai` + `googleapis.com` `NetworkOnly`
+  (so AI streams are never cached). `registerType: 'prompt'` so
+  long-lived journaling tabs don't auto-update mid-session.
+
+### Productivity
+
+- **⌘K / Ctrl+K command palette** (W3.1 — `components/CommandPalette.tsx`,
+  `cmdk` ^1.1.1, ~6 kB gzip). Single keyboard-first navigation entry
+  for power users. Two pages: 'root' and 'language'. Commands:
+  Navigation (New entry / Open archive / Back to dashboard / Replay
+  intro), Appearance (Toggle theme / Switch language), Recent
+  entries (top 8), Danger zone (Lock vault / Wipe data — only when
+  password is set). Defers actions through `requestAnimationFrame`
+  so cmdk's focus-restoration runs before parent re-renders.
+- **AI provider extraction** (W2.3 — `server/aiProviders.ts`).
+  Pulls `Provider` type, `chooseProvider`, `callOpenRouter`,
+  `callGemini`, `fetchOpenRouterFreeModels`,
+  `resolveProviderModel` out of `server.ts` (471 → 362 LOC).
+  Provider helpers now take a `ProviderConfig` snapshot so
+  `server.ts` stays the only file that reaches into `process.env`.
+  Lays the groundwork for the W2.4 streaming variants.
+
+### Observability
+
+- **Sentry release + sourcemap upload** (W1.5 — CI workflow). Every
+  push to `main` with the Sentry secrets configured uploads minified
+  bundles + matching sourcemaps to Sentry under the commit SHA as
+  the release tag, then strips `.map` files from the deployable
+  artefact (`vite build` emits `sourcemap: 'hidden'` so the bundles
+  never reference them). `index.tsx` baked
+  `process.env.SENTRY_RELEASE` matches what the `getsentry/action-release`
+  step uploaded — that's the join key Sentry needs to de-minify
+  stack traces automatically.
+- **Web Vitals as Sentry distributions** (W1.2 — `lib/vitals.ts`).
+  Replaces `Sentry.captureMessage` with `Sentry.metrics.distribution`
+  so LCP / INP / CLS / FCP / TTFB show up as proper time-series in
+  the Sentry dashboard with `unit` and `attributes` (rating,
+  navigation_type) instead of one-off events.
+
+### Developer experience
+
+- **husky + lint-staged + commitlint** (W1.4). Pre-commit runs
+  `lint-staged` (eslint --fix + prettier --write on changed files);
+  commit-msg runs `commitlint` against the conventional-commits
+  config the existing log already follows. `prepare` script
+  auto-installs hooks on `npm install` so cloners / CI agents pick
+  up the discipline transparently.
+- **Dependabot weekly surveillance** (W4.4 —
+  `.github/dependabot.yml`). Weekly grouped npm updates (production
+  - dev as separate PRs), monthly GitHub Actions updates.
+    Conventional commit prefix matches commitlint config so PRs land
+    green automatically.
+- **e2e testid migration** (W4.1). Anchors every onboarding +
+  dashboard + editor + viewer e2e selector on a stable `data-testid`
+  so visible labels can change freely without breaking specs. New
+  testids: `cover-version-{...}`, `cover-initialize`,
+  `onboarding-{next,back,finish,password,password-confirm,recovery-saved,star-${kebab}}`,
+  `dashboard-{new-entry,open-archive}`,
+  `editor-{title,content,save}`, `viewer-back`, `entry-card-${id}`,
+  `command-palette`, `argon2id-toggle`, `morning-star-loading`,
+  `morning-star-streaming-preview`. `CyberButton` propagates
+  `data-testid` through every polymorphic branch. New
+  `docs/e2e-conventions.md` documents the selector hierarchy.
+- **Stale-closure fix** (W1.3 — `hooks/useDiaryData.ts`).
+  `addContainer` and `deleteContainer` now use functional
+  `setContainers((prev) => …)` so rapid successive mutations cannot
+  drop entries through stale closures (same pattern already applied
+  to `addMaterial` / `deleteMaterial` in the previous release).
+
+### Bundle delta
+
+Production bundle changed by:
+
+- `+6 kB gz` (cmdk W3.1 → command palette).
+- `+220 kB on disk` (W4.2 self-hosted fonts; latin/latin-ext only;
+  served via cache-first SW after first load — no network round trip
+  on the warm path).
+- `+12 kB gz` lazy chunk (W3.2 workbox-window; loaded once after
+  first paint, never on the critical path).
+- `0 KB main` (W2.4 streaming, W3.3 blob URLs, W2.1 Argon2id
+  minter — all behind feature flags / dead-code-eliminated when off).
+
+Precache: 44 entries / 3.5 MiB.
+
+### Verified
+
+- `scripts/check-beta.sh` → **28/28** invariants pass.
+- `npm run lint` (`--max-warnings=0`) clean.
+- `npm run typecheck` clean.
+- `npm test` clean (vitest coverage thresholds `lines 82 / branches 61`
+  unchanged).
+- `npm run build` clean; service worker emits 11 woff2 files +
+  hashed JS/CSS chunks.
+- `npm audit --omit=dev --audit-level=high` → 0 vulnerabilities.
+
+### Carry-over from previous Unreleased section
+
+The Phase 3 entries (Argon2id verifier branch, share-card PNG,
+PWA install banner, Storybook 10, design-token migration scoreboard,
+visual regression baselines, etc.) listed under
+"### Added (Phase 3 §3.e-2 …)" through
+"### Added (Phase 3 starter …)" below were all already shipped in
+the unreleased trunk before Phase 4. They are part of 1.1.0.
+
+---
+
+## [Unreleased — Phase 3 trunk, now part of 1.1.0]
 
 ### Added (Phase 3 §3.e-2 — Argon2id verifier branch in SecurityService)
 
@@ -84,7 +250,7 @@ versioning follows [SemVer](https://semver.org/).
 #### §3.f · Visual regression baselines
 
 - **`e2e/seedHelpers.ts`** (new) — shared `seedOnboardedApp(page,
-  options?)` helper that walks the same onboarding flow as
+options?)` helper that walks the same onboarding flow as
   `app.spec.ts` / `backup.spec.ts` (~25 s wall-clock per spec).
   `useDiaryData` persists through `idb-keyval`, so a
   `localStorage` shim cannot fast-forward us past onboarding;
@@ -161,7 +327,7 @@ versioning follows [SemVer](https://semver.org/).
   - Status flags: `SEALED`, `TIMELOCK`, `ARCHIVED`, `ANALYSED`.
   - Optional tag chips (8-tag soft cap).
   - Body: dashed-border masked block when `showBody=false`, or a
-    540-char excerpt with markdown noise stripped (#, **, code
+    540-char excerpt with markdown noise stripped (#, \*\*, code
     fences, image / link syntax) when revealed.
   - Optional attachment badge (only shown when both the option
     is on and the entry actually has an attachment).
@@ -240,11 +406,11 @@ versioning follows [SemVer](https://semver.org/).
 
 ### Bundle delta
 
-| Chunk | Before | After | Δ |
-| --- | ---: | ---: | ---: |
-| main `index` | 320.85 kB / 96.43 kB gz | 323.17 kB / 97.21 kB gz | **+0.78 kB gz** |
-| `Viewer` | 172.94 kB / 54.29 kB gz | 188.00 kB / 58.87 kB gz | +4.58 kB gz |
-| `index-BGbQGMFM` (new lazy) | — | 27.29 kB / **10.47 kB gz** | first modal open only |
+| Chunk                       |                  Before |                      After |                     Δ |
+| --------------------------- | ----------------------: | -------------------------: | --------------------: |
+| main `index`                | 320.85 kB / 96.43 kB gz |    323.17 kB / 97.21 kB gz |       **+0.78 kB gz** |
+| `Viewer`                    | 172.94 kB / 54.29 kB gz |    188.00 kB / 58.87 kB gz |           +4.58 kB gz |
+| `index-BGbQGMFM` (new lazy) |                       — | 27.29 kB / **10.47 kB gz** | first modal open only |
 
 The `modern-screenshot` chunk is **only fetched on first open of
 the share-card modal**. Bundle audit
@@ -329,12 +495,12 @@ chunks.
 
 ### Benchmark snapshot (Apple M4 / Node 24 / hash-wasm 4.12)
 
-| Configuration | Mean | Notes |
-| --- | ---: | --- |
-| PBKDF2-SHA256 (600 000 iter) | 43.8 ms | Current production cost factor |
-| Argon2id OWASP_MIN (19 MiB / 2t / 1p) | 17.5 ms | OWASP 2024+ minimum acceptable |
-| Argon2id OWASP_REC (64 MiB / 3t / 1p) | 99.2 ms | **VECTOR target** — under 350 ms UX budget on every supported device class |
-| Argon2id STRICT (128 MiB / 3t / 1p) | 200.2 ms | Rejected — tail-latency on iPhone SE / Pixel 4a leaves spinner visible |
+| Configuration                         |     Mean | Notes                                                                      |
+| ------------------------------------- | -------: | -------------------------------------------------------------------------- |
+| PBKDF2-SHA256 (600 000 iter)          |  43.8 ms | Current production cost factor                                             |
+| Argon2id OWASP_MIN (19 MiB / 2t / 1p) |  17.5 ms | OWASP 2024+ minimum acceptable                                             |
+| Argon2id OWASP_REC (64 MiB / 3t / 1p) |  99.2 ms | **VECTOR target** — under 350 ms UX budget on every supported device class |
+| Argon2id STRICT (128 MiB / 3t / 1p)   | 200.2 ms | Rejected — tail-latency on iPhone SE / Pixel 4a leaves spinner visible     |
 
 ### Dev-dependency
 
