@@ -382,4 +382,34 @@ export const en = {
   reflectionSaved: 'Reflection Saved',
   protocolAuthenticated: 'Protocol Authenticated',
   vectorsOfLife: 'Vectors of life...',
+  shareCardTitle: 'Share card',
+  shareCardSubtitle:
+    'Privacy-on by default. Body content stays hidden unless you explicitly opt in.',
+  shareCardEyebrow: 'VECTOR · Reflection card',
+  shareCardBodyMasked:
+    'Body content hidden by default. Toggle "Show body" to include it in the exported PNG.',
+  shareCardEmptyBody: '(no body)',
+  shareCardAttachmentBadge: 'Has attachment',
+  shareCardFooter: 'Local-first journal · vectorlife.app',
+  shareCardPrivacy: 'Privacy options',
+  shareCardShowBody: 'Show body content',
+  shareCardShowBodyHint:
+    'Off by default. Be careful — this reveals the entry text in the exported PNG.',
+  shareCardShowTags: 'Show tags',
+  shareCardShowTagsHint: 'Tag chips below the title. Usually safe to share.',
+  shareCardShowAttachment: 'Show attachment badge',
+  shareCardShowAttachmentHint:
+    'Adds a "📎 attachment" badge — does not include the file itself.',
+  shareCardTheme: 'Card theme',
+  shareCardSavePng: 'Save PNG',
+  shareCardRendering: 'Rendering…',
+  shareCardSaved: 'Saved.',
+  shareCardExportError: 'Export failed:',
+  shareCardResetDefaults: 'Reset to privacy defaults',
+  shareCardOpen: 'Share card',
+  pwaInstallTitle: 'Install VECTOR',
+  pwaInstallBody:
+    'Install the app for offline access, instant launches, and a homescreen icon. Your data stays local.',
+  pwaInstallAction: 'Install app',
+  pwaInstallDismiss: 'Not now',
 } satisfies TranslationDictionary;
