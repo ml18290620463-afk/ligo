@@ -113,6 +113,7 @@ export const Viewer: React.FC<ViewerProps> = ({
     setReflectionText,
     loading: morningStarLoading,
     error: morningStarError,
+    streamingPreview: morningStarStreamingPreview,
     parsedAnalysis,
     readingStep,
     setReadingStep,
@@ -293,6 +294,7 @@ export const Viewer: React.FC<ViewerProps> = ({
             setMorningStarPersonas={setMorningStarPersonas}
             morningStarLoading={morningStarLoading}
             morningStarError={morningStarError}
+            morningStarStreamingPreview={morningStarStreamingPreview}
             parsedAnalysis={parsedAnalysis}
             onAnalyze={handleMorningStarAnalysis}
             onDeleteAnalysis={handleDeleteAnalysis}

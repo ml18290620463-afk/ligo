@@ -48,6 +48,19 @@ export const AppStorageKeys = {
    * this through `SecurityService.setArgon2idMinterEnabled`.
    */
   argon2MinterEnabled: 'vector_argon2_minter',
+  /**
+   * Phase 4 §W2.4 — per-installation opt-in for the streaming Morning
+   * Star endpoint. When set to `"1"`, the Viewer flow uses
+   * `POST /api/morning-star/stream` (SSE) and shows an incremental
+   * "thinking" preview as deltas arrive. When unset, falls back to
+   * the buffered `POST /api/morning-star`.
+   *
+   * The streaming code path always attempts the SSE call first and
+   * silently falls back to buffered on any transport failure, so this
+   * flag only controls the UI affordance — turning it off does not
+   * disable the streaming endpoint server-side.
+   */
+  morningStarStreamingEnabled: 'vector_morning_star_stream',
 } as const;
 
 /** How stale a backup must be before the Dashboard banner appears. */

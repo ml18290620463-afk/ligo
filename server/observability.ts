@@ -59,13 +59,14 @@ export const initServerObservability = (): boolean => {
  */
 export const captureServerError = (
   error: unknown,
-  context?: { requestId?: string; provider?: string },
+  context?: { requestId?: string; provider?: string; mode?: string },
 ) => {
   if (!initialised) return;
   try {
     Sentry.withScope((scope) => {
       if (context?.requestId) scope.setTag('requestId', context.requestId);
       if (context?.provider) scope.setTag('provider', context.provider);
+      if (context?.mode) scope.setTag('mode', context.mode);
       Sentry.captureException(error);
     });
   } catch {

@@ -2,9 +2,13 @@ import { MorningStarPersona } from '../types';
 
 const MORNING_STAR_PUBLIC_ERROR = '星光暂时失联，请稍后重试。';
 
-const fetchFromSecureBackend = async (prompt: string): Promise<string> => {
+/** Per-chunk callback for streaming Morning Star responses. */
+export type MorningStarChunkHandler = (delta: string, accumulated: string) => void;
+
+const fetchFromSecureBackend = async (prompt: string, signal?: AbortSignal): Promise<string> => {
   const response = await fetch('/api/morning-star', {
     method: 'POST',
+    signal,
     headers: {
       'Content-Type': 'application/json',
     },
@@ -22,11 +26,123 @@ const fetchFromSecureBackend = async (prompt: string): Promise<string> => {
   throw new Error(MORNING_STAR_PUBLIC_ERROR);
 };
 
-export const getMorningStarAnalysis = async (
+/**
+ * W2.4 — Streamed Morning Star call. POSTs to `/api/morning-star/stream`
+ * which returns SSE-framed events:
+ *   event: chunk    data: {"text": "delta"}
+ *   event: done     data: {"fullText": "...", "provider": "...", "requestId": "..."}
+ *   event: error    data: {"error": "..."}
+ *
+ * `onChunk(delta, accumulated)` fires once per `chunk` event so the UI
+ * can render a "thinking" preview. The promise resolves with the
+ * authoritative fullText from the `done` event (which the server
+ * generates by concatenating every emitted delta — guaranteed to match
+ * what the buffered endpoint would have returned).
+ *
+ * Throws a localised error for the `error` event OR for any transport
+ * failure. Callers should catch and fall back to `fetchFromSecureBackend`
+ * if they want a buffered safety net.
+ */
+const streamFromSecureBackend = async (
+  prompt: string,
+  onChunk: MorningStarChunkHandler,
+  signal?: AbortSignal,
+): Promise<string> => {
+  const response = await fetch('/api/morning-star/stream', {
+    method: 'POST',
+    signal,
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'text/event-stream',
+    },
+    body: JSON.stringify({ prompt }),
+  });
+
+  if (!response.ok || !response.body) {
+    throw new Error(MORNING_STAR_PUBLIC_ERROR);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let accumulated = '';
+  let finalText: string | null = null;
+
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      // SSE events are separated by a blank line (\n\n). We split on
+      // that and keep any partial trailing event in `buffer` for the
+      // next read.
+      const events = buffer.split('\n\n');
+      buffer = events.pop() ?? '';
+
+      for (const rawEvent of events) {
+        if (!rawEvent.trim()) continue;
+        let evtType = 'message';
+        let dataLines = '';
+        for (const line of rawEvent.split('\n')) {
+          if (line.startsWith('event:')) {
+            evtType = line.slice(6).trim();
+          } else if (line.startsWith('data:')) {
+            dataLines += line.slice(5).trim();
+          }
+        }
+        if (!dataLines) continue;
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(dataLines);
+        } catch {
+          continue;
+        }
+        if (evtType === 'chunk') {
+          const delta = (parsed as { text?: string })?.text ?? '';
+          if (delta) {
+            accumulated += delta;
+            onChunk(delta, accumulated);
+          }
+        } else if (evtType === 'done') {
+          const full = (parsed as { fullText?: string })?.fullText;
+          finalText = typeof full === 'string' && full.length > 0 ? full : accumulated;
+        } else if (evtType === 'error') {
+          throw new Error(MORNING_STAR_PUBLIC_ERROR);
+        }
+      }
+    }
+  } finally {
+    try {
+      reader.releaseLock();
+    } catch {
+      // Already released — nothing to do.
+    }
+  }
+
+  if (finalText === null) {
+    if (accumulated.length === 0) {
+      throw new Error(MORNING_STAR_PUBLIC_ERROR);
+    }
+    // Stream closed without an explicit `done` frame (e.g. network
+    // hiccup mid-flight); fall back to whatever we accumulated. The
+    // downstream JSON parser will report a meaningful error to the
+    // user if the partial text is unusable.
+    return accumulated;
+  }
+  return finalText;
+};
+
+/**
+ * Builds the upstream prompt that both the buffered and the streaming
+ * Morning Star endpoints send. Pulled out of `getMorningStarAnalysis`
+ * so the new streaming entry point can share it byte-for-byte (so the
+ * fallback path produces identical output).
+ */
+const buildMorningStarPrompt = (
   entryContent: string,
   reflectionContext: string | undefined,
   personas: MorningStarPersona[],
-): Promise<string> => {
+): string => {
   const personaPrompts: Record<string, string> = {
     'Elon Musk':
       '埃隆·马斯克 (Elon Musk)：第一性原理的守望者。关注物理层面的终极逻辑，将困难解构为原子。他的语言应当充满动力学与客观真理的冷峻。',
@@ -51,7 +167,7 @@ export const getMorningStarAnalysis = async (
     })
     .join('\n\n');
 
-  const prompt = `你是一个既像真诚的朋友，又像专业教练的思考伙伴。当前用户（记录者）选择了以下几位智者作为启明星来引导他们：
+  return `你是一个既像真诚的朋友，又像专业教练的思考伙伴。当前用户（记录者）选择了以下几位智者作为启明星来引导他们：
     ${combinedPersonaPrompt}
     
     核心任务：请让【每一位被选中的启明星】分别给用户写一封“老朋友的回信”。每位智者单独占据一个版块，亲自解答或分析用户的内容。
@@ -98,15 +214,73 @@ export const getMorningStarAnalysis = async (
     4. 评价反馈要像一位懂得“克制”与“慈悲”的长者或挚友。`
         : '（用户尚未提供反思，请仅基于原始记录进行初步的智慧导引。）'
     }`;
+};
 
+const MORNING_STAR_FALLBACK_PAYLOAD = JSON.stringify({
+  content: `### ⚠️ 星光指引中断\n\n${MORNING_STAR_PUBLIC_ERROR}\n\n请稍后再次发送你的反思。`,
+  metrics: { resilience: 0 },
+});
+
+/**
+ * Buffered Morning Star call (the original entry point). Sends the
+ * full prompt and waits for the complete response in one round trip.
+ * Used by both the legacy non-streaming UI path and the streaming
+ * path's fallback when SSE fails.
+ */
+export const getMorningStarAnalysis = async (
+  entryContent: string,
+  reflectionContext: string | undefined,
+  personas: MorningStarPersona[],
+): Promise<string> => {
+  const prompt = buildMorningStarPrompt(entryContent, reflectionContext, personas);
   try {
-    const responseText = await fetchFromSecureBackend(prompt);
-    return responseText;
+    return await fetchFromSecureBackend(prompt);
   } catch (error: unknown) {
     console.error('Morning Star Critical Error:', error);
-    return JSON.stringify({
-      content: `### ⚠️ 星光指引中断\n\n${MORNING_STAR_PUBLIC_ERROR}\n\n请稍后再次发送你的反思。`,
-      metrics: { resilience: 0 },
-    });
+    return MORNING_STAR_FALLBACK_PAYLOAD;
+  }
+};
+
+/**
+ * W2.4 — Streamed Morning Star call. Identical inputs to
+ * `getMorningStarAnalysis`, but additionally accepts an `onChunk`
+ * callback that receives each partial token (delta) plus the running
+ * accumulated text. Useful for "AI is thinking…" preview affordances.
+ *
+ * Strategy:
+ *   1. Try `/api/morning-star/stream` first.
+ *   2. On any failure (network, SSE parse, server error), transparently
+ *      fall back to the buffered endpoint via `getMorningStarAnalysis`.
+ *      The caller does not need to handle this — the promise resolves
+ *      with the buffered text just as if streaming had succeeded.
+ *
+ * Returns the same JSON-string shape as the buffered call so the
+ * downstream parser (`safeParseAnalysis` in `useMorningStarPipeline`)
+ * never has to branch.
+ */
+export const streamMorningStarAnalysis = async (
+  entryContent: string,
+  reflectionContext: string | undefined,
+  personas: MorningStarPersona[],
+  onChunk: MorningStarChunkHandler,
+  signal?: AbortSignal,
+): Promise<string> => {
+  const prompt = buildMorningStarPrompt(entryContent, reflectionContext, personas);
+  try {
+    return await streamFromSecureBackend(prompt, onChunk, signal);
+  } catch (streamError: unknown) {
+    if (signal?.aborted) {
+      throw streamError;
+    }
+    // Fallback path: try the buffered endpoint once before showing
+    // the user a hard failure. This keeps the experience identical
+    // to the legacy flow on any network / SSE incompat.
+    console.warn('Morning Star streaming failed, falling back to buffered:', streamError);
+    try {
+      return await fetchFromSecureBackend(prompt, signal);
+    } catch (bufferedError: unknown) {
+      console.error('Morning Star Critical Error (buffered fallback):', bufferedError);
+      return MORNING_STAR_FALLBACK_PAYLOAD;
+    }
   }
 };

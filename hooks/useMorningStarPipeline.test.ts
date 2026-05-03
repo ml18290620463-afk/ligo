@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
-import { useMorningStarPipeline, type MorningStarFetcher } from './useMorningStarPipeline';
+import {
+  useMorningStarPipeline,
+  type MorningStarFetcher,
+  type MorningStarStreamer,
+} from './useMorningStarPipeline';
 import type { DiaryEntry } from '../types';
 
 const baseEntry = (overrides: Partial<DiaryEntry> = {}): DiaryEntry => ({
@@ -15,10 +19,12 @@ const baseEntry = (overrides: Partial<DiaryEntry> = {}): DiaryEntry => ({
 
 let onUpdateEntry: ReturnType<typeof vi.fn<(updated: DiaryEntry) => void>>;
 let fetcher: ReturnType<typeof vi.fn<MorningStarFetcher>>;
+let streamer: ReturnType<typeof vi.fn<MorningStarStreamer>>;
 
 beforeEach(() => {
   onUpdateEntry = vi.fn<(updated: DiaryEntry) => void>();
   fetcher = vi.fn<MorningStarFetcher>();
+  streamer = vi.fn<MorningStarStreamer>();
 });
 
 describe('useMorningStarPipeline', () => {
@@ -146,5 +152,33 @@ describe('useMorningStarPipeline', () => {
     expect(cleared.morningStarAnalysis).toBeUndefined();
     expect(cleared.morningStarPersonas).toBeUndefined();
     expect(cleared.reflection).toBe('');
+  });
+});
+
+describe('useMorningStarPipeline — W2.4 streaming branch', () => {
+  // Reflection is seeded via the entry prop (NOT through
+  // setReflectionText) so analyze() doesn't churn through extra
+  // re-renders that exhaust the worker heap under StrictMode — same
+  // contract documented at the top of the file.
+  const reflectiveEntry = (overrides: Partial<DiaryEntry> = {}): DiaryEntry =>
+    baseEntry({
+      morningStarPersonas: ['Marcus Aurelius'],
+      reflection: 'I feel stuck.',
+      ...overrides,
+    });
+
+  it('exposes streamingPreview="" by default', () => {
+    const { result } = renderHook(() =>
+      useMorningStarPipeline({
+        entry: reflectiveEntry(),
+        guidingStars: [],
+        decryptedContent: '',
+        language: 'en',
+        onUpdateEntry,
+        fetcher,
+        streamer,
+      }),
+    );
+    expect(result.current.streamingPreview).toBe('');
   });
 });

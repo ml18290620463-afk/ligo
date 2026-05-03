@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DiaryEntry } from '../types';
-import { getMorningStarAnalysis as defaultMorningStarFetcher } from '../services/geminiService';
+import {
+  getMorningStarAnalysis as defaultMorningStarFetcher,
+  streamMorningStarAnalysis as defaultMorningStarStreamer,
+  type MorningStarChunkHandler,
+} from '../services/geminiService';
+import { AppStorageKeys } from '../services/appSettings';
 
 export type ReadingStep = 'reading' | 'reflecting' | 'evaluation';
 
@@ -16,6 +21,20 @@ export type MorningStarFetcher = (
   personas: string[],
 ) => Promise<string>;
 
+/**
+ * Signature compatible with
+ * `services/geminiService.streamMorningStarAnalysis`. Each chunk fires
+ * with `(delta, accumulated)` so a UI preview can show the running
+ * text without rebuilding the string itself.
+ */
+export type MorningStarStreamer = (
+  decryptedContent: string,
+  reflectionText: string,
+  personas: string[],
+  onChunk: MorningStarChunkHandler,
+  signal?: AbortSignal,
+) => Promise<string>;
+
 export interface UseMorningStarPipelineArgs {
   entry: DiaryEntry;
   guidingStars: string[];
@@ -25,11 +44,19 @@ export interface UseMorningStarPipelineArgs {
   /** Persist updates back to useDiaryData. */
   onUpdateEntry: (updated: DiaryEntry) => void;
   /**
-   * Override the upstream Morning Star call; defaults to the proxy in
+   * Override the buffered Morning Star call; defaults to the proxy in
    * `services/geminiService`. Useful for tests and for swapping providers
-   * (e.g. SSE) without touching this hook.
+   * without touching this hook.
    */
   fetcher?: MorningStarFetcher;
+  /** Override the streaming Morning Star call. */
+  streamer?: MorningStarStreamer;
+  /**
+   * Force the streaming path (used by tests). When undefined, the hook
+   * reads the per-installation flag at
+   * `localStorage[AppStorageKeys.morningStarStreamingEnabled]`.
+   */
+  streamingEnabled?: boolean;
 }
 
 export interface MorningStarPipeline {
@@ -42,11 +69,27 @@ export interface MorningStarPipeline {
   parsedAnalysis: ParsedMorningStarAnalysis | null;
   readingStep: ReadingStep;
   setReadingStep: (step: ReadingStep) => void;
+  /**
+   * W2.4 — Live preview of streamed Morning Star deltas. Empty string
+   * when the streaming path is off OR before the first chunk arrives.
+   * Cleared back to '' on every fresh analyze() call.
+   */
+  streamingPreview: string;
   /** Trigger an analysis call. No-ops if already loading or pre-conditions fail. */
   analyze: () => Promise<void>;
   /** Drop the persisted analysis and reset to the reading step. */
   deleteAnalysis: () => void;
 }
+
+const isStreamingEnabledFromStorage = (): boolean => {
+  try {
+    if (typeof localStorage === 'undefined') return false;
+    const value = localStorage.getItem(AppStorageKeys.morningStarStreamingEnabled);
+    return value === '1' || (typeof value === 'string' && value.toLowerCase() === 'true');
+  } catch {
+    return false;
+  }
+};
 
 const initialPersonas = (entry: DiaryEntry, guidingStars: string[]): string[] => {
   if (entry.morningStarPersonas && entry.morningStarPersonas.length > 0) {
@@ -86,12 +129,15 @@ export const useMorningStarPipeline = ({
   language,
   onUpdateEntry,
   fetcher = defaultMorningStarFetcher,
+  streamer = defaultMorningStarStreamer,
+  streamingEnabled,
 }: UseMorningStarPipelineArgs): MorningStarPipeline => {
   const [personas, setPersonas] = useState<string[]>(() => initialPersonas(entry, guidingStars));
   const [reflectionText, setReflectionText] = useState(entry.reflection ?? '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [readingStep, setReadingStep] = useState<ReadingStep>(() => initialReadingStep(entry));
+  const [streamingPreview, setStreamingPreview] = useState('');
 
   // Reset when navigating into a different entry.
   // We deliberately depend on the specific entry fields below — depending on
@@ -137,10 +183,20 @@ export const useMorningStarPipeline = ({
     if (loading || !reflectionText.trim() || personas.length === 0) return;
     setLoading(true);
     setError(null);
+    setStreamingPreview('');
     setReadingStep('evaluation');
     try {
       const contentToAnalyze = decryptedContent || entry.content;
-      const result = await fetcher(contentToAnalyze, reflectionText, personas);
+      // Streaming path is opt-in via per-installation flag (or test
+      // override). On any failure inside the streamer, the underlying
+      // service silently falls back to the buffered endpoint, so the
+      // hook only sees a single "result" string.
+      const useStreaming = streamingEnabled ?? isStreamingEnabledFromStorage();
+      const result = useStreaming
+        ? await streamer(contentToAnalyze, reflectionText, personas, (_delta, accumulated) =>
+            setStreamingPreview(accumulated),
+          )
+        : await fetcher(contentToAnalyze, reflectionText, personas);
       onUpdateEntry({
         ...entry,
         morningStarAnalysis: result,
@@ -156,6 +212,7 @@ export const useMorningStarPipeline = ({
       );
     } finally {
       setLoading(false);
+      setStreamingPreview('');
     }
   }, [
     decryptedContent,
@@ -166,6 +223,8 @@ export const useMorningStarPipeline = ({
     onUpdateEntry,
     personas,
     reflectionText,
+    streamer,
+    streamingEnabled,
   ]);
 
   const deleteAnalysis = useCallback(() => {
@@ -190,6 +249,7 @@ export const useMorningStarPipeline = ({
     parsedAnalysis,
     readingStep,
     setReadingStep,
+    streamingPreview,
     analyze,
     deleteAnalysis,
   };

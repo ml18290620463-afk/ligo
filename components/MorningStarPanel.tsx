@@ -43,6 +43,14 @@ interface MorningStarPanelProps {
   setMorningStarPersonas: (personas: string[]) => void;
   morningStarLoading: boolean;
   morningStarError: string | null;
+  /**
+   * W2.4 — incremental SSE preview text. When non-empty AND
+   * morningStarLoading is true, the loading panel shows the streamed
+   * deltas in a "thinking" affordance instead of a static spinner.
+   * Falls back to the spinner when the streaming flag is off or no
+   * chunks have arrived yet.
+   */
+  morningStarStreamingPreview?: string;
   parsedAnalysis: ParsedAnalysis | null;
   onAnalyze: () => void;
   onDeleteAnalysis: () => void;
@@ -81,6 +89,7 @@ export const MorningStarPanel: React.FC<MorningStarPanelProps> = ({
   setMorningStarPersonas,
   morningStarLoading,
   morningStarError,
+  morningStarStreamingPreview,
   parsedAnalysis,
   onAnalyze,
   onDeleteAnalysis,
@@ -264,6 +273,7 @@ export const MorningStarPanel: React.FC<MorningStarPanelProps> = ({
             {morningStarLoading ? (
               <div
                 className={`p-12 border border-dashed flex flex-col items-center gap-6 ${theme === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-black/20 border-cyan-900/30'}`}
+                data-testid="morning-star-loading"
               >
                 <div className="relative">
                   <div className="absolute inset-0 blur-xl bg-cyan-500/20 animate-pulse rounded-full" />
@@ -277,6 +287,18 @@ export const MorningStarPanel: React.FC<MorningStarPanelProps> = ({
                     星辰正在低语，请稍候...
                   </div>
                 </div>
+                {morningStarStreamingPreview && morningStarStreamingPreview.trim() && (
+                  <div
+                    data-testid="morning-star-streaming-preview"
+                    aria-live="polite"
+                    className={`w-full max-h-48 overflow-hidden text-[11px] font-mono leading-relaxed text-left whitespace-pre-wrap p-4 border rounded-md ${theme === 'light' ? 'bg-white/60 border-slate-200 text-slate-600' : 'bg-black/40 border-cyan-900/40 text-cyan-200/80'}`}
+                  >
+                    {/* Show only the tail of the stream so very long
+                        responses stay legible without forcing scroll. */}
+                    {morningStarStreamingPreview.slice(-1200)}
+                    <span className="inline-block w-2 h-3 ml-1 bg-cyan-400 animate-pulse align-middle" />
+                  </div>
+                )}
               </div>
             ) : morningStarError ? (
               <div

@@ -52,6 +52,8 @@ interface ViewerReadingPanelProps {
   setMorningStarPersonas: (personas: string[]) => void;
   morningStarLoading: boolean;
   morningStarError: string | null;
+  /** W2.4 — incremental SSE preview text. Empty when streaming is off. */
+  morningStarStreamingPreview?: string;
   parsedAnalysis: ParsedMorningStarAnalysis | null;
   onAnalyze: () => void | Promise<void>;
   onDeleteAnalysis: () => void;
@@ -122,6 +124,7 @@ export const ViewerReadingPanel: React.FC<ViewerReadingPanelProps> = ({
   setMorningStarPersonas,
   morningStarLoading,
   morningStarError,
+  morningStarStreamingPreview,
   parsedAnalysis,
   onAnalyze,
   onDeleteAnalysis,
@@ -333,6 +336,7 @@ export const ViewerReadingPanel: React.FC<ViewerReadingPanelProps> = ({
         setMorningStarPersonas={setMorningStarPersonas}
         morningStarLoading={morningStarLoading}
         morningStarError={morningStarError}
+        morningStarStreamingPreview={morningStarStreamingPreview}
         parsedAnalysis={parsedAnalysis}
         onAnalyze={onAnalyze}
         onDeleteAnalysis={onDeleteAnalysis}

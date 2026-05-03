@@ -4,6 +4,7 @@ import {
   resolveProviderModel,
   callOpenRouter,
   fetchOpenRouterFreeModels,
+  streamOpenRouter,
   type ProviderConfig,
 } from './aiProviders';
 
@@ -215,5 +216,128 @@ describe('fetchOpenRouterFreeModels', () => {
     const [, init] = vi.mocked(globalThis.fetch).mock.calls[0]!;
     const headers = (init as { headers: Record<string, string> }).headers;
     expect(headers['Authorization']).toBeUndefined();
+  });
+});
+
+/**
+ * Helper that builds a streamed Response from a list of SSE-framed
+ * data chunks, mimicking what OpenRouter's SSE endpoint emits.
+ */
+const sseResponse = (chunks: string[]): Response => {
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      const encoder = new TextEncoder();
+      for (const chunk of chunks) {
+        controller.enqueue(encoder.encode(chunk));
+      }
+      controller.close();
+    },
+  });
+  return new Response(stream, {
+    status: 200,
+    headers: { 'Content-Type': 'text/event-stream' },
+  });
+};
+
+describe('streamOpenRouter', () => {
+  beforeEach(() => {
+    vi.spyOn(globalThis, 'fetch');
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('throws on non-2xx upstream', async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(new Response('overload', { status: 503 }));
+    await expect(
+      streamOpenRouter('hi', baseCfg({ openrouterKey: 'sk-or-1' }), () => {}),
+    ).rejects.toThrow(/OpenRouter 503/);
+  });
+
+  it('emits onChunk for each delta and returns the concatenated text', async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+      sseResponse([
+        'data: {"choices":[{"delta":{"content":"Hello"}}]}\n\n',
+        'data: {"choices":[{"delta":{"content":" "}}]}\n\n',
+        'data: {"choices":[{"delta":{"content":"world"}}]}\n\n',
+        'data: [DONE]\n\n',
+      ]),
+    );
+    const chunks: string[] = [];
+    const result = await streamOpenRouter('hi', baseCfg({ openrouterKey: 'sk-or-1' }), (delta) =>
+      chunks.push(delta),
+    );
+    expect(chunks).toEqual(['Hello', ' ', 'world']);
+    expect(result).toBe('Hello world');
+  });
+
+  it('tolerates SSE keep-alive / non-JSON lines without blowing up', async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+      sseResponse([
+        ': openrouter heartbeat\n\n',
+        'data: garbage that is not json\n\n',
+        'data: {"choices":[{"delta":{"content":"ok"}}]}\n\n',
+        'data: [DONE]\n\n',
+      ]),
+    );
+    const result = await streamOpenRouter('hi', baseCfg({ openrouterKey: 'sk-or-1' }), () => {});
+    expect(result).toBe('ok');
+  });
+
+  it('reassembles deltas split across chunks (split mid-event)', async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+      sseResponse([
+        'data: {"choices":[{"delta":{"content":"alpha"}}]}\ndata: {"choices":[{"delta":{"content":"beta"}',
+        '}]}\n\ndata: [DONE]\n\n',
+      ]),
+    );
+    const chunks: string[] = [];
+    const result = await streamOpenRouter('hi', baseCfg({ openrouterKey: 'sk-or-1' }), (delta) =>
+      chunks.push(delta),
+    );
+    expect(chunks).toEqual(['alpha', 'beta']);
+    expect(result).toBe('alphabeta');
+  });
+
+  it('throws when the stream produces no content at all', async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(sseResponse(['data: [DONE]\n\n']));
+    await expect(
+      streamOpenRouter('hi', baseCfg({ openrouterKey: 'sk-or-1' }), () => {}),
+    ).rejects.toThrow(/Empty OpenRouter stream/);
+  });
+
+  it('sends stream:true and HTTP-Referer/X-Title headers', async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+      sseResponse(['data: {"choices":[{"delta":{"content":"x"}}]}\n\n', 'data: [DONE]\n\n']),
+    );
+    await streamOpenRouter(
+      'hi',
+      baseCfg({
+        openrouterKey: 'sk-or-1',
+        openrouterReferer: 'https://example.test',
+        openrouterTitle: 'Test',
+      }),
+      () => {},
+    );
+    const [, init] = vi.mocked(globalThis.fetch).mock.calls[0]!;
+    const body = JSON.parse((init as { body: string }).body);
+    const headers = (init as { headers: Record<string, string> }).headers;
+    expect(body.stream).toBe(true);
+    expect(headers['Authorization']).toBe('Bearer sk-or-1');
+    expect(headers['HTTP-Referer']).toBe('https://example.test');
+    expect(headers['X-Title']).toBe('Test');
+    expect(headers['Accept']).toBe('text/event-stream');
+  });
+
+  it('honours an aborted signal between reads', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+      sseResponse(['data: {"choices":[{"delta":{"content":"x"}}]}\n\n', 'data: [DONE]\n\n']),
+    );
+    await expect(
+      streamOpenRouter('hi', baseCfg({ openrouterKey: 'sk-or-1' }), () => {}, controller.signal),
+    ).rejects.toMatchObject({ name: 'AbortError' });
   });
 });

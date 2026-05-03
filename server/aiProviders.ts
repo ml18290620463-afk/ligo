@@ -140,6 +140,142 @@ export const callGemini = async (
   return response.text || '';
 };
 
+/**
+ * Receives one streamed token / token-fragment at a time (whatever the
+ * upstream provider emits). Implementations must be cheap — they fire
+ * once per chunk and the route handler relays them to the SSE client.
+ */
+export type StreamChunkHandler = (chunk: string) => void;
+
+/**
+ * Streamed OpenRouter completion. Sends `stream: true` so the upstream
+ * responds with `text/event-stream` framing (`data: {...}\n\n`,
+ * terminated by `data: [DONE]`). Returns the full concatenated text
+ * once the stream closes; emits each delta through `onChunk` as it
+ * arrives.
+ *
+ * `signal` aborts the upstream fetch; the reader loop checks the
+ * signal between reads so cancellation propagates within a few ms.
+ */
+export const streamOpenRouter = async (
+  prompt: string,
+  cfg: ProviderConfig,
+  onChunk: StreamChunkHandler,
+  signal?: AbortSignal,
+): Promise<string> => {
+  const body: Record<string, unknown> = {
+    model: cfg.openrouterModel,
+    messages: [{ role: 'user', content: prompt }],
+    stream: true,
+  };
+  if (cfg.openrouterJsonMode) {
+    body.response_format = { type: 'json_object' };
+  }
+
+  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    signal,
+    headers: {
+      Authorization: `Bearer ${cfg.openrouterKey}`,
+      'Content-Type': 'application/json',
+      Accept: 'text/event-stream',
+      'HTTP-Referer': cfg.openrouterReferer,
+      'X-Title': cfg.openrouterTitle,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    throw new Error(`OpenRouter ${response.status}: ${detail.slice(0, 300)}`);
+  }
+  if (!response.body) {
+    throw new Error('OpenRouter stream has no body');
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let fullText = '';
+
+  try {
+    while (true) {
+      if (signal?.aborted) {
+        throw Object.assign(new Error('Aborted'), { name: 'AbortError' });
+      }
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() ?? '';
+      for (const rawLine of lines) {
+        const line = rawLine.trim();
+        if (!line || !line.startsWith('data:')) continue;
+        const payload = line.slice(5).trim();
+        if (payload === '[DONE]') continue;
+        try {
+          const parsed = JSON.parse(payload);
+          const delta = parsed?.choices?.[0]?.delta?.content;
+          if (typeof delta === 'string' && delta.length > 0) {
+            fullText += delta;
+            onChunk(delta);
+          }
+        } catch {
+          // Tolerate keep-alive / heartbeat lines that aren't JSON.
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  if (!fullText) {
+    throw new Error('Empty OpenRouter stream');
+  }
+  return fullText;
+};
+
+/**
+ * Streamed Gemini completion. Wraps `generateContentStream` (an async
+ * iterable returning `{ text }` chunks) with a manual abort check so
+ * cancellation is responsive even when the upstream is slow to close
+ * the underlying connection.
+ */
+export const streamGemini = async (
+  prompt: string,
+  cfg: ProviderConfig,
+  onChunk: StreamChunkHandler,
+  signal?: AbortSignal,
+): Promise<string> => {
+  if (signal?.aborted) {
+    throw Object.assign(new Error('Aborted'), { name: 'AbortError' });
+  }
+
+  const client = new GoogleGenAI({ apiKey: cfg.geminiKey });
+  const stream = await client.models.generateContentStream({
+    model: cfg.geminiModel,
+    contents: prompt,
+    config: { responseMimeType: 'application/json' },
+  });
+
+  let fullText = '';
+  for await (const chunk of stream) {
+    if (signal?.aborted) {
+      throw Object.assign(new Error('Aborted'), { name: 'AbortError' });
+    }
+    const delta = chunk?.text;
+    if (typeof delta === 'string' && delta.length > 0) {
+      fullText += delta;
+      onChunk(delta);
+    }
+  }
+
+  if (!fullText) {
+    throw new Error('Empty Gemini stream');
+  }
+  return fullText;
+};
+
 export interface FreeModelSummary {
   id: string;
   name: string;

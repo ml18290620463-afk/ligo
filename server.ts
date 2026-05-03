@@ -16,6 +16,8 @@ import {
   chooseProvider,
   fetchOpenRouterFreeModels,
   resolveProviderModel,
+  streamGemini,
+  streamOpenRouter,
   type Provider,
   type ProviderConfig,
 } from './server/aiProviders';
@@ -275,6 +277,129 @@ async function startServer() {
       res.status(502).json({ error: 'Failed to fetch from secure backend', requestId });
     } finally {
       clearTimeout(timeout);
+    }
+  });
+
+  // W2.4 — Server-Sent Events streaming variant of /api/morning-star.
+  //
+  // Identical contract for input + auth + injection guard, but the
+  // response body is `text/event-stream` framed:
+  //   event: chunk    data: {"text": "delta"}\n\n
+  //   event: done     data: {"requestId": "...", "provider": "...", "fullText": "..."}\n\n
+  //   event: error    data: {"error": "...", "requestId": "..."}\n\n
+  //
+  // Clients can opt in by POSTing here instead of /api/morning-star.
+  // The buffered endpoint stays as the fallback so even very old
+  // clients (or hostile network middleboxes that buffer SSE) keep
+  // working.
+  app.post('/api/morning-star/stream', morningStarLimiter, requireAiProxyAuth, async (req, res) => {
+    const requestId = randomUUID();
+    res.setHeader('X-Request-Id', requestId);
+
+    const provider = chooseProvider(providerConfig);
+    if (!provider) {
+      res.status(503).json({ error: 'AI backend is not configured', requestId });
+      return;
+    }
+
+    const { prompt } = req.body;
+    if (typeof prompt !== 'string' || prompt.trim().length === 0 || prompt.length > 60_000) {
+      res.status(400).json({ error: 'Invalid prompt payload', requestId });
+      return;
+    }
+
+    if (containsInjection(prompt)) {
+      console.warn(
+        JSON.stringify({
+          level: 'warn',
+          event: 'morning_star_stream_rejected_injection',
+          requestId,
+          provider,
+          promptLength: prompt.length,
+        }),
+      );
+      res
+        .status(400)
+        .json({ error: 'Prompt rejected by safety guard', requestId, code: 'INJECTION' });
+      return;
+    }
+
+    // SSE setup. `X-Accel-Buffering: no` instructs nginx (the most
+    // common reverse proxy in our deployment notes) to disable its
+    // default response buffering — without this, chunks pile up in
+    // the proxy until the connection closes, defeating streaming.
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+
+    const writeEvent = (event: string, data: unknown) => {
+      res.write(`event: ${event}\n`);
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    };
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), env.openrouterTimeoutMs);
+    const startedAt = Date.now();
+
+    // Abort the upstream call when the client disconnects mid-stream
+    // (browser tab close, navigate-away). Otherwise we'd keep paying
+    // OpenRouter / Gemini quota for tokens nobody will read.
+    req.on('close', () => {
+      if (!res.writableEnded) {
+        controller.abort();
+      }
+    });
+
+    try {
+      const fullText =
+        provider === 'openrouter'
+          ? await streamOpenRouter(
+              prompt,
+              providerConfig,
+              (delta) => writeEvent('chunk', { text: delta }),
+              controller.signal,
+            )
+          : await streamGemini(
+              prompt,
+              providerConfig,
+              (delta) => writeEvent('chunk', { text: delta }),
+              controller.signal,
+            );
+
+      writeEvent('done', { requestId, provider, fullText });
+      console.info(
+        JSON.stringify({
+          level: 'info',
+          event: 'morning_star_stream_success',
+          requestId,
+          provider,
+          promptLength: prompt.length,
+          chars: fullText.length,
+          durationMs: Date.now() - startedAt,
+        }),
+      );
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          level: 'error',
+          event: 'morning_star_stream_failed',
+          requestId,
+          provider,
+          durationMs: Date.now() - startedAt,
+          error: formatLogError(error),
+        }),
+      );
+      captureServerError(error, { requestId, provider, mode: 'stream' });
+      try {
+        writeEvent('error', { error: 'Failed to fetch from secure backend', requestId });
+      } catch {
+        // Connection already torn down — nothing to flush.
+      }
+    } finally {
+      clearTimeout(timeout);
+      res.end();
     }
   });
 
