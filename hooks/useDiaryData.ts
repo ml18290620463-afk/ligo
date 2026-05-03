@@ -354,10 +354,9 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
     [userId],
   );
 
-  const persistContainers = useCallback(
+  const persistContainersArray = useCallback(
     async (newContainers: Container[]) => {
       const keys = getDiaryStorageKeys(userId);
-      setContainers(newContainers);
       try {
         await set(keys.containers, newContainers).catch((err) => {
           console.warn('IndexedDB set failed for containers, falling back to localStorage', err);
@@ -372,26 +371,29 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
 
   const addContainer = useCallback(
     (name: string) => {
-      const newContainer: Container = {
-        id: generateSecureId('container'),
-        name,
-        createdAt: Date.now(),
-      };
-      persistContainers([newContainer, ...containers]);
+      const c: Container = { id: generateSecureId('container'), name, createdAt: Date.now() };
+      let next: Container[] = [];
+      setContainers((prev) => (next = [c, ...prev]));
+      void persistContainersArray(next);
     },
-    [containers, persistContainers],
+    [persistContainersArray],
   );
 
   const deleteContainer = useCallback(
     (id: string) => {
-      const newContainers = containers.filter((container) => container.id !== id);
-      persistContainers(newContainers);
-      const updatedEntries = entries.map((entry) =>
-        entry.containerId === id ? { ...entry, containerId: undefined } : entry,
+      let nextContainers: Container[] = [];
+      setContainers((prev) => (nextContainers = prev.filter((c) => c.id !== id)));
+      void persistContainersArray(nextContainers);
+      let nextEntries: DiaryEntry[] = [];
+      setEntries(
+        (prev) =>
+          (nextEntries = prev.map((e) =>
+            e.containerId === id ? { ...e, containerId: undefined } : e,
+          )),
       );
-      persistEntries(updatedEntries);
+      void persistEntries(nextEntries);
     },
-    [containers, entries, persistContainers, persistEntries],
+    [persistContainersArray, persistEntries],
   );
 
   const addEntry = useCallback(
