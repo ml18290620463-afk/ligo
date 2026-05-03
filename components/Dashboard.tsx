@@ -7,6 +7,7 @@ import { getStoredString, setStoredString } from '../services/browserStorage';
 import { useBackupImport } from '../hooks/useBackupImport';
 import { useDashboardVault } from '../hooks/useDashboardVault';
 import { useBackupReminder } from '../hooks/useBackupReminder';
+import { usePwaInstallPrompt } from '../hooks/usePwaInstallPrompt';
 import { DashboardOverlays } from './DashboardOverlays';
 import { FilterHub } from './FilterHub';
 import { DashboardHeader } from './DashboardHeader';
@@ -80,6 +81,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const { backupReminderActive, daysSinceBackup, recordBackup } = useBackupReminder(
     entries.length,
   );
+
+  const pwaInstall = usePwaInstallPrompt();
 
   const handleGoHomeClick = () => {
     setIsSailingHome(true);
@@ -214,6 +217,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
         backupReminderActive={backupReminderActive}
         daysSinceBackup={daysSinceBackup}
         onOpenSettings={() => setShowSettings(true)}
+        pwaInstallAvailable={pwaInstall.isAvailable}
+        onPwaInstall={() => {
+          void pwaInstall.promptInstall();
+        }}
+        onPwaInstallDismiss={pwaInstall.dismiss}
         importPending={importConfirm.pending}
         onResolveImport={importConfirm.resolveConfirm}
         isVerifyingVault={isVerifyingVault}

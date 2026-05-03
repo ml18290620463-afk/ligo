@@ -22,6 +22,44 @@
   --color-tech-slate: #0f172a;
   --color-vector-magenta: #c85f72;
   --color-vector-alert: #c85f72;
+
+  /*
+   * Phase 3 §3.a-2 — design-token migration tier 1.
+   *
+   * These tokens absorb the high-frequency raw hex literals that
+   * previously lived inline in CoverScreen.tsx (and a handful of
+   * other surfaces). Tailwind 4's `@theme` auto-generates `bg-…`,
+   * `text-…`, `border-…`, `shadow-…` utilities for every token,
+   * so consumers write `bg-vector-magenta-bright/10` instead of
+   * `bg-[#FF2ECC]/10` and the lint-tokens scoreboard
+   * (`npm run lint:tokens`) shrinks accordingly.
+   *
+   * Naming convention:
+   *   `--color-vector-<hue>-<role>` where <role> ∈
+   *   {bright, brand, deep, pure, mid, strong, light}.
+   */
+  --color-vector-cyan-brand: #007a8c;
+  --color-vector-cyan-pure: #06b6d4;
+  --color-vector-cyan-neon: #12d8ff;
+  --color-vector-magenta-bright: #ff2ecc;
+  --color-vector-blue-deep: #3182ce;
+  --color-vector-fog-light: #f0f4f7;
+  --color-vector-ink-strong: #1a202c;
+  --color-vector-ink-deep: #050505;
+  --color-vector-night-deep: #05070b;
+  --color-vector-onyx: #030303;
+  --color-vector-teal-online: #11bfaf;
+  --color-vector-fog-paper: #f0f9fa;
+  --color-vector-navy-deep: #173242;
+  --color-vector-ice-pale: #eaf4ff;
+  --color-vector-paper-cream: #faf9f6;
+  --color-vector-paper-white: #fcfdfe;
+  --color-vector-night-navy: #0a0f14;
+  --color-vector-night-blue: #020508;
+  --color-vector-night-slate: #0a0d12;
+  --color-vector-slate-mid: #4a5568;
+  --color-vector-slate-soft: #718096;
+  --color-vector-slate-chrome: #6e8198;
 }
 
 :root {
@@ -34,6 +72,167 @@
   --text-muted: #64748b;
   --grid-color: rgba(6, 182, 212, 0.02);
   --grid-color-alt: rgba(255, 46, 204, 0.02);
+}
+
+/*
+ * Phase 3 §3.a-2 — bespoke neon glow utilities used by CoverScreen
+ * + future Master/Onboarding migrations. Each utility carries its
+ * exact rgba value so the consumers can write `shadow-glow-magenta-soft`
+ * instead of `shadow-[0_0_10px_rgba(255,46,204,0.1)]` and
+ * `npm run lint:tokens` shrinks accordingly.
+ */
+@utility shadow-glow-magenta-soft {
+  box-shadow: 0 0 10px rgba(255, 46, 204, 0.1);
+}
+@utility shadow-glow-magenta {
+  box-shadow: 0 0 15px rgba(255, 46, 204, 0.1);
+}
+@utility shadow-glow-magenta-strong {
+  box-shadow: 0 0 15px rgba(255, 46, 204, 0.2);
+}
+@utility text-glow-magenta {
+  text-shadow: 0 0 10px rgba(255, 46, 204, 0.3);
+}
+@utility shadow-glow-cyan-400 {
+  box-shadow: 0 0 8px rgba(34, 211, 238, 0.4);
+}
+@utility drop-shadow-glow-vector-magenta {
+  filter: drop-shadow(0 0 5px rgba(200, 95, 114, 0.5));
+}
+@utility shadow-glow-cyan-neon-soft {
+  box-shadow: 0 0 15px rgba(18, 216, 255, 0.15);
+}
+@utility shadow-glow-cyan-neon {
+  box-shadow: 0 0 25px rgba(18, 216, 255, 0.3);
+}
+@utility shadow-glow-vector-magenta {
+  box-shadow: 0 0 10px rgba(200, 95, 114, 0.1);
+}
+@utility shadow-glow-vector-magenta-strong {
+  box-shadow: 0 0 20px rgba(200, 95, 114, 0.4);
+}
+@utility shadow-glow-vector-magenta-soft {
+  box-shadow: 0 0 8px rgba(200, 95, 114, 0.2);
+}
+@utility shadow-glow-indigo-500 {
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
+}
+@utility shadow-glow-cyan-400-soft {
+  box-shadow: 0 0 30px rgba(34, 211, 238, 0.05);
+}
+@utility shadow-paper-card {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+@utility shadow-inset-glow-cyan-soft {
+  box-shadow: inset 0 0 20px rgba(6, 182, 212, 0.02);
+}
+@utility shadow-inset-glow-vector-cyan-brand {
+  box-shadow: inset 0 0 30px rgba(0, 122, 140, 0.05);
+}
+@utility shadow-inset-glow-cyan-400-deep {
+  box-shadow: inset 0 0 40px rgba(34, 211, 238, 0.03);
+}
+@utility shadow-inset-glow-rose-soft {
+  box-shadow: inset 0 0 20px rgba(244, 63, 94, 0.1);
+}
+@utility shadow-inset-glow-rose-deep {
+  box-shadow: inset 0 0 40px rgba(244, 63, 94, 0.1);
+}
+@utility shadow-glow-cyan-neon-bright {
+  box-shadow: 0 0 50px rgba(18, 216, 255, 0.1);
+}
+@utility shadow-glow-cyan-500-bright {
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.6);
+}
+@utility shadow-glow-cyan-400-mid {
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);
+}
+@utility shadow-glow-indigo-strong {
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
+}
+@utility shadow-glow-indigo-soft {
+  box-shadow: 0 0 30px rgba(99, 102, 241, 0.1);
+}
+@utility shadow-glow-rose-soft {
+  box-shadow: 0 0 20px rgba(244, 63, 94, 0.1);
+}
+@utility shadow-glow-rose-strong {
+  box-shadow: 0 0 30px rgba(244, 63, 94, 0.2);
+}
+@utility drop-shadow-glow-indigo {
+  filter: drop-shadow(0 0 5px rgba(99, 102, 241, 0.3));
+}
+@utility drop-shadow-glow-rose {
+  filter: drop-shadow(0 0 5px rgba(244, 63, 94, 0.3));
+}
+@utility shadow-glow-rose-mid {
+  box-shadow: 0 0 20px rgba(244, 63, 94, 0.2);
+}
+@utility shadow-inset-glow-cyan-mid {
+  box-shadow: inset 0 0 20px rgba(6, 182, 212, 0.1);
+}
+@utility shadow-glow-cyan-card {
+  box-shadow: 0 4px 12px rgba(6, 182, 212, 0.1);
+}
+@utility shadow-glow-cyan-mid {
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.3);
+}
+@utility shadow-glow-cyan-strong {
+  box-shadow: 0 0 25px rgba(6, 182, 212, 0.3);
+}
+@utility shadow-glow-cyan-thin {
+  box-shadow: 0 0 10px rgba(6, 182, 212, 0.8);
+}
+@utility shadow-glow-cyan-400-strong {
+  box-shadow: 0 0 25px rgba(34, 211, 238, 0.2);
+}
+@utility shadow-glow-green-bright {
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.6);
+}
+@utility shadow-glow-green-mid {
+  box-shadow: 0 0 15px rgba(34, 197, 94, 0.3);
+}
+@utility shadow-glow-green-strong {
+  box-shadow: 0 0 25px rgba(34, 197, 94, 0.3);
+}
+@utility shadow-glow-green-thin {
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.8);
+}
+@utility shadow-elevation-modal-light {
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
+}
+@utility shadow-elevation-modal-cyan {
+  box-shadow: 0 20px 50px rgba(0, 122, 140, 0.3);
+}
+
+/*
+ * Phase 3 §3.a-2 — SpaceTimeBackground star-river grid.
+ * Three stacked linear-gradients (horizon glow + 1px H + 1px V grid),
+ * one variant per theme. Centralised here so the component stays
+ * literal-free; the rgba inlined below is the canonical source of
+ * truth for the grid effect.
+ */
+@utility bg-spacetime-grid-light {
+  background-image:
+    linear-gradient(
+      to bottom,
+      transparent 0%,
+      rgba(0, 122, 140, 0.03) 30%,
+      rgba(0, 122, 140, 0.08) 100%
+    ),
+    linear-gradient(90deg, rgba(0, 122, 140, 0.02) 1px, transparent 1px),
+    linear-gradient(rgba(0, 122, 140, 0.02) 1px, transparent 1px);
+}
+@utility bg-spacetime-grid-dark {
+  background-image:
+    linear-gradient(
+      to bottom,
+      transparent 0%,
+      rgba(18, 216, 255, 0.03) 30%,
+      rgba(99, 102, 241, 0.05) 100%
+    ),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.01) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.01) 1px, transparent 1px);
 }
 
 @utility neon-glow-magenta {

@@ -60,7 +60,7 @@ export const MasterLockBackdrop: React.FC<MasterLockBackdropProps> = ({ theme })
     <div className="absolute inset-0 pointer-events-none" aria-hidden>
       {/* Nebula Gradients */}
       <div
-        className={`absolute inset-0 opacity-40 ${theme === 'light' ? 'bg-[radial-gradient(circle_at_20%_30%,rgba(0,122,140,0.1),transparent_50%),radial-gradient(circle_at_80%_70%,rgba(99,102,241,0.05),transparent_50%)]' : 'bg-[radial-gradient(circle_at_20%_30%,rgba(6,182,212,0.15),transparent_50%),radial-gradient(circle_at_80%_70%,rgba(99,102,241,0.08),transparent_50%)]'}`}
+        className={`absolute inset-0 opacity-40 ${theme === 'light' ? 'bg-[radial-gradient(circle_at_20%_30%,color-mix(in_srgb,_var(--color-vector-cyan-brand)_10%,_transparent),transparent_50%),radial-gradient(circle_at_80%_70%,color-mix(in_srgb,_var(--color-indigo-500)_5%,_transparent),transparent_50%)]' : 'bg-[radial-gradient(circle_at_20%_30%,color-mix(in_srgb,_var(--color-cyan-500)_15%,_transparent),transparent_50%),radial-gradient(circle_at_80%_70%,color-mix(in_srgb,_var(--color-indigo-500)_8%,_transparent),transparent_50%)]'}`}
       />
 
       {/* Fixed Stars */}

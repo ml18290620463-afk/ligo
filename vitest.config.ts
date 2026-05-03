@@ -18,24 +18,62 @@ export default defineConfig({
       // once lit, they may only move upward (per ROADMAP cross-phase
       // discipline).
       //
-      // The pre-split baseline (with the 1247-line Viewer.tsx counted)
-      // was `lines 71 / branches 47`. After the Viewer split landed
-      // (§2.g) the analyser's denominator changed: ~600 LOC of pure-
-      // presentation panels (ViewerSealedPanel / ViewerReadingPanel /
-      // ViewerStarfield) were excluded from coverage in their own block
-      // below — but the remaining `useViewerAccess` hook is only
-      // ~64% covered today and the new TypewriterText / viewerMarkdown
-      // tests pulled in additional uncovered UI files (MorningStarPanel,
-      // MorningStarRadar, SettingsPanel, ViewerActionFooter,
-      // ViewerAttachmentPanel) that were previously hidden behind
-      // Viewer.tsx's 0% line. The honest measured floor is now
-      // `lines 69.83 / branches 44.56` — pinned here. Next ratchet step
-      // (target +5pp lines) is conditioned on the remaining four legacy
-      // components (Dashboard / MasterLock / SettingsPanel /
-      // ArchiveVault) being split per ROADMAP §2.h–§2.j.
+      // History:
+      //  - Pre-split baseline (1247-line Viewer): `71 / 47`.
+      //  - After Viewer split (§2.g): `69.83 / 44.56` (denominator
+      //    grew because previously-hidden MorningStar / Settings panels
+      //    became visible).
+      //  - After Dashboard split (§2.h): `76.06 / 47.66` — five new
+      //    hooks (`useDashboardVault`, `useGuidingStarsEditor`,
+      //    `useDashboardSecurity`, `useBackupReminder`,
+      //    `useDashboardExport`) plus `useClickOutside` shipped with
+      //    ≥5 cases each, lifting the lines metric by +6pp.
+      //  - After SettingsPanel split (§2.j): `78.61 / 54.49` — seven
+      //    sub-components (`SettingsRecoveryView`, `SettingsSecurityForm`,
+      //    `SettingsGuidingStarsSection`, `SettingsMaterialSection`,
+      //    `SettingsScanRepair`, `SettingsBackupSection`,
+      //    `SettingsWipeSection`) each tested with ≥5 cases (62 new
+      //    cases). Branches finally crossed 50% — the SettingsPanel
+      //    used to swallow ~440 branch instructions inside its
+      //    isViewingRecovery / securityMode ternary tree.
+      //  - After MasterLock split (§2.i): `79.31 / 56.18` — three new
+      //    hooks (`useBiometricAuth`, `useMasterPasswordVerify`,
+      //    `useDoubleClickConfirm`) plus four sub-components
+      //    (`MasterLockCardChrome`, `MasterLockHeader`,
+      //    `MasterLockRecoveryForm`, `MasterLockUnlockForm`) shipped
+      //    with ≥5 cases each.
+      //  - After ArchiveVault split (§2.k): `80.44 / 58.12` — one new
+      //    hook (`useArchiveGrouping`) plus five sub-components
+      //    (`ArchiveVaultBackground`, `ArchiveVaultHeader`,
+      //    `ArchiveEntryCard`, `ArchiveVaultEntries`,
+      //    `ArchivePrinciplesView`) shipped with ≥5 cases each. Lines
+      //    finally crossed 80%.
+      //  - After StatisticsWidget split (§2.m): `80.88 / 59.28` —
+      //    four new sub-components shipped with ≥5 cases each.
+      //  - After Dashboard tail (§2.l): `81.26 / 59.60` — extracting
+      //    `DashboardOverlays` and lifting `DashboardProps` into a
+      //    dedicated types file.
+      //  - After branch-coverage push (§2.n): `82.70 / 61.28` — three
+      //    targeted suites were extended:
+      //      * `useAttachmentUpload.test.ts`  +7 cases
+      //        (empty input, 4 MIME → type cases, FileReader.onerror,
+      //         thrown FileReader constructor)
+      //      * `useBackupImport.test.ts`      +5 cases
+      //        (empty input, missing onImportBackup, thrown
+      //         onImportBackup, sparse translation fallback, manual
+      //         setStatus reset)
+      //      * `components/MorningStarRadar.test.tsx`  +7 cases
+      //        (axes / rings / clamp / palette / progress bars /
+      //         "n/10" notation / partial metrics fallback)
+      //    Branches finally crossed the **ROADMAP `branches: 60`
+      //    target** (now sitting at 61.28). The threshold is now
+      //    `lines: 82 / branches: 61` so today's floor cannot regress.
+      // Future work focuses on closing the last 8pp of branches in
+      // Editor + FilterHub + EntryGrid + MorningStarPanel — these
+      // are post-Phase 2 candidates.
       thresholds: {
-        lines: 69,
-        branches: 44,
+        lines: 82,
+        branches: 61,
       },
       // Don't measure declarative configuration / generated assets or e2e
       // entry points; they would otherwise drag the percentages down for

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { ARCHIVE_PARTICLE_COLORS, withAlpha, ARCHIVE_RGB } from '../lib/canvasPalette';
 
 interface Point {
   x: number;
@@ -53,7 +54,7 @@ export const DeepArchiveAnimation: React.FC<DeepArchiveAnimationProps> = ({
     // Generate Particles
     const particles: Particle[] = [];
     const particleCount = 40;
-    const colors = ['#ff00ff', '#00ffff', '#ffff00', '#00ff00', '#ff0000', '#4b0082', '#ee82ee'];
+    const colors = ARCHIVE_PARTICLE_COLORS;
 
     for (let i = 0; i < particleCount; i++) {
       particles.push({
@@ -72,7 +73,7 @@ export const DeepArchiveAnimation: React.FC<DeepArchiveAnimationProps> = ({
 
     const drawDataConstellation = (opacity: number) => {
       ctx.save();
-      ctx.strokeStyle = `rgba(0, 255, 255, ${0.15 * opacity})`;
+      ctx.strokeStyle = withAlpha('cyan', 0.15 * opacity);
       ctx.lineWidth = 1;
 
       // Abstract data grid instead of world map
@@ -85,7 +86,7 @@ export const DeepArchiveAnimation: React.FC<DeepArchiveAnimationProps> = ({
 
       // Labels based on keyInfo
       ctx.font = 'bold 12px monospace';
-      ctx.fillStyle = `rgba(0, 255, 255, ${0.6 * opacity})`;
+      ctx.fillStyle = withAlpha('cyan', 0.6 * opacity);
 
       const defaultLabels: [string, string, number, number][] = [
         ['日期', '2026/03/30', 0.2, 0.2],
@@ -100,18 +101,18 @@ export const DeepArchiveAnimation: React.FC<DeepArchiveAnimationProps> = ({
         const posY = y * canvas.height;
 
         // Draw Label
-        ctx.fillStyle = `rgba(0, 255, 255, ${0.3 * opacity})`;
+        ctx.fillStyle = withAlpha('cyan', 0.3 * opacity);
         ctx.fillText(label, posX, posY - 15);
 
         // Draw Value
-        ctx.fillStyle = `rgba(255, 255, 255, ${0.8 * opacity})`;
+        ctx.fillStyle = withAlpha('white', 0.8 * opacity);
         ctx.font = 'bold 14px monospace';
         ctx.fillText(value.toUpperCase(), posX, posY);
 
         // Draw Point
         ctx.beginPath();
         ctx.arc(posX - 10, posY - 5, 3, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(0, 255, 255, ${opacity})`;
+        ctx.fillStyle = withAlpha('cyan', opacity);
         ctx.fill();
       });
 
@@ -125,8 +126,15 @@ export const DeepArchiveAnimation: React.FC<DeepArchiveAnimationProps> = ({
       ctx.save();
       ctx.translate(vaultPos.x, vaultPos.y);
 
-      // Outer Rings - Multi-colored and glowing
-      const ringColors = ['#00ffff', '#ff00ff', '#ffff00', '#00ff00'];
+      // Outer Rings - Multi-colored and glowing. Order is cyan → magenta
+      // → yellow → green to keep the same cyclic feel as the pre-token
+      // implementation.
+      const ringColors = [
+        ARCHIVE_PARTICLE_COLORS[1],
+        ARCHIVE_PARTICLE_COLORS[0],
+        ARCHIVE_PARTICLE_COLORS[2],
+        ARCHIVE_PARTICLE_COLORS[3],
+      ];
       for (let i = 0; i < 8; i++) {
         const r = baseRadius + i * 12 + pulse * (i + 1) * 0.15;
         ctx.beginPath();
@@ -145,10 +153,10 @@ export const DeepArchiveAnimation: React.FC<DeepArchiveAnimationProps> = ({
 
       // Inner Core - Pulsating Magenta/Cyan
       const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, baseRadius + pulse);
-      gradient.addColorStop(0, `rgba(255, 0, 255, ${0.9 * opacity})`);
-      gradient.addColorStop(0.4, `rgba(255, 0, 255, ${0.6 * opacity})`);
-      gradient.addColorStop(0.7, `rgba(0, 255, 255, ${0.3 * opacity})`);
-      gradient.addColorStop(1, `rgba(0, 0, 0, 0)`);
+      gradient.addColorStop(0, withAlpha('magenta', 0.9 * opacity));
+      gradient.addColorStop(0.4, withAlpha('magenta', 0.6 * opacity));
+      gradient.addColorStop(0.7, withAlpha('cyan', 0.3 * opacity));
+      gradient.addColorStop(1, 'transparent');
 
       ctx.beginPath();
       ctx.arc(0, 0, baseRadius + pulse, 0, Math.PI * 2);
@@ -175,7 +183,7 @@ export const DeepArchiveAnimation: React.FC<DeepArchiveAnimationProps> = ({
         return;
       }
 
-      ctx.fillStyle = theme === 'light' ? '#f8fafc' : 'black';
+      ctx.fillStyle = theme === 'light' ? `rgb(${ARCHIVE_RGB.paperLight})` : 'black';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       drawDataConstellation(globalOpacity);

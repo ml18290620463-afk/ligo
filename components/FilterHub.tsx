@@ -91,7 +91,7 @@ export const FilterHub: React.FC<FilterHubProps> = ({
               </button>
               <button
                 onClick={onClose}
-                className={`p-2 transition-all ${theme === 'light' ? 'text-slate-300 hover:text-[#C85F72]' : isGreen ? 'text-green-900 hover:text-green-400' : 'text-cyan-900 hover:text-cyan-400'}`}
+                className={`p-2 transition-all ${theme === 'light' ? 'text-slate-300 hover:text-vector-magenta' : isGreen ? 'text-green-900 hover:text-green-400' : 'text-cyan-900 hover:text-cyan-400'}`}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -104,10 +104,10 @@ export const FilterHub: React.FC<FilterHubProps> = ({
               className={`px-4 sm:px-8 py-3 text-sm font-black tracking-[0.2em] transition-all relative overflow-hidden group ${
                 selectedCategory === 'all'
                   ? theme === 'light'
-                    ? 'bg-[#007a8c] text-white shadow-lg'
+                    ? 'bg-vector-cyan-brand text-white shadow-lg'
                     : isGreen
-                      ? 'bg-green-500 text-black shadow-[0_0_20px_rgba(34,197,94,0.6)]'
-                      : 'bg-cyan-500 text-black shadow-[0_0_20px_rgba(6,182,212,0.6)]'
+                      ? 'bg-green-500 text-black shadow-glow-green-bright'
+                      : 'bg-cyan-500 text-black shadow-glow-cyan-500-bright'
                   : theme === 'light'
                     ? 'bg-slate-50 text-slate-400 hover:bg-slate-100 border border-slate-100'
                     : isGreen
@@ -132,10 +132,10 @@ export const FilterHub: React.FC<FilterHubProps> = ({
               className={`px-4 sm:px-8 py-3 text-sm font-black tracking-[0.2em] transition-all relative overflow-hidden group ${
                 selectedCategory === 'uncategorized'
                   ? theme === 'light'
-                    ? 'bg-[#007a8c] text-white shadow-lg'
+                    ? 'bg-vector-cyan-brand text-white shadow-lg'
                     : isGreen
-                      ? 'bg-green-500 text-black shadow-[0_0_20px_rgba(34,197,94,0.6)]'
-                      : 'bg-cyan-500 text-black shadow-[0_0_20px_rgba(6,182,212,0.6)]'
+                      ? 'bg-green-500 text-black shadow-glow-green-bright'
+                      : 'bg-cyan-500 text-black shadow-glow-cyan-500-bright'
                   : theme === 'light'
                     ? 'bg-slate-50 text-slate-400 hover:bg-slate-100 border border-slate-100'
                     : isGreen
@@ -162,12 +162,12 @@ export const FilterHub: React.FC<FilterHubProps> = ({
                   className={`px-4 sm:px-8 py-3 text-sm font-black tracking-[0.2em] transition-all relative overflow-hidden pr-12 min-w-[120px] ${
                     selectedCategory === container.id
                       ? theme === 'light'
-                        ? 'bg-[#007a8c] text-white shadow-lg'
+                        ? 'bg-vector-cyan-brand text-white shadow-lg'
                         : isGreen
-                          ? 'bg-green-500 text-black shadow-[0_0_20px_rgba(34,197,94,0.6)]'
-                          : 'bg-cyan-500 text-black shadow-[0_0_20px_rgba(6,182,212,0.6)]'
+                          ? 'bg-green-500 text-black shadow-glow-green-bright'
+                          : 'bg-cyan-500 text-black shadow-glow-cyan-500-bright'
                       : theme === 'light'
-                        ? 'bg-slate-50 border border-slate-100 text-slate-400 hover:text-[#007a8c]'
+                        ? 'bg-slate-50 border border-slate-100 text-slate-400 hover:text-vector-cyan-brand'
                         : isGreen
                           ? 'bg-transparent border border-green-900/30 text-green-800 hover:text-green-400 hover:bg-green-900/10'
                           : 'bg-transparent border border-cyan-900/30 text-cyan-800 hover:text-cyan-400 hover:bg-cyan-900/10'
@@ -189,7 +189,7 @@ export const FilterHub: React.FC<FilterHubProps> = ({
                     e.stopPropagation();
                     onDeleteContainer(container.id);
                   }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1 hover:text-[#C85F72] transition-all z-10"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1 hover:text-vector-magenta transition-all z-10"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -234,7 +234,7 @@ export const FilterHub: React.FC<FilterHubProps> = ({
           <div className="flex flex-wrap gap-x-6 gap-y-3">
             <button
               onClick={() => onSelectTag(null)}
-              className={`text-xs font-bold font-mono tracking-widest transition-all ${!selectedTag ? (theme === 'light' ? 'text-[#007a8c] bg-cyan-50 px-2' : isGreen ? 'text-green-400 bg-green-500/10 px-2 shadow-[0_0_15px_rgba(34,197,94,0.3)] ring-1 ring-green-500/50' : 'text-cyan-400 bg-cyan-500/10 px-2 shadow-[0_0_15px_rgba(6,182,212,0.3)] ring-1 ring-cyan-500/50') : theme === 'light' ? 'text-slate-400 hover:text-cyan-600' : isGreen ? 'text-green-900/80 hover:text-green-400' : 'text-cyan-900/80 hover:text-cyan-400'}`}
+              className={`text-xs font-bold font-mono tracking-widest transition-all ${!selectedTag ? (theme === 'light' ? 'text-vector-cyan-brand bg-cyan-50 px-2' : isGreen ? 'text-green-400 bg-green-500/10 px-2 shadow-glow-green-mid ring-1 ring-green-500/50' : 'text-cyan-400 bg-cyan-500/10 px-2 shadow-glow-cyan-mid ring-1 ring-cyan-500/50') : theme === 'light' ? 'text-slate-400 hover:text-cyan-600' : isGreen ? 'text-green-900/80 hover:text-green-400' : 'text-cyan-900/80 hover:text-cyan-400'}`}
             >
               #ALL / 全量
             </button>
@@ -242,7 +242,7 @@ export const FilterHub: React.FC<FilterHubProps> = ({
               <button
                 key={tag}
                 onClick={() => onSelectTag(tag === selectedTag ? null : tag)}
-                className={`text-xs font-bold font-mono tracking-widest transition-all hover:scale-105 ${selectedTag === tag ? (theme === 'light' ? 'text-[#007a8c] bg-cyan-50 px-2' : isGreen ? 'text-green-400 bg-green-500/10 px-2 shadow-[0_0_15px_rgba(34,197,94,0.3)] ring-1 ring-green-500/50' : 'text-cyan-400 bg-cyan-500/10 px-2 shadow-[0_0_15px_rgba(6,182,212,0.3)] ring-1 ring-cyan-500/50') : theme === 'light' ? 'text-slate-400 hover:text-cyan-600' : isGreen ? 'text-green-800 hover:text-green-400' : 'text-cyan-800 hover:text-cyan-400'}`}
+                className={`text-xs font-bold font-mono tracking-widest transition-all hover:scale-105 ${selectedTag === tag ? (theme === 'light' ? 'text-vector-cyan-brand bg-cyan-50 px-2' : isGreen ? 'text-green-400 bg-green-500/10 px-2 shadow-glow-green-mid ring-1 ring-green-500/50' : 'text-cyan-400 bg-cyan-500/10 px-2 shadow-glow-cyan-mid ring-1 ring-cyan-500/50') : theme === 'light' ? 'text-slate-400 hover:text-cyan-600' : isGreen ? 'text-green-800 hover:text-green-400' : 'text-cyan-800 hover:text-cyan-400'}`}
               >
                 #{tag.toUpperCase()}
               </button>
@@ -277,8 +277,8 @@ export const FilterHub: React.FC<FilterHubProps> = ({
                         ? theme === 'light'
                           ? 'bg-cyan-600 border-cyan-800 text-white shadow-lg'
                           : isGreen
-                            ? 'bg-green-500/20 border-green-400 text-green-300 ring-1 ring-green-400 shadow-[0_0_25px_rgba(34,197,94,0.3)]'
-                            : 'bg-cyan-500/20 border-cyan-400 text-cyan-300 ring-1 ring-cyan-400 shadow-[0_0_25px_rgba(6,182,212,0.3)]'
+                            ? 'bg-green-500/20 border-green-400 text-green-300 ring-1 ring-green-400 shadow-glow-green-strong'
+                            : 'bg-cyan-500/20 border-cyan-400 text-cyan-300 ring-1 ring-cyan-400 shadow-glow-cyan-strong'
                         : theme === 'light'
                           ? 'bg-white border-slate-100 text-slate-400 hover:border-cyan-200 hover:text-cyan-600'
                           : isGreen
@@ -328,7 +328,7 @@ export const FilterHub: React.FC<FilterHubProps> = ({
             <motion.div
               initial={false}
               animate={{ width: searchQuery ? '100%' : '0%' }}
-              className={`absolute bottom-0 left-0 h-[2px] ${isGreen ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)]' : 'bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.8)]'}`}
+              className={`absolute bottom-0 left-0 h-[2px] ${isGreen ? 'bg-green-500 shadow-glow-green-thin' : 'bg-cyan-500 shadow-glow-cyan-thin'}`}
             />
           </div>
         </div>

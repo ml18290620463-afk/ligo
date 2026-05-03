@@ -90,7 +90,7 @@ export const MasterLockUnlockForm: React.FC<MasterLockUnlockFormProps> = ({
         <motion.div
           animate={isDecrypting || isScanning ? { rotate: 360 } : {}}
           transition={{ repeat: Infinity, duration: 2, ease: 'linear' }}
-          className={`w-20 h-20 rounded-full border-2 border-dashed flex items-center justify-center transition-colors duration-500 ${isSuccess ? 'border-green-500 bg-green-500/10' : error || lockout.isLocked ? 'border-[#C85F72] bg-[#C85F72]/5 neon-border-alert' : theme === 'light' ? 'border-cyan-200' : 'border-white/10'}`}
+          className={`w-20 h-20 rounded-full border-2 border-dashed flex items-center justify-center transition-colors duration-500 ${isSuccess ? 'border-green-500 bg-green-500/10' : error || lockout.isLocked ? 'border-vector-magenta bg-vector-magenta/5 neon-border-alert' : theme === 'light' ? 'border-cyan-200' : 'border-white/10'}`}
         >
           <AnimatePresence mode="wait">
             {isSuccess ? (
@@ -113,7 +113,7 @@ export const MasterLockUnlockForm: React.FC<MasterLockUnlockFormProps> = ({
               />
             ) : (
               <Fingerprint
-                className={`w-10 h-10 ${error || lockout.isLocked ? 'text-[#C85F72] neon-glow-alert' : theme === 'light' ? 'text-cyan-600' : 'text-slate-500'}`}
+                className={`w-10 h-10 ${error || lockout.isLocked ? 'text-vector-magenta neon-glow-alert' : theme === 'light' ? 'text-cyan-600' : 'text-slate-500'}`}
               />
             )}
           </AnimatePresence>
@@ -127,7 +127,7 @@ export const MasterLockUnlockForm: React.FC<MasterLockUnlockFormProps> = ({
               initial={{ opacity: 0, y: 10, scale: 0.8 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
-              className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-black border border-[#C85F72]/30 text-[#C85F72] text-[10px] px-3 py-1 font-bold uppercase tracking-[0.2em] whitespace-nowrap shadow-[0_4px_12px_rgba(200,95,114,0.15)]"
+              className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-black border border-vector-magenta/30 text-vector-magenta text-[10px] px-3 py-1 font-bold uppercase tracking-[0.2em] whitespace-nowrap shadow-[0_4px_12px_color-mix(in_srgb,_var(--color-vector-magenta)_15%,_transparent)]"
             >
               {lockout.isLocked
                 ? `${t.tooManyAttempts} (${lockout.secondsRemaining}s)`

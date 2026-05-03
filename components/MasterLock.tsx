@@ -93,7 +93,7 @@ export const MasterLock: React.FC<MasterLockProps> = ({
 
   return (
     <div
-      className={`fixed inset-0 z-[200] flex items-center justify-center p-6 md:p-10 backdrop-blur-3xl overflow-y-auto transition-colors duration-1000 ${theme === 'light' ? 'bg-[#fafafa]' : 'bg-[#030303]'}`}
+      className={`fixed inset-0 z-[200] flex items-center justify-center p-6 md:p-10 backdrop-blur-3xl overflow-y-auto transition-colors duration-1000 ${theme === 'light' ? 'bg-neutral-50' : 'bg-vector-onyx'}`}
     >
       <MasterLockBackdrop theme={theme} />
 
@@ -141,7 +141,7 @@ export const MasterLock: React.FC<MasterLockProps> = ({
                   rotateX: { duration: 10, repeat: Infinity, ease: 'easeInOut' },
                 }
           }
-          className={`relative w-full p-5 sm:p-6 border transition-all duration-1000 group rounded-sm ${theme === 'light' ? 'bg-[#faf9f6] shadow-[0_40px_100px_rgba(0,0,0,0.15)] border-[#e2e8f0]' : 'bg-[#0a0a0a] border border-white/[0.08] shadow-[0_0_100px_rgba(6,182,212,0.1)]'} ${verify.isSuccess ? 'pointer-events-none' : ''}`}
+          className={`relative w-full p-5 sm:p-6 border transition-all duration-1000 group rounded-sm ${theme === 'light' ? 'bg-vector-paper-cream shadow-[0_40px_100px_color-mix(in_srgb,_black_15%,_transparent)] border-slate-200' : 'bg-neutral-950 border border-white/[0.08] shadow-[0_0_100px_color-mix(in_srgb,_var(--color-cyan-500)_10%,_transparent)]'} ${verify.isSuccess ? 'pointer-events-none' : ''}`}
         >
           <MasterLockCardChrome theme={theme} />
 

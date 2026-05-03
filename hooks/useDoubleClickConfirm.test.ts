@@ -27,9 +27,7 @@ describe('useDoubleClickConfirm', () => {
 
   it('second trigger after minGap fires onConfirm and resets the badge', () => {
     const onConfirm = vi.fn();
-    const { result } = renderHook(() =>
-      useDoubleClickConfirm({ onConfirm, minGapMs: 100 }),
-    );
+    const { result } = renderHook(() => useDoubleClickConfirm({ onConfirm, minGapMs: 100 }));
     act(() => result.current.trigger());
     act(() => {
       vi.advanceTimersByTime(150);
@@ -41,9 +39,7 @@ describe('useDoubleClickConfirm', () => {
 
   it('rapid second click within minGap is ignored (debounces accidental double-tap)', () => {
     const onConfirm = vi.fn();
-    const { result } = renderHook(() =>
-      useDoubleClickConfirm({ onConfirm, minGapMs: 500 }),
-    );
+    const { result } = renderHook(() => useDoubleClickConfirm({ onConfirm, minGapMs: 500 }));
     act(() => result.current.trigger());
     act(() => {
       vi.advanceTimersByTime(50);

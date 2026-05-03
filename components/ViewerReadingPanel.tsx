@@ -39,6 +39,9 @@ interface ViewerReadingPanelProps {
   onMoveToContainer: (containerId: string | undefined) => void;
   onArchiveOrRestore: () => void | Promise<void>;
   onDownload: () => void;
+  /** Phase 3 §3.h — open the share-card preview / export modal.
+   *  Optional so existing tests / call sites compile unchanged. */
+  onShareCard?: () => void;
   // Morning Star
   guidingStars: string[];
   readingStep: ReadingStep;
@@ -126,6 +129,7 @@ export const ViewerReadingPanel: React.FC<ViewerReadingPanelProps> = ({
   onRequestBurn,
   onCancelBurn,
   onExecuteBurn,
+  onShareCard,
   markdownComponents,
 }) => (
   <motion.div
@@ -165,7 +169,7 @@ export const ViewerReadingPanel: React.FC<ViewerReadingPanelProps> = ({
           variant="ghost"
           onClick={onBack}
           theme={theme}
-          className={theme === 'light' ? 'text-[#718096] hover:bg-[rgba(0,122,140,0.05)]' : ''}
+          className={theme === 'light' ? 'text-vector-slate-soft hover:bg-vector-cyan-brand/5' : ''}
         >
           <ArrowLeft className="w-4 h-4" /> {t.closeFile}
         </CyberButton>
@@ -177,7 +181,7 @@ export const ViewerReadingPanel: React.FC<ViewerReadingPanelProps> = ({
                 initial={{ opacity: 0, x: 10 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 10 }}
-                className="text-[10px] font-mono text-indigo-400 uppercase tracking-widest drop-shadow-[0_0_5px_rgba(99,102,241,0.3)]"
+                className="text-[10px] font-mono text-indigo-400 uppercase tracking-widest drop-shadow-glow-indigo"
               >
                 {t.confirmAction || 'Confirm?'}
               </motion.span>
@@ -189,10 +193,10 @@ export const ViewerReadingPanel: React.FC<ViewerReadingPanelProps> = ({
 
     <div
       className={`border p-6 md:p-12 relative overflow-hidden min-h-[500px] transition-all duration-1000 shadow-lg z-10 backdrop-blur-md
-              ${theme === 'light' ? 'bg-white/95 border-[rgba(0,122,140,0.1)] shadow-slate-200/50' : 'bg-[#030303]/90 border-cyan-500/20'}
+              ${theme === 'light' ? 'bg-white/95 border-vector-cyan-brand/10 shadow-slate-200/50' : 'bg-vector-onyx/90 border-cyan-500/20'}
               ${
                 burnMode === 'confirm'
-                  ? 'border-rose-500 shadow-[0_0_30px_rgba(244,63,94,0.2)]'
+                  ? 'border-rose-500 shadow-glow-rose-strong'
                   : burnMode !== 'idle'
                     ? 'border-rose-500 bg-rose-950/20'
                     : archiveState !== 'idle'
@@ -210,10 +214,10 @@ export const ViewerReadingPanel: React.FC<ViewerReadingPanelProps> = ({
             transition={{ duration: 8, repeat: Infinity, delay: i * 2.5, ease: 'linear' }}
             className={`absolute top-0 right-0 w-24 h-24 border rounded-full -translate-y-1/2 translate-x-1/2 ${
               i === 1 && theme === 'dark'
-                ? 'border-indigo-500/40 shadow-[0_0_20px_rgba(99,102,241,0.2)]'
+                ? 'border-indigo-500/40 shadow-glow-indigo-strong'
                 : theme === 'light'
                   ? 'border-cyan-500/30'
-                  : 'border-cyan-400/30 shadow-[0_0_10px_rgba(34,211,238,0.2)]'
+                  : 'border-cyan-400/30 shadow-glow-cyan-400-mid'
             }`}
           />
         ))}
@@ -231,7 +235,7 @@ export const ViewerReadingPanel: React.FC<ViewerReadingPanelProps> = ({
         </div>
 
         <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2 opacity-40" />
-        <div className="absolute top-0 right-0 w-16 h-16 bg-indigo-500/10 blur-2xl rounded-full -translate-y-1/3 translate-x-1/3 opacity-30 shadow-[0_0_30px_rgba(99,102,241,0.1)]" />
+        <div className="absolute top-0 right-0 w-16 h-16 bg-indigo-500/10 blur-2xl rounded-full -translate-y-1/3 translate-x-1/3 opacity-30 shadow-glow-indigo-soft" />
       </div>
 
       <div className="pb-4 mb-6 relative z-10">
@@ -246,13 +250,13 @@ export const ViewerReadingPanel: React.FC<ViewerReadingPanelProps> = ({
         </div>
 
         <h1
-          className={`text-2xl md:text-4xl font-bold mb-1 tracking-wide uppercase leading-tight font-mono ${theme === 'light' ? 'text-[#1a202c]' : 'text-white'}`}
+          className={`text-2xl md:text-4xl font-bold mb-1 tracking-wide uppercase leading-tight font-mono ${theme === 'light' ? 'text-vector-ink-strong' : 'text-white'}`}
         >
           {decrypted ? (
             <DecryptionText text={entry.title} speed={50} />
           ) : (
             <span
-              className={`${theme === 'light' ? 'text-[#718096]/20' : 'text-gray-600'} blur-sm select-none`}
+              className={`${theme === 'light' ? 'text-vector-slate-soft/20' : 'text-gray-600'} blur-sm select-none`}
             >
               {t.encryptedTitle}
             </span>
@@ -260,7 +264,7 @@ export const ViewerReadingPanel: React.FC<ViewerReadingPanelProps> = ({
         </h1>
 
         <div
-          className={`flex flex-wrap gap-4 text-[10px] font-mono mt-2 items-center uppercase tracking-wider ${theme === 'light' ? 'text-[#718096]' : 'text-cyan-500/60'}`}
+          className={`flex flex-wrap gap-4 text-[10px] font-mono mt-2 items-center uppercase tracking-wider ${theme === 'light' ? 'text-vector-slate-soft' : 'text-cyan-500/60'}`}
         >
           <span className="flex items-center gap-1">
             <Key className="w-3 h-3" /> {new Date(entry.createdAt).toLocaleString('zh-CN')}
@@ -279,7 +283,7 @@ export const ViewerReadingPanel: React.FC<ViewerReadingPanelProps> = ({
             {entry.tags.map((tag) => (
               <span
                 key={tag}
-                className={`text-[9px] uppercase px-2 py-0.5 border rounded-sm ${theme === 'light' ? 'border-[rgba(0,122,140,0.1)] text-[#718096] bg-[rgba(0,122,140,0.02)]' : 'border-cyan-900 text-cyan-600 bg-cyan-950/10'}`}
+                className={`text-[9px] uppercase px-2 py-0.5 border rounded-sm ${theme === 'light' ? 'border-vector-cyan-brand/10 text-vector-slate-soft bg-vector-cyan-brand/2' : 'border-cyan-900 text-cyan-600 bg-cyan-950/10'}`}
               >
                 #{tag}
               </span>
@@ -295,7 +299,7 @@ export const ViewerReadingPanel: React.FC<ViewerReadingPanelProps> = ({
               className={`prose max-w-none ${theme === 'light' ? 'prose-slate' : 'prose-invert'}`}
             >
               <div
-                className={`leading-relaxed font-serif text-lg md:text-xl whitespace-pre-wrap selection:bg-cyan-500/30 ${theme === 'light' ? 'text-[#1a202c]' : 'text-cyan-100/90'}`}
+                className={`leading-relaxed font-serif text-lg md:text-xl whitespace-pre-wrap selection:bg-cyan-500/30 ${theme === 'light' ? 'text-vector-ink-strong' : 'text-cyan-100/90'}`}
               >
                 <Markdown components={markdownComponents}>{decryptedContent}</Markdown>
               </div>
@@ -308,7 +312,7 @@ export const ViewerReadingPanel: React.FC<ViewerReadingPanelProps> = ({
         ) : (
           <div className="py-20 flex flex-col items-center justify-center opacity-20 select-none">
             <span
-              className={`${theme === 'light' ? 'text-[#718096]/20' : 'text-gray-600'} blur-sm select-none text-4xl break-all line-clamp-3`}
+              className={`${theme === 'light' ? 'text-vector-slate-soft/20' : 'text-gray-600'} blur-sm select-none text-4xl break-all line-clamp-3`}
             >
               {entry.content}
             </span>
@@ -350,6 +354,7 @@ export const ViewerReadingPanel: React.FC<ViewerReadingPanelProps> = ({
             onArchiveOrRestore={onArchiveOrRestore}
             onDownload={onDownload}
             onRequestBurn={onRequestBurn}
+            onShareCard={onShareCard}
           />
         )}
 
@@ -362,12 +367,12 @@ export const ViewerReadingPanel: React.FC<ViewerReadingPanelProps> = ({
             className={`absolute inset-0 z-50 flex items-center justify-center backdrop-blur-sm p-6 ${theme === 'light' ? 'bg-white/95' : 'bg-black/90'}`}
           >
             <div className="text-center space-y-6 max-w-sm">
-              <div className="w-16 h-16 bg-rose-500/10 rounded-full flex items-center justify-center mx-auto border border-rose-500/40 shadow-[0_0_20px_rgba(244,63,94,0.1)]">
+              <div className="w-16 h-16 bg-rose-500/10 rounded-full flex items-center justify-center mx-auto border border-rose-500/40 shadow-glow-rose-soft">
                 <AlertTriangle className="w-8 h-8 text-rose-500" />
               </div>
               <div className="space-y-2">
                 <h3
-                  className={`text-xl font-bold uppercase tracking-tighter ${theme === 'light' ? 'text-[#1a202c]' : 'text-white'}`}
+                  className={`text-xl font-bold uppercase tracking-tighter ${theme === 'light' ? 'text-vector-ink-strong' : 'text-white'}`}
                 >
                   {t.confirmDestruction}
                 </h3>
@@ -400,7 +405,7 @@ export const ViewerReadingPanel: React.FC<ViewerReadingPanelProps> = ({
     </div>
 
     <div
-      className={`mt-8 flex justify-between items-center text-[8px] font-mono uppercase tracking-[0.3em] ${theme === 'light' ? 'text-[#718096]/40' : 'text-cyan-900'}`}
+      className={`mt-8 flex justify-between items-center text-[8px] font-mono uppercase tracking-[0.3em] ${theme === 'light' ? 'text-vector-slate-soft/40' : 'text-cyan-900'}`}
     >
       <span>VECTOR_TRACE_PROTOCOL_V2.8</span>
       <span>NODE_ID: {entry.id}</span>

@@ -106,6 +106,77 @@ describe('useBackupImport', () => {
     expect(result.current.status?.kind).toBe('success');
   });
 
+  it('does nothing when the file input is empty', async () => {
+    const onImportBackup = vi.fn();
+    const { result } = renderHook(() =>
+      useBackupImport({ onImportBackup, t, confirm: () => true }),
+    );
+    const emptyEvent = {
+      target: { files: null },
+    } as unknown as React.ChangeEvent<HTMLInputElement>;
+    await act(async () => {
+      await result.current.handleChange(emptyEvent);
+    });
+    expect(onImportBackup).not.toHaveBeenCalled();
+    expect(result.current.status).toBeNull();
+  });
+
+  it('does nothing when onImportBackup is omitted (feature-flag off)', async () => {
+    const { result } = renderHook(() => useBackupImport({ t, confirm: () => true }));
+    await act(async () => {
+      await result.current.handleChange(buildEvent('{}'));
+    });
+    expect(result.current.status).toBeNull();
+  });
+
+  it('catches a thrown onImportBackup, sets the error status and routes through reportError', async () => {
+    const onImportBackup = vi.fn(async () => {
+      throw new Error('upstream merge failed');
+    });
+    const reportError = vi.fn();
+    const { result } = renderHook(() =>
+      useBackupImport({ onImportBackup, t, confirm: () => true, reportError }),
+    );
+    const payload = JSON.stringify({
+      type: 'vector-vault-backup',
+      schemaVersion: 1,
+      entries: [{ id: 'x', title: 'X', content: 'x', createdAt: 1, tags: [], isLocked: false }],
+    });
+    await act(async () => {
+      await result.current.handleChange(buildEvent(payload));
+    });
+    expect(result.current.status).toEqual({ kind: 'error', message: 'unknown' });
+    expect(reportError).toHaveBeenCalledOnce();
+  });
+
+  it('falls back to default English copy when the translation dictionary lacks the key', async () => {
+    const onImportBackup = vi.fn();
+    const sparseT = {} as unknown as TranslationDictionary;
+    const { result } = renderHook(() =>
+      useBackupImport({ onImportBackup, t: sparseT, confirm: () => true }),
+    );
+    await act(async () => {
+      await result.current.handleChange(buildEvent('{not json'));
+    });
+    expect(result.current.status).toEqual({
+      kind: 'error',
+      message: 'Backup file is not valid JSON.',
+    });
+  });
+
+  it('exposes setStatus so callers can manually clear the banner', async () => {
+    const onImportBackup = vi.fn();
+    const { result } = renderHook(() =>
+      useBackupImport({ onImportBackup, t, confirm: () => true }),
+    );
+    await act(async () => {
+      await result.current.handleChange(buildEvent('{not json'));
+    });
+    expect(result.current.status).not.toBeNull();
+    act(() => result.current.setStatus(null));
+    expect(result.current.status).toBeNull();
+  });
+
   it('aborts when the user declines the confirm dialog', async () => {
     const onImportBackup = vi.fn();
     const { result } = renderHook(() =>

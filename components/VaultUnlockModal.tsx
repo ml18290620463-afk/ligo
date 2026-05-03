@@ -47,7 +47,7 @@ export const VaultUnlockModal: React.FC<VaultUnlockModalProps> = ({
         <motion.div
           initial={{ scale: 0.9, y: 20 }}
           animate={{ scale: 1, y: 0 }}
-          className={`w-full max-w-sm p-8 border ${theme === 'light' ? 'bg-white border-slate-200 shadow-2xl' : 'bg-black border-cyan-500/20 shadow-[0_0_50px_rgba(6,182,212,0.15)]'}`}
+          className={`w-full max-w-sm p-8 border ${theme === 'light' ? 'bg-white border-slate-200 shadow-2xl' : 'bg-black border-cyan-500/20 shadow-[0_0_50px_color-mix(in_srgb,_var(--color-cyan-500)_15%,_transparent)]'}`}
         >
           <div className="flex flex-col items-center gap-6">
             <div className="w-16 h-16 rounded-full border border-dashed border-cyan-500/40 flex items-center justify-center">
@@ -71,14 +71,14 @@ export const VaultUnlockModal: React.FC<VaultUnlockModalProps> = ({
                 onKeyDown={(e) => e.key === 'Enter' && onUnlock()}
                 placeholder="▪ ▪ ▪ ▪ ▪ ▪"
                 aria-label={t.masterLock}
-                className={`w-full bg-transparent border-b p-4 text-center text-xl tracking-[0.5em] focus:outline-none transition-colors ${vaultError ? 'border-[#C85F72] text-[#C85F72] neon-border-alert' : 'border-cyan-900 focus:border-cyan-500 text-cyan-400'}`}
+                className={`w-full bg-transparent border-b p-4 text-center text-xl tracking-[0.5em] focus:outline-none transition-colors ${vaultError ? 'border-vector-magenta text-vector-magenta neon-border-alert' : 'border-cyan-900 focus:border-cyan-500 text-cyan-400'}`}
               />
               {vaultError && (
                 <motion.p
                   role="alert"
                   initial={{ opacity: 0, y: 5 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="absolute -bottom-6 left-0 right-0 text-center text-[10px] font-mono text-[#C85F72] uppercase font-bold neon-glow-alert"
+                  className="absolute -bottom-6 left-0 right-0 text-center text-[10px] font-mono text-vector-magenta uppercase font-bold neon-glow-alert"
                 >
                   {t.passwordMismatch}
                 </motion.p>

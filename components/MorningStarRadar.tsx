@@ -16,31 +16,31 @@ export const MorningStarRadar: React.FC<MorningStarRadarProps> = ({ metrics, t, 
       key: 'rationality',
       label: t.rationality,
       icon: Brain,
-      color: theme === 'light' ? '#007a8c' : '#06b6d4',
+      color: theme === 'light' ? 'var(--color-vector-cyan-brand)' : 'var(--color-vector-cyan-pure)',
     },
     {
       key: 'emotionality',
       label: t.emotionality,
       icon: Heart,
-      color: theme === 'light' ? '#f43f5e' : '#fb7185',
+      color: theme === 'light' ? 'var(--color-rose-500)' : 'var(--color-rose-400)',
     },
     {
       key: 'futureFocus',
       label: t.futureFocus,
       icon: FastForward,
-      color: theme === 'light' ? '#7c3aed' : '#8b5cf6',
+      color: theme === 'light' ? 'var(--color-violet-600)' : 'var(--color-violet-500)',
     },
     {
       key: 'selfReflection',
       label: t.selfReflection,
       icon: User,
-      color: theme === 'light' ? '#059669' : '#10b981',
+      color: theme === 'light' ? 'var(--color-emerald-600)' : 'var(--color-emerald-500)',
     },
     {
       key: 'resilience',
       label: t.resilience,
       icon: Shield,
-      color: theme === 'light' ? '#d97706' : '#f59e0b',
+      color: theme === 'light' ? 'var(--color-amber-600)' : 'var(--color-amber-500)',
     },
   ];
 
@@ -71,7 +71,7 @@ export const MorningStarRadar: React.FC<MorningStarRadarProps> = ({ metrics, t, 
               cy={center}
               r={radius * tick}
               fill="none"
-              stroke={theme === 'light' ? 'rgba(0, 122, 140, 0.1)' : 'rgba(6, 182, 212, 0.1)'}
+              stroke={theme === 'light' ? 'color-mix(in srgb, var(--color-vector-cyan-brand) 10%, transparent)' : 'color-mix(in srgb, var(--color-vector-cyan-pure) 10%, transparent)'}
               strokeWidth="1"
             />
           ))}
@@ -85,7 +85,7 @@ export const MorningStarRadar: React.FC<MorningStarRadarProps> = ({ metrics, t, 
                 y1={center}
                 x2={p.x}
                 y2={p.y}
-                stroke={theme === 'light' ? 'rgba(0, 122, 140, 0.15)' : 'rgba(6, 182, 212, 0.2)'}
+                stroke={theme === 'light' ? 'color-mix(in srgb, var(--color-vector-cyan-brand) 15%, transparent)' : 'color-mix(in srgb, var(--color-vector-cyan-pure) 20%, transparent)'}
                 strokeWidth="1"
               />
             );
@@ -95,8 +95,8 @@ export const MorningStarRadar: React.FC<MorningStarRadarProps> = ({ metrics, t, 
             initial={{ opacity: 0, scale: 0 }}
             animate={{ opacity: 1, scale: 1 }}
             points={polygonPath}
-            fill={theme === 'light' ? 'rgba(0, 122, 140, 0.1)' : 'rgba(6, 182, 212, 0.2)'}
-            stroke={theme === 'light' ? '#007a8c' : '#06b6d4'}
+            fill={theme === 'light' ? 'color-mix(in srgb, var(--color-vector-cyan-brand) 10%, transparent)' : 'color-mix(in srgb, var(--color-vector-cyan-pure) 20%, transparent)'}
+            stroke={theme === 'light' ? 'var(--color-vector-cyan-brand)' : 'var(--color-vector-cyan-pure)'}
             strokeWidth="2"
           />
 
@@ -106,7 +106,7 @@ export const MorningStarRadar: React.FC<MorningStarRadarProps> = ({ metrics, t, 
               cx={p.x}
               cy={p.y}
               r="3"
-              fill={theme === 'light' ? '#007a8c' : '#06b6d4'}
+              fill={theme === 'light' ? 'var(--color-vector-cyan-brand)' : 'var(--color-vector-cyan-pure)'}
             />
           ))}
         </svg>
@@ -147,7 +147,7 @@ export const MorningStarRadar: React.FC<MorningStarRadarProps> = ({ metrics, t, 
               <span style={{ color: d.color }}>{metrics[d.key] || 0}/10</span>
             </div>
             <div
-              className={`h-1 rounded-full overflow-hidden border ${theme === 'light' ? 'bg-[rgba(0,122,140,0.05)] border-[rgba(0,122,140,0.1)]' : 'bg-cyan-950/30 border-cyan-900/20'}`}
+              className={`h-1 rounded-full overflow-hidden border ${theme === 'light' ? 'bg-[color-mix(in_srgb,_var(--color-vector-cyan-brand)_5%,_transparent)] border-[color-mix(in_srgb,_var(--color-vector-cyan-brand)_10%,_transparent)]' : 'bg-cyan-950/30 border-cyan-900/20'}`}
             >
               <motion.div
                 initial={{ width: 0 }}

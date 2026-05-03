@@ -111,12 +111,12 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
             const badge = buildSyncBadge(syncStatus, language);
             const dotClass =
               badge.tone === 'error'
-                ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.7)]'
+                ? 'bg-rose-500 shadow-[0_0_8px_color-mix(in_srgb,_var(--color-rose-500)_70%,_transparent)]'
                 : badge.tone === 'warn'
-                  ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.7)]'
+                  ? 'bg-amber-500 shadow-[0_0_8px_color-mix(in_srgb,_var(--color-amber-500)_70%,_transparent)]'
                   : theme === 'light'
                     ? 'bg-emerald-500'
-                    : 'bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.8)]';
+                    : 'bg-cyan-500 shadow-[0_0_8px_color-mix(in_srgb,_var(--color-cyan-500)_80%,_transparent)]';
             const labelClass =
               badge.tone === 'error'
                 ? 'text-rose-500'
@@ -146,7 +146,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                 initial={{ opacity: 0, x: 10 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 10 }}
-                className="text-[10px] font-mono text-[#C85F72] font-bold uppercase tracking-widest neon-glow-alert"
+                className="text-[10px] font-mono text-vector-magenta font-bold uppercase tracking-widest neon-glow-alert"
               >
                 {t.confirmAction || 'Confirm?'}
               </motion.span>
@@ -165,7 +165,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                 scheduleTimeout(() => setShowConfirmHome(false), 3000);
               }
             }}
-            className={`p-2 border transition-all rounded-sm group relative w-12 h-12 flex items-center justify-center ${showConfirmHome ? 'border-[#C85F72] text-[#C85F72] bg-[#C85F72]/5 shadow-[0_0_15px_rgba(200,95,114,0.1)]' : theme === 'light' ? 'border-slate-200 text-slate-400 hover:text-slate-900 hover:border-slate-400 bg-white' : 'border-white/10 text-slate-500 hover:text-white hover:border-white/20 hover:bg-white/5'}`}
+            className={`p-2 border transition-all rounded-sm group relative w-12 h-12 flex items-center justify-center ${showConfirmHome ? 'border-vector-magenta text-vector-magenta bg-vector-magenta/5 shadow-[0_0_15px_color-mix(in_srgb,_var(--color-vector-magenta)_10%,_transparent)]' : theme === 'light' ? 'border-slate-200 text-slate-400 hover:text-slate-900 hover:border-slate-400 bg-white' : 'border-white/10 text-slate-500 hover:text-white hover:border-white/20 hover:bg-white/5'}`}
             title={t.backToHome || 'Back to Home'}
           >
             <GeometricBoat className="w-7 h-7" theme={theme} />
@@ -187,7 +187,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
         >
           <Settings className="w-5 h-5 group-hover:rotate-180 transition-transform duration-1000" />
           <div
-            className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${theme === 'light' ? 'bg-emerald-500' : 'bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.8)]'}`}
+            className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${theme === 'light' ? 'bg-emerald-500' : 'bg-cyan-500 shadow-[0_0_8px_color-mix(in_srgb,_var(--color-cyan-500)_80%,_transparent)]'}`}
           ></div>
         </button>
 
@@ -202,7 +202,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
         <CyberButton
           onClick={onNewEntry}
           theme={theme}
-          className="h-12 px-8 uppercase font-black tracking-widest text-base shadow-[0_8px_32px_rgba(0,210,255,0.15)]"
+          className="h-12 px-8 uppercase font-black tracking-widest text-base shadow-[0_8px_32px_color-mix(in_srgb,_var(--color-vector-cyan-neon)_15%,_transparent)]"
         >
           <Plus className="w-5 h-5 mr-1" /> {t.newEntry}
         </CyberButton>

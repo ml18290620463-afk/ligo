@@ -97,7 +97,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
       case 'WARP_SPEED':
         return (
           <div
-            className={`relative min-h-screen overflow-hidden flex flex-col items-center justify-center perspective-[1000px] transition-colors duration-1000 ${theme === 'light' ? 'bg-[#f0f4f7]' : 'bg-black'}`}
+            className={`relative min-h-screen overflow-hidden flex flex-col items-center justify-center perspective-[1000px] transition-colors duration-1000 ${theme === 'light' ? 'bg-vector-fog-light' : 'bg-black'}`}
           >
             {/* Nebula Atmosphere Layers */}
             <div
@@ -107,7 +107,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                 className={`absolute top-[-20%] left-[-20%] w-[80vw] h-[80vw] rounded-full blur-[120px] mix-blend-screen animate-[nebula-drift_25s_infinite_alternate] ${theme === 'light' ? 'bg-cyan-200/20' : 'bg-cyan-900/20'}`}
               ></div>
               <div
-                className={`absolute bottom-[-20%] right-[-20%] w-[80vw] h-[80vw] rounded-full blur-[120px] mix-blend-screen animate-[nebula-drift_30s_infinite_alternate_reverse] ${theme === 'light' ? 'bg-blue-200/20' : 'bg-[#FF2ECC]/5'}`}
+                className={`absolute bottom-[-20%] right-[-20%] w-[80vw] h-[80vw] rounded-full blur-[120px] mix-blend-screen animate-[nebula-drift_30s_infinite_alternate_reverse] ${theme === 'light' ? 'bg-blue-200/20' : 'bg-vector-magenta-bright/5'}`}
               ></div>
               <div
                 className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60vw] h-[60vw] rounded-full blur-[100px] mix-blend-screen animate-pulse ${theme === 'light' ? 'bg-cyan-100/10' : 'bg-indigo-900/10'}`}
@@ -134,17 +134,17 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                       color:
                         theme === 'light'
                           ? isPink
-                            ? '#FF2ECC'
-                            : 'rgba(26, 32, 44, 0.5)'
+                            ? 'var(--color-vector-magenta-bright)'
+                            : 'color-mix(in srgb, var(--color-vector-ink-strong) 50%, transparent)'
                           : isPink
-                            ? '#FF2ECC'
-                            : 'rgba(34, 211, 238, 0.8)',
+                            ? 'var(--color-vector-magenta-bright)'
+                            : 'color-mix(in srgb, var(--color-cyan-400) 80%, transparent)',
                       textShadow:
-                        isPink && theme === 'dark' ? '0 0 10px rgba(255, 46, 204, 0.3)' : 'none',
+                        isPink && theme === 'dark' ? '0 0 10px color-mix(in srgb, var(--color-vector-magenta-bright) 30%, transparent)' : 'none',
                     }}
                   >
                     <span
-                      className={`text-sm font-bold tracking-wider mr-2 ${theme === 'light' ? 'text-[#007a8c]/40' : 'opacity-60'}`}
+                      className={`text-sm font-bold tracking-wider mr-2 ${theme === 'light' ? 'text-vector-cyan-brand/40' : 'opacity-60'}`}
                     >
                       {`【${p.source || p.date || p.year}】`}
                     </span>
@@ -153,7 +153,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                 );
               })}
               <div
-                className={`absolute inset-0 z-10 ${theme === 'light' ? 'bg-[radial-gradient(circle_at_center,rgba(240,244,247,0.2)_10%,#f0f4f7_95%)]' : 'bg-[radial-gradient(circle_at_center,rgba(0,0,0,0.2)_10%,black_95%)]'}`}
+                className={`absolute inset-0 z-10 ${theme === 'light' ? 'bg-[radial-gradient(circle_at_center,color-mix(in_srgb,var(--color-vector-fog-light)_20%,transparent)_10%,var(--color-vector-fog-light)_95%)]' : 'bg-[radial-gradient(circle_at_center,color-mix(in_srgb,_black_20%,_transparent)_10%,black_95%)]'}`}
               ></div>
             </div>
 
@@ -163,8 +163,8 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
               [transform:perspective(500px)_rotateX(75deg)] opacity-40 animate-[grid-move_20s_linear_infinite] pointer-events-none z-0
               ${
                 theme === 'light'
-                  ? 'bg-[linear-gradient(transparent,rgba(0,122,140,0.05)_1px,transparent_1px),linear-gradient(90deg,transparent,rgba(0,122,140,0.02)_1px,transparent_1px)]'
-                  : 'bg-[linear-gradient(transparent,rgba(6,182,212,0.1)_1px,transparent_1px),linear-gradient(90deg,transparent,rgba(6,182,212,0.05)_1px,transparent_1px)]'
+                  ? 'bg-[linear-gradient(transparent,color-mix(in_srgb,var(--color-vector-cyan-brand)_5%,transparent)_1px,transparent_1px),linear-gradient(90deg,transparent,color-mix(in_srgb,var(--color-vector-cyan-brand)_2%,transparent)_1px,transparent_1px)]'
+                  : 'bg-[linear-gradient(transparent,color-mix(in_srgb,var(--color-vector-cyan-pure)_10%,transparent)_1px,transparent_1px),linear-gradient(90deg,transparent,color-mix(in_srgb,var(--color-vector-cyan-pure)_5%,transparent)_1px,transparent_1px)]'
               }
               ${isWarping ? 'opacity-0' : ''}
             `}
@@ -176,7 +176,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
             >
               <div className="mb-14 relative w-64 h-64 md:w-80 md:h-80 flex items-center justify-center [perspective:1000px]">
                 <div
-                  className={`absolute inset-0 border rounded-full ${theme === 'light' ? 'border-[rgba(0,122,140,0.1)]' : 'border-cyan-900/30'}`}
+                  className={`absolute inset-0 border rounded-full ${theme === 'light' ? 'border-vector-cyan-brand/10' : 'border-cyan-900/30'}`}
                 ></div>
                 <div className="absolute inset-0 animate-[spin_60s_linear_infinite]">
                   {Array.from({ length: 12 }).map((_, i) => (
@@ -203,17 +203,17 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                   ></div>
                 </div>
                 <div
-                  className={`absolute inset-16 border-[3px] rounded-full animate-[spin-x_8s_linear_infinite] [transform-style:preserve-3d] ${theme === 'light' ? 'border-cyan-400/20' : 'border-[#FF2ECC]/10 shadow-[0_0_15px_rgba(255,46,204,0.1)]'}`}
+                  className={`absolute inset-16 border-[3px] rounded-full animate-[spin-x_8s_linear_infinite] [transform-style:preserve-3d] ${theme === 'light' ? 'border-cyan-400/20' : 'border-vector-magenta-bright/10 shadow-glow-magenta'}`}
                 >
                   <div
-                    className={`absolute inset-0 border-t-4 rounded-full blur-[1px] ${theme === 'light' ? 'border-t-cyan-400/40' : 'border-t-[#FF2ECC]/40 shadow-[0_0_10px_rgba(255,46,204,0.2)]'}`}
+                    className={`absolute inset-0 border-t-4 rounded-full blur-[1px] ${theme === 'light' ? 'border-t-cyan-400/40' : 'border-t-[var(--color-vector-magenta-bright)]/40 shadow-[0_0_10px_color-mix(in_srgb,var(--color-vector-magenta-bright)_20%,transparent)]'}`}
                   ></div>
                 </div>
                 <div
-                  className={`absolute inset-20 border rounded-full animate-[spin-y_12s_linear_infinite] [transform-style:preserve-3d] ${theme === 'light' ? 'border-blue-400/20' : 'border-[#FF2ECC]/20'}`}
+                  className={`absolute inset-20 border rounded-full animate-[spin-y_12s_linear_infinite] [transform-style:preserve-3d] ${theme === 'light' ? 'border-blue-400/20' : 'border-vector-magenta-bright/20'}`}
                 >
                   <div
-                    className={`absolute inset-0 border-l-4 rounded-full ${theme === 'light' ? 'border-l-blue-400/40' : 'border-l-[#FF2ECC]/30 shadow-[0_0_15px_rgba(255,46,204,0.1)]'}`}
+                    className={`absolute inset-0 border-l-4 rounded-full ${theme === 'light' ? 'border-l-blue-400/40' : 'border-l-[var(--color-vector-magenta-bright)]/30 shadow-glow-magenta'}`}
                   ></div>
                 </div>
                 <div className="relative z-10 w-16 h-16 flex items-center justify-center">
@@ -224,26 +224,26 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                     className={`absolute inset-[-4px] rounded-full blur-lg animate-ping ${theme === 'light' ? 'bg-cyan-400/20' : 'bg-cyan-400/50'}`}
                   ></div>
                   <div
-                    className={`absolute inset-0 border-2 bg-black/50 rounded-full flex items-center justify-center ${theme === 'light' ? 'border-[#007a8c] bg-white' : 'border-white bg-black/50'}`}
+                    className={`absolute inset-0 border-2 bg-black/50 rounded-full flex items-center justify-center ${theme === 'light' ? 'border-vector-cyan-brand bg-white' : 'border-white bg-black/50'}`}
                   >
                     <Cpu
-                      className={`w-8 h-8 animate-pulse ${theme === 'light' ? 'text-[#007a8c]' : 'text-cyan-200'}`}
+                      className={`w-8 h-8 animate-pulse ${theme === 'light' ? 'text-vector-cyan-brand' : 'text-cyan-200'}`}
                     />
                   </div>
                 </div>
                 <div className="absolute -right-6 top-12 flex flex-col items-start gap-1">
                   <div
-                    className={`flex items-center gap-2 text-xs font-mono pl-3 ${theme === 'light' ? 'text-[#007a8c]' : 'text-cyan-400'}`}
+                    className={`flex items-center gap-2 text-xs font-mono pl-3 ${theme === 'light' ? 'text-vector-cyan-brand' : 'text-cyan-400'}`}
                   >
                     <Cpu
-                      className={`w-4 h-4 animate-pulse ${theme === 'light' ? 'text-[#007a8c]' : 'text-cyan-400'}`}
+                      className={`w-4 h-4 animate-pulse ${theme === 'light' ? 'text-vector-cyan-brand' : 'text-cyan-400'}`}
                     />
                     {language === 'zh' ? '认知已同步' : 'Consciousness Synced'}
                   </div>
                 </div>
                 <div className="absolute -left-12 bottom-10 flex flex-col items-end gap-1">
                   <div
-                    className={`flex items-center gap-1 text-[9px] font-mono border-r-2 pr-2 pl-1 py-0.5 backdrop-blur-sm ${theme === 'light' ? 'text-blue-600 border-blue-500 bg-white/60' : 'text-cyan-300 border-[#FF2ECC] bg-black/60 shadow-[0_0_10px_rgba(255,46,204,0.1)]'}`}
+                    className={`flex items-center gap-1 text-[9px] font-mono border-r-2 pr-2 pl-1 py-0.5 backdrop-blur-sm ${theme === 'light' ? 'text-blue-600 border-blue-500 bg-white/60' : 'text-cyan-300 border-vector-magenta-bright bg-black/60 shadow-glow-magenta-soft'}`}
                   >
                     <Scan className="w-3 h-3" />{' '}
                     {language === 'zh' ? '观测系统连接' : 'Observation Active'}
@@ -258,7 +258,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                     y1="160"
                     x2="280"
                     y2="80"
-                    stroke={theme === 'light' ? '#007a8c' : '#06b6d4'}
+                    stroke={theme === 'light' ? 'var(--color-vector-cyan-brand)' : 'var(--color-vector-cyan-pure)'}
                     strokeWidth="1"
                     strokeDasharray="4 2"
                   />
@@ -267,45 +267,45 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                     y1="160"
                     x2="40"
                     y2="240"
-                    stroke={theme === 'light' ? '#3182ce' : '#FF2ECC'}
+                    stroke={theme === 'light' ? 'var(--color-vector-blue-deep)' : 'var(--color-vector-magenta-bright)'}
                     strokeWidth="1"
                     strokeDasharray="4 2"
                   />
-                  <circle cx="280" cy="80" r="2" fill={theme === 'light' ? '#007a8c' : '#06b6d4'} />
-                  <circle cx="40" cy="240" r="2" fill={theme === 'light' ? '#3182ce' : '#FF2ECC'} />
+                  <circle cx="280" cy="80" r="2" fill={theme === 'light' ? 'var(--color-vector-cyan-brand)' : 'var(--color-vector-cyan-pure)'} />
+                  <circle cx="40" cy="240" r="2" fill={theme === 'light' ? 'var(--color-vector-blue-deep)' : 'var(--color-vector-magenta-bright)'} />
                 </svg>
               </div>
 
               <h1
-                className={`text-5xl sm:text-7xl md:text-9xl font-black tracking-tighter mb-2 glitch-text mix-blend-overlay ${theme === 'light' ? 'text-[#1a202c]' : 'text-white'}`}
+                className={`text-5xl sm:text-7xl md:text-9xl font-black tracking-tighter mb-2 glitch-text mix-blend-overlay ${theme === 'light' ? 'text-vector-ink-strong' : 'text-white'}`}
                 data-text="VECTOR"
               >
                 VECTOR
               </h1>
               <div
-                className={`flex items-center gap-4 font-bold text-xl md:text-3xl tracking-[0.6em] uppercase mb-12 relative ${theme === 'light' ? 'text-[#007a8c]' : 'text-indigo-400'}`}
+                className={`flex items-center gap-4 font-bold text-xl md:text-3xl tracking-[0.6em] uppercase mb-12 relative ${theme === 'light' ? 'text-vector-cyan-brand' : 'text-indigo-400'}`}
               >
                 <span
-                  className={`h-[1px] w-8 ${theme === 'light' ? 'bg-[#007a8c]/30' : 'bg-indigo-500/30'}`}
+                  className={`h-[1px] w-8 ${theme === 'light' ? 'bg-vector-cyan-brand/30' : 'bg-indigo-500/30'}`}
                 ></span>
-                <span className={`${theme === 'light' ? 'text-[#1a202c]' : 'text-white'}`}>
+                <span className={`${theme === 'light' ? 'text-vector-ink-strong' : 'text-white'}`}>
                   {t.vectorLife}
                 </span>
                 <span
-                  className={`h-[1px] w-8 ${theme === 'light' ? 'bg-[#007a8c]/30' : 'bg-indigo-500/30'}`}
+                  className={`h-[1px] w-8 ${theme === 'light' ? 'bg-vector-cyan-brand/30' : 'bg-indigo-500/30'}`}
                 ></span>
               </div>
 
               <div
-                className={`max-w-md mb-12 relative group cursor-default backdrop-blur-md p-6 border-y transition-all duration-500 ${theme === 'light' ? 'bg-white/60 border-[rgba(0,122,140,0.1)] hover:border-[rgba(0,122,140,0.3)] shadow-md' : 'bg-black/80 border-cyan-900/40 hover:border-cyan-500/40 shadow-2xl'}`}
+                className={`max-w-md mb-12 relative group cursor-default backdrop-blur-md p-6 border-y transition-all duration-500 ${theme === 'light' ? 'bg-white/60 border-vector-cyan-brand/10 hover:border-vector-cyan-brand/30 shadow-md' : 'bg-black/80 border-cyan-900/40 hover:border-cyan-500/40 shadow-2xl'}`}
               >
                 <p
-                  className={`font-mono text-sm leading-relaxed tracking-wide relative z-10 ${theme === 'light' ? 'text-[#4a5568]' : 'text-cyan-100/90'}`}
+                  className={`font-mono text-sm leading-relaxed tracking-wide relative z-10 ${theme === 'light' ? 'text-vector-slate-mid' : 'text-cyan-100/90'}`}
                 >
                   <DecryptionText text={t.defineMagnitude} speed={25} />
                   <br />
                   <span
-                    className={`text-[10px] mt-4 block uppercase tracking-[0.25em] flex items-center justify-center gap-2 ${theme === 'light' ? 'text-[#007a8c]' : 'text-cyan-500'}`}
+                    className={`text-[10px] mt-4 block uppercase tracking-[0.25em] flex items-center justify-center gap-2 ${theme === 'light' ? 'text-vector-cyan-brand' : 'text-cyan-500'}`}
                   >
                     <Globe className="w-3 h-3" /> {t.globalPosition}
                   </span>
@@ -314,11 +314,11 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
 
               <div className="group relative">
                 <div
-                  className={`absolute -inset-1 rounded-lg blur opacity-20 group-hover:opacity-80 transition duration-500 ${theme === 'light' ? 'bg-gradient-to-r from-[#007a8c] to-blue-600' : 'bg-gradient-to-r from-cyan-600 to-indigo-600'}`}
+                  className={`absolute -inset-1 rounded-lg blur opacity-20 group-hover:opacity-80 transition duration-500 ${theme === 'light' ? 'bg-gradient-to-r from-vector-cyan-brand to-blue-600' : 'bg-gradient-to-r from-cyan-600 to-indigo-600'}`}
                 ></div>
                 <CyberButton
                   onClick={handleInitialize}
-                  className={`!px-8 md:!px-16 !py-4 md:!py-5 text-xl relative ${theme === 'light' ? 'bg-white border-[rgba(0,122,140,0.3)]' : 'bg-black border-cyan-500/50'}`}
+                  className={`!px-8 md:!px-16 !py-4 md:!py-5 text-xl relative ${theme === 'light' ? 'bg-white border-vector-cyan-brand/30' : 'bg-black border-cyan-500/50'}`}
                   theme={theme}
                 >
                   <span className="flex items-center gap-3 relative z-10">
@@ -334,7 +334,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
 
             {isWarping && (
               <div
-                className={`absolute inset-0 opacity-0 animate-[flash_1.2s_ease-in-out_forwards] pointer-events-none z-50 ${theme === 'light' ? 'bg-[#f0f4f7]' : 'bg-white'}`}
+                className={`absolute inset-0 opacity-0 animate-[flash_1.2s_ease-in-out_forwards] pointer-events-none z-50 ${theme === 'light' ? 'bg-vector-fog-light' : 'bg-white'}`}
               ></div>
             )}
 
@@ -355,7 +355,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
               @keyframes flash {
                 0% { opacity: 0; }
                 40% { opacity: 0.9; }
-                100% { opacity: 1; background: ${theme === 'light' ? '#f0f4f7' : 'black'}; }
+                100% { opacity: 1; background: ${theme === 'light' ? 'var(--color-vector-fog-light)' : 'black'}; }
               }
               @keyframes nebula-drift {
                  0% { transform: translate(0, 0) scale(1); opacity: 0.4; }
@@ -372,40 +372,40 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
       case 'GATE':
         return (
           <div
-            className={`min-h-screen flex flex-col items-center justify-center p-4 transition-colors duration-1000 ${theme === 'light' ? 'bg-[#f0f4f7]' : 'bg-black'}`}
+            className={`min-h-screen flex flex-col items-center justify-center p-4 transition-colors duration-1000 ${theme === 'light' ? 'bg-vector-fog-light' : 'bg-black'}`}
           >
             <div
-              className={`relative w-full max-w-lg border p-12 transition-all duration-700 ${theme === 'light' ? 'bg-white/80 border-[rgba(0,122,140,0.1)] shadow-xl' : 'bg-[#050505] border-cyan-900/40 shadow-2xl'}`}
+              className={`relative w-full max-w-lg border p-12 transition-all duration-700 ${theme === 'light' ? 'bg-white/80 border-vector-cyan-brand/10 shadow-xl' : 'bg-vector-ink-deep border-cyan-900/40 shadow-2xl'}`}
             >
               <div
-                className={`absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 ${theme === 'light' ? 'border-[#007a8c]' : 'border-cyan-500'}`}
+                className={`absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 ${theme === 'light' ? 'border-vector-cyan-brand' : 'border-cyan-500'}`}
               ></div>
               <div
-                className={`absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 ${theme === 'light' ? 'border-[#007a8c]' : 'border-cyan-500'}`}
+                className={`absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 ${theme === 'light' ? 'border-vector-cyan-brand' : 'border-cyan-500'}`}
               ></div>
               <div
-                className={`absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 ${theme === 'light' ? 'border-[#007a8c]' : 'border-cyan-500'}`}
+                className={`absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 ${theme === 'light' ? 'border-vector-cyan-brand' : 'border-cyan-500'}`}
               ></div>
               <div
-                className={`absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 ${theme === 'light' ? 'border-[#007a8c]' : 'border-cyan-500'}`}
+                className={`absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 ${theme === 'light' ? 'border-vector-cyan-brand' : 'border-cyan-500'}`}
               ></div>
 
               <div className="flex flex-col items-center gap-8">
                 <div
-                  className={`w-20 h-20 rounded-full border-4 flex items-center justify-center animate-pulse ${theme === 'light' ? 'border-[#007a8c]/20' : 'border-cyan-500/20'}`}
+                  className={`w-20 h-20 rounded-full border-4 flex items-center justify-center animate-pulse ${theme === 'light' ? 'border-vector-cyan-brand/20' : 'border-cyan-500/20'}`}
                 >
                   <ShieldCheck
-                    className={`w-8 h-8 ${theme === 'light' ? 'text-[#007a8c]' : 'text-cyan-500'}`}
+                    className={`w-8 h-8 ${theme === 'light' ? 'text-vector-cyan-brand' : 'text-cyan-500'}`}
                   />
                 </div>
                 <div className="text-center space-y-4">
                   <h1
-                    className={`text-4xl font-bold tracking-[0.4em] uppercase ${theme === 'light' ? 'text-[#1a202c]' : 'text-white'}`}
+                    className={`text-4xl font-bold tracking-[0.4em] uppercase ${theme === 'light' ? 'text-vector-ink-strong' : 'text-white'}`}
                   >
                     VECTOR_GATE
                   </h1>
                   <p
-                    className={`font-mono text-xs uppercase tracking-widest ${theme === 'light' ? 'text-[#007a8c]/60' : 'text-cyan-800'}`}
+                    className={`font-mono text-xs uppercase tracking-widest ${theme === 'light' ? 'text-vector-cyan-brand/60' : 'text-cyan-800'}`}
                   >
                     {t.secureLinkEstablished}
                   </p>
@@ -426,7 +426,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
       case 'TERMINAL':
         return (
           <div
-            className={`min-h-screen p-8 font-mono transition-colors duration-1000 ${theme === 'light' ? 'bg-[#f0f4f7] text-[#007a8c]' : 'bg-black text-cyan-500'}`}
+            className={`min-h-screen p-8 font-mono transition-colors duration-1000 ${theme === 'light' ? 'bg-vector-fog-light text-vector-cyan-brand' : 'bg-black text-cyan-500'}`}
           >
             <div className="max-w-2xl mx-auto space-y-2">
               <div className="animate-pulse">{t.bootSequence}</div>
@@ -434,7 +434,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
               <div className="opacity-60">{t.initializingLink}</div>
               <div className="opacity-60">{t.decryptingVault}</div>
               <div
-                className={`mt-8 ${theme === 'light' ? 'text-[#1a202c] opacity-100' : 'opacity-80'}`}
+                className={`mt-8 ${theme === 'light' ? 'text-vector-ink-strong opacity-100' : 'opacity-80'}`}
               >
                 {t.welcomeCommander}
               </div>
@@ -442,7 +442,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                 <CyberButton
                   onClick={onStart}
                   variant="ghost"
-                  className={`border-cyan-900 hover:border-cyan-500 ${theme === 'light' ? 'border-[rgba(0,122,140,0.3)] hover:border-[#007a8c]' : ''}`}
+                  className={`border-cyan-900 hover:border-cyan-500 ${theme === 'light' ? 'border-vector-cyan-brand/30 hover:border-vector-cyan-brand' : ''}`}
                   theme={theme}
                 >
                   {t.initialize}
@@ -456,7 +456,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
 
   return (
     <div
-      className={`relative min-h-screen transition-colors duration-1000 ${theme === 'light' ? 'bg-[#f0f4f7]' : 'bg-black'}`}
+      className={`relative min-h-screen transition-colors duration-1000 ${theme === 'light' ? 'bg-vector-fog-light' : 'bg-black'}`}
     >
       <AnimatePresence mode="wait">
         <motion.div
@@ -473,32 +473,32 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
 
       {/* Version Switcher */}
       <div
-        className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-2 border p-2 rounded-full backdrop-blur-md shadow-2xl transition-all duration-700 ${theme === 'light' ? 'bg-white/80 border-[rgba(0,122,140,0.1)]' : 'bg-black/80 border-cyan-900/50'}`}
+        className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-2 border p-2 rounded-full backdrop-blur-md shadow-2xl transition-all duration-700 ${theme === 'light' ? 'bg-white/80 border-vector-cyan-brand/10' : 'bg-black/80 border-cyan-900/50'}`}
       >
         <button
           onClick={() => setVersion('STAR_TUNNEL')}
-          className={`p-2 rounded-full transition-all ${version === 'STAR_TUNNEL' ? (theme === 'light' ? 'bg-[#007a8c] text-white shadow-md' : 'bg-cyan-500 text-black') : theme === 'light' ? 'text-slate-400 hover:text-[#007a8c]' : 'text-cyan-800 hover:text-cyan-500'}`}
+          className={`p-2 rounded-full transition-all ${version === 'STAR_TUNNEL' ? (theme === 'light' ? 'bg-vector-cyan-brand text-white shadow-md' : 'bg-cyan-500 text-black') : theme === 'light' ? 'text-slate-400 hover:text-vector-cyan-brand' : 'text-cyan-800 hover:text-cyan-500'}`}
           title={t.starTunnelTitle}
         >
           <Star className="w-4 h-4" />
         </button>
         <button
           onClick={() => setVersion('WARP_SPEED')}
-          className={`p-2 rounded-full transition-all ${version === 'WARP_SPEED' ? (theme === 'light' ? 'bg-[#007a8c] text-white shadow-md' : 'bg-cyan-500 text-black') : theme === 'light' ? 'text-slate-400 hover:text-[#007a8c]' : 'text-cyan-800 hover:text-cyan-500'}`}
+          className={`p-2 rounded-full transition-all ${version === 'WARP_SPEED' ? (theme === 'light' ? 'bg-vector-cyan-brand text-white shadow-md' : 'bg-cyan-500 text-black') : theme === 'light' ? 'text-slate-400 hover:text-vector-cyan-brand' : 'text-cyan-800 hover:text-cyan-500'}`}
           title={t.warpSpeedTitle}
         >
           <Zap className="w-4 h-4" />
         </button>
         <button
           onClick={() => setVersion('GATE')}
-          className={`p-2 rounded-full transition-all ${version === 'GATE' ? (theme === 'light' ? 'bg-[#007a8c] text-white shadow-md' : 'bg-cyan-500 text-black') : theme === 'light' ? 'text-slate-400 hover:text-[#007a8c]' : 'text-cyan-800 hover:text-cyan-500'}`}
+          className={`p-2 rounded-full transition-all ${version === 'GATE' ? (theme === 'light' ? 'bg-vector-cyan-brand text-white shadow-md' : 'bg-cyan-500 text-black') : theme === 'light' ? 'text-slate-400 hover:text-vector-cyan-brand' : 'text-cyan-800 hover:text-cyan-500'}`}
           title={t.gateTitle}
         >
           <Layers className="w-4 h-4" />
         </button>
         <button
           onClick={() => setVersion('TERMINAL')}
-          className={`p-2 rounded-full transition-all ${version === 'TERMINAL' ? (theme === 'light' ? 'bg-[#007a8c] text-white shadow-md' : 'bg-cyan-500 text-black') : theme === 'light' ? 'text-slate-400 hover:text-[#007a8c]' : 'text-cyan-800 hover:text-cyan-500'}`}
+          className={`p-2 rounded-full transition-all ${version === 'TERMINAL' ? (theme === 'light' ? 'bg-vector-cyan-brand text-white shadow-md' : 'bg-cyan-500 text-black') : theme === 'light' ? 'text-slate-400 hover:text-vector-cyan-brand' : 'text-cyan-800 hover:text-cyan-500'}`}
           title={t.terminalTitle}
         >
           <Terminal className="w-4 h-4" />

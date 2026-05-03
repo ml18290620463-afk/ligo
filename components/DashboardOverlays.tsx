@@ -4,6 +4,7 @@ import type { TranslationDictionary } from '../i18n/translations';
 import { BackupReminderBanner } from './BackupReminderBanner';
 import { BackupImportConfirmModal } from './BackupImportConfirmModal';
 import { VaultUnlockModal } from './VaultUnlockModal';
+import { PwaInstallBanner } from './PwaInstallBanner';
 
 interface DashboardOverlaysProps {
   theme: Theme;
@@ -14,6 +15,10 @@ interface DashboardOverlaysProps {
   daysSinceBackup: number | null;
   /** Click target on the "open settings" link inside the banner. */
   onOpenSettings: () => void;
+  // ----- PWA install banner (Phase 3 §3.g) -----
+  pwaInstallAvailable: boolean;
+  onPwaInstall: () => void;
+  onPwaInstallDismiss: () => void;
   // ----- Backup import confirmation modal -----
   importPending: { message: string } | null;
   onResolveImport: (ok: boolean) => void;
@@ -50,6 +55,9 @@ export const DashboardOverlays: React.FC<DashboardOverlaysProps> = ({
   backupReminderActive,
   daysSinceBackup,
   onOpenSettings,
+  pwaInstallAvailable,
+  onPwaInstall,
+  onPwaInstallDismiss,
   importPending,
   onResolveImport,
   isVerifyingVault,
@@ -66,6 +74,14 @@ export const DashboardOverlays: React.FC<DashboardOverlaysProps> = ({
       theme={theme}
       t={t}
       onOpenSettings={onOpenSettings}
+    />
+
+    <PwaInstallBanner
+      active={pwaInstallAvailable}
+      theme={theme}
+      t={t}
+      onInstall={onPwaInstall}
+      onDismiss={onPwaInstallDismiss}
     />
 
     <BackupImportConfirmModal

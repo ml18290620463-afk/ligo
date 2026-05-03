@@ -43,21 +43,21 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
   return (
     <div
-      className={`mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 ${!isEditingStars ? 'border-b' : ''} ${theme === 'light' ? 'border-slate-100' : 'border-[#173242]/20'}`}
+      className={`mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 ${!isEditingStars ? 'border-b' : ''} ${theme === 'light' ? 'border-slate-100' : 'border-vector-navy-deep/20'}`}
     >
       <div className="flex-1 flex flex-col md:flex-row md:items-center gap-6">
         <button
           onClick={onToggleVault}
-          className={`flex items-center gap-2 font-mono text-xs uppercase tracking-[0.2em] transition-all hover:scale-105 active:scale-95 ${isVaultOpen ? (theme === 'light' ? 'text-cyan-600' : 'text-[#12d8ff]') : theme === 'light' ? 'text-slate-400' : 'text-[#6e8198]/60'}`}
+          className={`flex items-center gap-2 font-mono text-xs uppercase tracking-[0.2em] transition-all hover:scale-105 active:scale-95 ${isVaultOpen ? (theme === 'light' ? 'text-cyan-600' : 'text-vector-cyan-neon') : theme === 'light' ? 'text-slate-400' : 'text-vector-slate-chrome/60'}`}
         >
           <Mail className={`w-4 h-4 ${isVaultOpen ? 'animate-pulse' : ''}`} /> {t.encryptedLog}
           <span
-            className={`text-[9px] px-1.5 py-0.5 rounded-full border ${isVaultOpen ? (theme === 'light' ? 'border-cyan-200 bg-cyan-50' : 'border-[#12d8ff]/50 bg-[#12d8ff]/10') : 'border-slate-200 opacity-40'}`}
+            className={`text-[9px] px-1.5 py-0.5 rounded-full border ${isVaultOpen ? (theme === 'light' ? 'border-cyan-200 bg-cyan-50' : 'border-vector-cyan-neon/50 bg-vector-cyan-neon/10') : 'border-slate-200 opacity-40'}`}
           >
             {entriesCount}
           </span>
           <span
-            className={`text-[9px] px-1 border ${isVaultOpen ? (theme === 'light' ? 'border-cyan-200 bg-cyan-50' : 'border-[#12d8ff]/60 bg-[#12d8ff]/5 text-[#12d8ff]/80') : 'border-transparent opacity-40'}`}
+            className={`text-[9px] px-1 border ${isVaultOpen ? (theme === 'light' ? 'border-cyan-200 bg-cyan-50' : 'border-vector-cyan-neon/60 bg-vector-cyan-neon/5 text-vector-cyan-neon/80') : 'border-transparent opacity-40'}`}
           >
             {isVaultOpen ? 'OPEN' : 'LOCKED'}
           </span>
@@ -86,7 +86,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
       <div className="flex items-center gap-4">
         <span
-          className={`text-[11px] font-mono uppercase tracking-widest ${theme === 'light' ? 'text-slate-400' : 'text-[#6e8198]/60'}`}
+          className={`text-[11px] font-mono uppercase tracking-widest ${theme === 'light' ? 'text-slate-400' : 'text-vector-slate-chrome/60'}`}
         >
           {t.groupBy} :
         </span>
@@ -110,7 +110,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                             isActive
                               ? theme === 'light'
                                 ? 'bg-cyan-500 border-cyan-600 text-white shadow-lg shadow-cyan-500/20'
-                                : 'bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-[0_0_25px_rgba(34,211,238,0.2)] ring-1 ring-cyan-400/50'
+                                : 'bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-glow-cyan-400-strong ring-1 ring-cyan-400/50'
                               : theme === 'light'
                                 ? 'bg-white/50 border-slate-200 text-slate-400 hover:border-cyan-300 hover:text-cyan-600'
                                 : 'bg-white/[0.02] border-white/5 text-white/30 hover:border-cyan-500/40 hover:text-cyan-400'

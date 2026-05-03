@@ -39,7 +39,7 @@ export const ViewerStarfield: React.FC<ViewerStarfieldProps> = React.memo(
     <div className="fixed inset-0 pointer-events-none z-0" aria-hidden="true">
       {/* Nebula gradients */}
       <div
-        className={`absolute inset-0 opacity-30 ${theme === 'light' ? 'bg-[radial-gradient(circle_at_20%_30%,rgba(0,122,140,0.08),transparent_50%),radial-gradient(circle_at_80%_70%,rgba(99,102,241,0.04),transparent_50%)]' : 'bg-[radial-gradient(circle_at_20%_30%,rgba(6,182,212,0.12),transparent_50%),radial-gradient(circle_at_80%_70%,rgba(99,102,241,0.06),transparent_50%)]'}`}
+        className={`absolute inset-0 opacity-30 ${theme === 'light' ? 'bg-[radial-gradient(circle_at_20%_30%,color-mix(in_srgb,_var(--color-vector-cyan-brand)_8%,_transparent),transparent_50%),radial-gradient(circle_at_80%_70%,color-mix(in_srgb,_var(--color-indigo-500)_4%,_transparent),transparent_50%)]' : 'bg-[radial-gradient(circle_at_20%_30%,color-mix(in_srgb,_var(--color-cyan-500)_12%,_transparent),transparent_50%),radial-gradient(circle_at_80%_70%,color-mix(in_srgb,_var(--color-indigo-500)_6%,_transparent),transparent_50%)]'}`}
       />
 
       {/* Static (non-animated) stars */}

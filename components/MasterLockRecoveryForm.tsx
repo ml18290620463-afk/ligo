@@ -141,8 +141,8 @@ export const MasterLockRecoveryForm: React.FC<MasterLockRecoveryFormProps> = ({
       </div>
 
       {recovery.resetError && (
-        <div role="alert" className="p-3 bg-[#C85F72]/5 border border-[#C85F72]/20 rounded">
-          <p className="text-[10px] font-mono text-[#C85F72] uppercase tracking-tight neon-glow-alert">
+        <div role="alert" className="p-3 bg-vector-magenta/5 border border-vector-magenta/20 rounded">
+          <p className="text-[10px] font-mono text-vector-magenta uppercase tracking-tight neon-glow-alert">
             {recovery.resetError}
           </p>
         </div>

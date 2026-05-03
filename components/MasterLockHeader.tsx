@@ -64,10 +64,10 @@ export const MasterLockHeader: React.FC<MasterLockHeaderProps> = ({
               initial={{ opacity: 0, x: 10 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 10 }}
-              className="flex items-center gap-2 px-3 py-1 bg-black border border-[#C85F72]/30 rounded-full shadow-[0_0_15px_rgba(200,95,114,0.1)]"
+              className="flex items-center gap-2 px-3 py-1 bg-black border border-vector-magenta/30 rounded-full shadow-[0_0_15px_color-mix(in_srgb,_var(--color-vector-magenta)_10%,_transparent)]"
             >
-              <AlertCircle className="w-3 h-3 text-[#C85F72]" />
-              <span className="text-[10px] font-mono text-[#C85F72] uppercase tracking-widest font-bold neon-glow-alert">
+              <AlertCircle className="w-3 h-3 text-vector-magenta" />
+              <span className="text-[10px] font-mono text-vector-magenta uppercase tracking-widest font-bold neon-glow-alert">
                 {t.confirmAction}
               </span>
             </motion.div>
@@ -76,7 +76,7 @@ export const MasterLockHeader: React.FC<MasterLockHeaderProps> = ({
         <button
           onClick={onCancelClick}
           aria-label={language === 'zh' ? '返回上一步' : 'Back to Previous Step'}
-          className={`p-2.5 rounded-full transition-all group ${isConfirmingCancel ? 'bg-[#C85F72] text-white shadow-[0_0_20px_rgba(200,95,114,0.4)]' : theme === 'light' ? 'bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-900 border border-transparent' : 'bg-white/5 text-slate-500 hover:bg-white/10 hover:text-white border border-white/5'}`}
+          className={`p-2.5 rounded-full transition-all group ${isConfirmingCancel ? 'bg-vector-magenta text-white shadow-[0_0_20px_color-mix(in_srgb,_var(--color-vector-magenta)_40%,_transparent)]' : theme === 'light' ? 'bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-900 border border-transparent' : 'bg-white/5 text-slate-500 hover:bg-white/10 hover:text-white border border-white/5'}`}
           title={language === 'zh' ? '返回上一步' : 'Back to Previous Step'}
         >
           <ArrowLeft

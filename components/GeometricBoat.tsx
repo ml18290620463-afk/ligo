@@ -27,17 +27,17 @@ export const GeometricBoat: React.FC<GeometricBoatProps> = ({ className, theme }
     />
     <polygon
       points="52,22 52,65 76,65"
-      fill="#0891b2"
+      fill="var(--color-cyan-600)"
       fillOpacity="0.4"
-      stroke="#06b6d4"
+      stroke="var(--color-cyan-500)"
       strokeWidth="1.5"
       strokeLinejoin="round"
     />
     <polygon
       points="48,32 48,65 30,65"
-      fill="#0891b2"
+      fill="var(--color-cyan-600)"
       fillOpacity="0.1"
-      stroke="#06b6d4"
+      stroke="var(--color-cyan-500)"
       strokeWidth="1.5"
       strokeLinejoin="round"
     />

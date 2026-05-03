@@ -109,9 +109,7 @@ describe('useMasterPasswordVerify', () => {
     const onUnlock = vi.fn();
     const verifyPassword = vi.fn().mockResolvedValue(true);
     const { result } = renderHook(() =>
-      useMasterPasswordVerify(
-        baseArgs({ onUnlock, verifyPassword, enterUnlockDelayMs: 100 }),
-      ),
+      useMasterPasswordVerify(baseArgs({ onUnlock, verifyPassword, enterUnlockDelayMs: 100 })),
     );
     act(() => result.current.setPassword('correct'));
     let ok: boolean | undefined;

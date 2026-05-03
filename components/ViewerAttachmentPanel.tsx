@@ -65,7 +65,7 @@ export const ViewerAttachmentPanel: React.FC<ViewerAttachmentPanelProps> = ({
   theme,
 }) => (
   <div
-    className={`mt-8 p-4 rounded-xl border ${theme === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-[#050505] border-cyan-900/30'}`}
+    className={`mt-8 p-4 rounded-xl border ${theme === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-vector-ink-deep border-cyan-900/30'}`}
   >
     <div
       className={`flex items-center gap-2 mb-4 font-mono text-xs uppercase tracking-widest ${theme === 'light' ? 'text-slate-500' : 'text-cyan-600'}`}

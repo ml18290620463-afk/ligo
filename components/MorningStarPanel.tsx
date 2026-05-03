@@ -87,7 +87,7 @@ export const MorningStarPanel: React.FC<MorningStarPanelProps> = ({
   markdownComponents,
 }) => (
   <div
-    className={`mt-16 pt-12 border-t ${theme === 'light' ? 'border-[rgba(0,122,140,0.1)]' : 'border-cyan-900/40'}`}
+    className={`mt-16 pt-12 border-t ${theme === 'light' ? 'border-[color-mix(in_srgb,_var(--color-vector-cyan-brand)_10%,_transparent)]' : 'border-cyan-900/40'}`}
   >
     {readingStep === 'reading' && (
       <div className="flex flex-col items-center gap-6 text-center">
@@ -143,7 +143,7 @@ export const MorningStarPanel: React.FC<MorningStarPanelProps> = ({
               ${
                 theme === 'light'
                   ? 'bg-slate-50 border-slate-200 focus:border-cyan-400 text-slate-800 shadow-inner'
-                  : 'bg-black/40 border-cyan-900/30 focus:border-cyan-500/50 text-cyan-50 shadow-[inset_0_0_20px_rgba(6,182,212,0.05)]'
+                  : 'bg-black/40 border-cyan-900/30 focus:border-cyan-500/50 text-cyan-50 shadow-[inset_0_0_20px_color-mix(in_srgb,_var(--color-cyan-500)_5%,_transparent)]'
               }`}
           />
         </div>
@@ -151,7 +151,7 @@ export const MorningStarPanel: React.FC<MorningStarPanelProps> = ({
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div
-              className={`flex items-center gap-2 font-mono text-sm uppercase tracking-widest ${theme === 'light' ? 'text-[#007a8c]' : 'text-cyan-400'}`}
+              className={`flex items-center gap-2 font-mono text-sm uppercase tracking-widest ${theme === 'light' ? 'text-vector-cyan-brand' : 'text-cyan-400'}`}
             >
               <Star className="w-4 h-4" /> 邀请哪颗星为你领航？
             </div>
@@ -176,7 +176,7 @@ export const MorningStarPanel: React.FC<MorningStarPanelProps> = ({
                       isSelected
                         ? theme === 'light'
                           ? 'bg-cyan-50 border-cyan-300 text-cyan-900'
-                          : 'bg-cyan-500/20 border-cyan-400 text-cyan-100 shadow-[0_0_15px_rgba(6,182,212,0.1)]'
+                          : 'bg-cyan-500/20 border-cyan-400 text-cyan-100 shadow-[0_0_15px_color-mix(in_srgb,_var(--color-cyan-500)_10%,_transparent)]'
                         : theme === 'light'
                           ? 'bg-white border-slate-100 text-slate-400 hover:border-cyan-200'
                           : 'bg-black/20 border-cyan-900/20 text-cyan-700 hover:border-cyan-800'
@@ -318,7 +318,7 @@ export const MorningStarPanel: React.FC<MorningStarPanelProps> = ({
                 </div>
 
                 <div
-                  className={`border p-8 relative overflow-hidden ${theme === 'light' ? 'bg-white border-slate-100 shadow-sm' : 'bg-cyan-950/5 border-cyan-500/10 shadow-[0_0_40px_rgba(6,182,212,0.03)]'}`}
+                  className={`border p-8 relative overflow-hidden ${theme === 'light' ? 'bg-white border-slate-100 shadow-sm' : 'bg-cyan-950/5 border-cyan-500/10 shadow-[0_0_40px_color-mix(in_srgb,_var(--color-cyan-500)_3%,_transparent)]'}`}
                 >
                   <div className="absolute top-0 left-0 w-1.5 h-full bg-cyan-500/40"></div>
 

@@ -6,9 +6,11 @@ interface SpaceTimeBackgroundProps {
 }
 
 export const SpaceTimeBackground: React.FC<SpaceTimeBackgroundProps> = ({ theme = 'dark' }) => {
+  const starColor = theme === 'light' ? 'var(--color-vector-cyan-brand)' : 'white';
+
   return (
     <div
-      className={`fixed inset-0 pointer-events-none z-0 overflow-hidden transition-colors duration-700 ${theme === 'light' ? 'bg-[#f0f4f7]' : 'bg-[#05070b]'}`}
+      className={`fixed inset-0 pointer-events-none z-0 overflow-hidden transition-colors duration-700 ${theme === 'light' ? 'bg-vector-fog-light' : 'bg-vector-night-deep'}`}
     >
       {/* 1. Deep Nebula/Aurora Effects (The Sky) */}
       <div
@@ -25,14 +27,14 @@ export const SpaceTimeBackground: React.FC<SpaceTimeBackgroundProps> = ({ theme 
         <div
           className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-[0.08] z-0"
           style={{
-            backgroundImage: `radial-gradient(${theme === 'light' ? '#007a8c' : '#ffffff'} 1.5px, transparent 1.5px)`,
+            backgroundImage: `radial-gradient(${starColor} 1.5px, transparent 1.5px)`,
             backgroundSize: '80px 80px',
           }}
         ></div>
         <div
           className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-[0.04] z-0"
           style={{
-            backgroundImage: `radial-gradient(${theme === 'light' ? '#007a8c' : '#ffffff'} 1px, transparent 1px)`,
+            backgroundImage: `radial-gradient(${starColor} 1px, transparent 1px)`,
             backgroundSize: '40px 40px',
             backgroundPosition: '20px 20px',
           }}
@@ -44,9 +46,7 @@ export const SpaceTimeBackground: React.FC<SpaceTimeBackgroundProps> = ({ theme 
         <div className="absolute inset-[-50%] origin-bottom transform-gpu [transform:rotateX(60deg)_translateZ(0)] opacity-40">
           <div
             className={`w-full h-full bg-[size:100px_100px] ${
-              theme === 'light'
-                ? 'bg-[linear-gradient(to_bottom,transparent_0%,rgba(0,122,140,0.03)_30%,rgba(0,122,140,0.08)_100%),linear-gradient(90deg,rgba(0,122,140,0.02)_1px,transparent_1px),linear-gradient(rgba(0,122,140,0.02)_1px,transparent_1px)]'
-                : 'bg-[linear-gradient(to_bottom,transparent_0%,rgba(18,216,255,0.03)_30%,rgba(99,102,241,0.05)_100%),linear-gradient(90deg,rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px)]'
+              theme === 'light' ? 'bg-spacetime-grid-light' : 'bg-spacetime-grid-dark'
             }`}
           ></div>
         </div>
@@ -56,14 +56,14 @@ export const SpaceTimeBackground: React.FC<SpaceTimeBackgroundProps> = ({ theme 
       <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
         <div className="relative top-[25%] w-[100vw] h-[100vw] flex items-center justify-center pointer-events-none">
           <div
-            className={`absolute w-12 h-12 rounded-full z-30 transition-colors ${theme === 'light' ? 'bg-cyan-600/10' : 'bg-cyan-500/5 shadow-[0_0_50px_rgba(18,216,255,0.1)]'}`}
+            className={`absolute w-12 h-12 rounded-full z-30 transition-colors ${theme === 'light' ? 'bg-cyan-600/10' : 'bg-cyan-500/5 shadow-glow-cyan-neon-bright'}`}
           ></div>
         </div>
       </div>
 
       {/* 4. Horizon Fade (Atmosphere) */}
       <div
-        className={`absolute inset-0 h-[70vh] transition-colors duration-700 ${theme === 'light' ? 'bg-gradient-to-b from-[#f0f4f7] via-[#f0f4f7]/90 to-transparent' : 'bg-gradient-to-b from-[#05070b] via-[#05070b]/90 to-transparent'}`}
+        className={`absolute inset-0 h-[70vh] transition-colors duration-700 ${theme === 'light' ? 'bg-gradient-to-b from-vector-fog-light via-vector-fog-light/90 to-transparent' : 'bg-gradient-to-b from-vector-night-deep via-vector-night-deep/90 to-transparent'}`}
       ></div>
 
       {/* 5. Rising Soul Particles (Static) */}

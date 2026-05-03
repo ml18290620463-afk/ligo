@@ -13,6 +13,7 @@ import { useMorningStarPipeline } from '../hooks/useMorningStarPipeline';
 import { TRANSLATIONS } from '../constants';
 import { ViewerStarfield } from './ViewerStarfield';
 import { buildViewerMarkdownComponents } from './viewerMarkdown';
+import { ShareCardModal } from './ShareCardModal';
 
 interface ViewerProps {
   language: Language;
@@ -63,6 +64,7 @@ export const Viewer: React.FC<ViewerProps> = ({
   const [isShaking, setIsShaking] = useState(false);
   const [showConfirmHome, setShowConfirmHome] = useState(false);
   const [lastClickTime, setLastClickTime] = useState(0);
+  const [shareCardOpen, setShareCardOpen] = useState(false);
 
   const handleMoveToContainer = (containerId: string | undefined) => {
     onUpdateEntry({ ...entry, containerId });
@@ -231,7 +233,7 @@ export const Viewer: React.FC<ViewerProps> = ({
 
   return (
     <div
-      className={`relative min-h-screen overflow-hidden flex flex-col items-center transition-colors duration-1000 ${theme === 'light' ? 'bg-[#f0f4f7]' : 'bg-[#030303]'}`}
+      className={`relative min-h-screen overflow-hidden flex flex-col items-center transition-colors duration-1000 ${theme === 'light' ? 'bg-vector-fog-light' : 'bg-vector-onyx'}`}
     >
       <ViewerStarfield theme={theme} fixedStars={fixedStars} twinklingStars={twinklingStars} />
 
@@ -298,10 +300,20 @@ export const Viewer: React.FC<ViewerProps> = ({
             onRequestBurn={initBurn}
             onCancelBurn={cancelBurn}
             onExecuteBurn={executeBurn}
+            onShareCard={decrypted ? () => setShareCardOpen(true) : undefined}
             markdownComponents={buildViewerMarkdownComponents(theme)}
           />
         )}
       </AnimatePresence>
+
+      <ShareCardModal
+        open={shareCardOpen}
+        onClose={() => setShareCardOpen(false)}
+        theme={theme}
+        t={t}
+        entry={{ ...entry, content: decryptedContent || entry.content }}
+        displayIdentity={displayIdentity}
+      />
 
       {/* Keyframes (Simplified) */}
       <style>{`

@@ -18,8 +18,14 @@ export default [
       'coverage/**',
       'playwright-report/**',
       'test-results/**',
+      'storybook-static/**',
       '.git/**',
       'app/**',
+      // Node-only build / tooling scripts. They run via `node` (or
+      // `tsx`) outside the browser environment and use `process.*`
+      // freely; running the same TS/JSX rule set against them adds
+      // no signal and tripped `no-undef` warnings.
+      'scripts/**',
     ],
   },
   js.configs.recommended,
@@ -92,43 +98,23 @@ export default [
       'no-useless-escape': 'off',
       'no-control-regex': 'off',
       'no-undef': 'off',
+      // Phase 3 §3.a-2 — design-token migration scoreboard.
+      // Status: `off` (infrastructure only). Engineers run
+      // `npm run lint:tokens` to surface the current backlog of raw
+      // hex / rgba literals that should eventually move to
+      // `lib/designTokens.ts`. ROADMAP says "warn first, error last";
+      // we will flip this rule to `warn` per directory in follow-up
+      // commits (`components/CoverScreen` first, then Master, then
+      // the rest of `components/`, then everywhere).
+      'no-restricted-syntax': 'off',
     },
   },
-  {
-    // Phase 2 §2.g–§2.j refactor target. These four files predate the
-    // 600-line cap and are scheduled to be split into ≤350-line chunks;
-    // until the split lands we silence `max-lines` here (rather than
-    // disabling it on every PR). Delete this whole override block as
-    // part of the Phase 2 exit checklist — do not extend it to new
-    // files.
-    files: [
-      // Viewer.tsx was split in Phase 2 §2.g (now 312 lines, well under
-      // the 350 LOC target — see ROADMAP exit checklist) so it is no
-      // longer in this override list. Remaining four legacy components
-      // are tracked as Phase 2 §2.h–§2.j follow-ups.
-      'components/Dashboard.tsx',
-      'components/MasterLock.tsx',
-      'components/SettingsPanel.tsx',
-      // Not in ROADMAP §0.1 originally but also above the cap; tracked
-      // as a Phase 2 follow-up so it gets the same treatment.
-      'components/ArchiveVault.tsx',
-      // StatisticsWidget has decorative div-based interactive cells; will
-      // be revisited together with the rest of the dashboard surface.
-      'components/StatisticsWidget.tsx',
-    ],
-    rules: {
-      'max-lines': 'off',
-      // Same lifecycle as `max-lines` above: the four jsx-a11y rules we
-      // re-opened in Phase 2 emit ~20 warnings inside these legacy
-      // components. We silence them here so `--max-warnings=0` stays
-      // useful for new code, and clear them per-file as the components
-      // are split into ≤350-line chunks.
-      'jsx-a11y/no-static-element-interactions': 'off',
-      'jsx-a11y/click-events-have-key-events': 'off',
-      'jsx-a11y/label-has-associated-control': 'off',
-      'jsx-a11y/no-noninteractive-element-interactions': 'off',
-    },
-  },
+  // Phase 2 §2.g–§2.m + §2.l: every legacy component (Viewer,
+  // Dashboard, MasterLock, SettingsPanel, ArchiveVault, StatisticsWidget)
+  // has been split below the 350-LOC target with its jsx-a11y
+  // violations resolved. The previous file-scoped `max-lines: off` /
+  // four jsx-a11y `off` overrides have been retired in their entirety;
+  // the codebase now lives under one uniform rule set.
   {
     files: ['**/*.test.{ts,tsx}', '**/*.spec.{ts,tsx}', 'e2e/**/*.{ts,tsx}'],
     languageOptions: {

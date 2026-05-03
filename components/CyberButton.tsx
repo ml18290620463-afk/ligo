@@ -24,16 +24,16 @@ export const CyberButton: React.FC<CyberButtonProps> = ({
   const variants = {
     primary:
       theme === 'light'
-        ? 'bg-white/80 backdrop-blur-xl text-[#007a8c] border border-[rgba(0,122,140,0.2)] hover:bg-[#007a8c] hover:text-white hover:border-[#007a8c] hover:shadow-sm'
-        : 'bg-[#12d8ff]/10 text-[#12d8ff] border border-[#12d8ff]/70 hover:bg-[#12d8ff]/20 hover:text-white hover:border-[#12d8ff] shadow-[0_0_15px_rgba(18,216,255,0.15)] hover:shadow-[0_0_25px_rgba(18,216,255,0.3)]',
+        ? 'bg-white/80 backdrop-blur-xl text-vector-cyan-brand border border-vector-cyan-brand/20 hover:bg-vector-cyan-brand hover:text-white hover:border-vector-cyan-brand hover:shadow-sm'
+        : 'bg-vector-cyan-neon/10 text-vector-cyan-neon border border-vector-cyan-neon/70 hover:bg-vector-cyan-neon/20 hover:text-white hover:border-vector-cyan-neon shadow-glow-cyan-neon-soft hover:shadow-glow-cyan-neon',
     danger:
       theme === 'light'
-        ? 'bg-white/80 backdrop-blur-xl text-[#C85F72] border border-[#C85F72]/20 hover:bg-[#C85F72] hover:text-white hover:border-[#C85F72] hover:shadow-sm'
-        : 'bg-[#C85F72]/10 text-[#C85F72] border border-[#C85F72]/50 hover:bg-[#C85F72] hover:text-white hover:shadow-[0_0_20px_rgba(200,95,114,0.4)] shadow-[0_0_10px_rgba(200,95,114,0.1)]',
+        ? 'bg-white/80 backdrop-blur-xl text-vector-magenta border border-vector-magenta/20 hover:bg-vector-magenta hover:text-white hover:border-vector-magenta hover:shadow-sm'
+        : 'bg-vector-magenta/10 text-vector-magenta border border-vector-magenta/50 hover:bg-vector-magenta hover:text-white hover:shadow-glow-vector-magenta-strong shadow-glow-vector-magenta',
     ghost:
       theme === 'light'
-        ? 'text-[#4a5568] hover:text-[#007a8c] border border-transparent hover:bg-[rgba(0,122,140,0.05)] hover:border-[rgba(0,122,140,0.1)]'
-        : 'text-[#6e8198] hover:text-[#12d8ff] border border-transparent hover:border-[#12d8ff]/30 hover:bg-[#12d8ff]/5',
+        ? 'text-vector-slate-mid hover:text-vector-cyan-brand border border-transparent hover:bg-vector-cyan-brand/5 hover:border-vector-cyan-brand/10'
+        : 'text-vector-slate-chrome hover:text-vector-cyan-neon border border-transparent hover:border-vector-cyan-neon/30 hover:bg-vector-cyan-neon/5',
   };
 
   const content = (

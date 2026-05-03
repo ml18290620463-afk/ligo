@@ -140,7 +140,7 @@ export const VaultListView = ({
                 Restricted
               </span>
               <span
-                className={`text-xs font-mono font-black ${theme === 'light' ? 'text-[#C85F72]/80 shadow-[0_0_10px_rgba(200,95,114,0.1)]' : 'text-[#C85F72] neon-glow-alert'}`}
+                className={`text-xs font-mono font-black ${theme === 'light' ? 'text-vector-magenta/80 shadow-[0_0_10px_color-mix(in_srgb,_var(--color-vector-magenta)_10%,_transparent)]' : 'text-vector-magenta neon-glow-alert'}`}
               >
                 {formatCountdown(entry.unlockAt)}
               </span>
@@ -150,7 +150,7 @@ export const VaultListView = ({
           <div
             className={`p-1.5 transition-all duration-500 ${
               encrypted
-                ? 'text-[#C85F72]/40 group-hover:text-[#C85F72] neon-glow-alert'
+                ? 'text-vector-magenta/40 group-hover:text-vector-magenta neon-glow-alert'
                 : 'text-slate-600 group-hover:text-cyan-400 font-bold'
             }`}
           >

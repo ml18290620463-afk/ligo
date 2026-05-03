@@ -20,13 +20,13 @@ describe('CyberButton', () => {
   it('applies ghost variant classes', () => {
     render(<CyberButton variant="ghost">Ghost</CyberButton>);
     const btn = screen.getByRole('button');
-    expect(btn.className).toContain('text-[#6e8198]');
-    expect(btn.className).toContain('hover:text-[#12d8ff]');
+    expect(btn.className).toContain('text-vector-slate-chrome');
+    expect(btn.className).toContain('hover:text-vector-cyan-neon');
   });
 
   it('applies light theme classes', () => {
     render(<CyberButton theme="light">Light</CyberButton>);
     const btn = screen.getByRole('button');
-    expect(btn.className).toContain('text-[#007a8c]');
+    expect(btn.className).toContain('text-vector-cyan-brand');
   });
 });

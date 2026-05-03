@@ -65,7 +65,7 @@ export const ViewerSealedPanel: React.FC<ViewerSealedPanelProps> = ({
     animate={{ opacity: 1 }}
     exit={{ opacity: 0, scale: 1.1, filter: 'blur(30px)' }}
     transition={{ duration: 1.2 }}
-    className={`fixed inset-0 z-50 flex items-center justify-center p-6 md:p-12 backdrop-blur-3xl overflow-y-auto transition-colors duration-1000 ${theme === 'light' ? 'bg-[#fafafa]/40' : 'bg-[#030303]/40'}`}
+    className={`fixed inset-0 z-50 flex items-center justify-center p-6 md:p-12 backdrop-blur-3xl overflow-y-auto transition-colors duration-1000 ${theme === 'light' ? 'bg-neutral-50/40' : 'bg-vector-onyx/40'}`}
   >
     {/* Data Stream Lines */}
     <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-30">
@@ -133,14 +133,14 @@ export const ViewerSealedPanel: React.FC<ViewerSealedPanelProps> = ({
                 rotateX: { duration: 10, repeat: Infinity, ease: 'easeInOut' },
               }
         }
-        className={`relative transition-all duration-1000 group rounded-sm ${theme === 'light' ? 'bg-[#faf9f6] shadow-[0_0_60px_rgba(0,122,140,0.1)] border border-cyan-500/20' : 'bg-[#0a0a0a] border border-cyan-500/40 neon-border-cyan shadow-[0_0_90px_rgba(6,182,212,0.2),inset_0_0_40px_rgba(6,182,212,0.1)]'} ${viewState === 'opening' ? 'pointer-events-none' : ''}`}
+        className={`relative transition-all duration-1000 group rounded-sm ${theme === 'light' ? 'bg-vector-paper-cream shadow-[0_0_60px_color-mix(in_srgb,_var(--color-vector-cyan-brand)_10%,_transparent)] border border-cyan-500/20' : 'bg-neutral-950 border border-cyan-500/40 neon-border-cyan shadow-[0_0_90px_color-mix(in_srgb,_var(--color-cyan-500)_20%,_transparent),inset_0_0_40px_color-mix(in_srgb,_var(--color-cyan-500)_10%,_transparent)]'} ${viewState === 'opening' ? 'pointer-events-none' : ''}`}
       >
         {/* Back Button (Top Left Corner) */}
         <div className="absolute -top-4 -left-4 z-50">
           <button
             onClick={onBack}
             aria-label={t.abort}
-            className={`w-12 h-12 rounded-full border transition-all flex items-center justify-center group backdrop-blur-md shadow-lg ${theme === 'light' ? 'text-slate-400 border-slate-200 hover:text-slate-900 hover:border-slate-400 bg-white/80' : 'text-cyan-500/60 border-cyan-500/20 hover:text-cyan-400 hover:border-cyan-500/50 bg-black/60 shadow-[0_0_20px_rgba(6,182,212,0.1)] neon-border-cyan'}`}
+            className={`w-12 h-12 rounded-full border transition-all flex items-center justify-center group backdrop-blur-md shadow-lg ${theme === 'light' ? 'text-slate-400 border-slate-200 hover:text-slate-900 hover:border-slate-400 bg-white/80' : 'text-cyan-500/60 border-cyan-500/20 hover:text-cyan-400 hover:border-cyan-500/50 bg-black/60 shadow-[0_0_20px_color-mix(in_srgb,_var(--color-cyan-500)_10%,_transparent)] neon-border-cyan'}`}
           >
             <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
           </button>
@@ -161,10 +161,10 @@ export const ViewerSealedPanel: React.FC<ViewerSealedPanelProps> = ({
               }}
               className={`absolute top-0 right-0 w-24 h-24 border-2 rounded-full -translate-y-1/2 translate-x-1/2 ${
                 i === 1 && theme === 'dark'
-                  ? 'border-indigo-500/60 shadow-[0_0_30px_rgba(99,102,241,0.3)]'
+                  ? 'border-indigo-500/60 shadow-[0_0_30px_color-mix(in_srgb,_var(--color-indigo-500)_30%,_transparent)]'
                   : theme === 'light'
                     ? 'border-cyan-500/20'
-                    : 'border-cyan-400/40 shadow-[0_0_15px_rgba(34,211,238,0.2)]'
+                    : 'border-cyan-400/40 shadow-[0_0_15px_color-mix(in_srgb,_var(--color-cyan-400)_20%,_transparent)]'
               }`}
             />
           ))}
@@ -195,15 +195,15 @@ export const ViewerSealedPanel: React.FC<ViewerSealedPanelProps> = ({
           <motion.div
             animate={{ opacity: [0.1, 0.5, 0.1], scale: [0.8, 1.3, 0.8] }}
             transition={{ duration: 4, repeat: Infinity, delay: 1 }}
-            className="absolute top-0 right-0 w-28 h-28 blur-2xl rounded-full -translate-y-1/3 translate-x-1/3 z-11 bg-indigo-500/10 shadow-[0_0_40px_rgba(99,102,241,0.2)]"
+            className="absolute top-0 right-0 w-28 h-28 blur-2xl rounded-full -translate-y-1/3 translate-x-1/3 z-11 bg-indigo-500/10 shadow-[0_0_40px_color-mix(in_srgb,_var(--color-indigo-500)_20%,_transparent)]"
           />
 
           {/* Static Tech Corner Plate */}
           <div
-            className={`absolute top-0 right-0 w-0 h-0 border-t-[60px] border-r-[60px] border-t-transparent z-40 ${theme === 'light' ? 'border-r-white/80' : 'border-r-black/60 shadow-[-10px_10px_20px_rgba(0,0,0,0.5)]'}`}
+            className={`absolute top-0 right-0 w-0 h-0 border-t-[60px] border-r-[60px] border-t-transparent z-40 ${theme === 'light' ? 'border-r-white/80' : 'border-r-black/60 shadow-[-10px_10px_20px_color-mix(in_srgb,_black_50%,_transparent)]'}`}
           />
           <div
-            className={`absolute top-0 right-0 w-px h-[85px] rotate-45 origin-top-right z-50 ${theme === 'light' ? 'bg-cyan-500/30' : 'bg-cyan-400/50 shadow-[0_0_10px_rgba(34,211,238,0.5)]'}`}
+            className={`absolute top-0 right-0 w-px h-[85px] rotate-45 origin-top-right z-50 ${theme === 'light' ? 'bg-cyan-500/30' : 'bg-cyan-400/50 shadow-[0_0_10px_color-mix(in_srgb,_var(--color-cyan-400)_50%,_transparent)]'}`}
           />
         </div>
 
@@ -224,7 +224,7 @@ export const ViewerSealedPanel: React.FC<ViewerSealedPanelProps> = ({
           {/* Clean Orderly Header Info Section */}
           <div className="flex flex-col gap-6 relative z-10 border-b border-black/[0.05] dark:border-white/[0.05] -mx-5 md:-mx-7 p-6 md:p-8 pt-10 md:pt-12 mb-6">
             <div
-              className={`font-mono text-xs md:text-sm tracking-widest leading-loose ${theme === 'light' ? 'text-slate-600' : 'text-[#22D3EE]'}`}
+              className={`font-mono text-xs md:text-sm tracking-widest leading-loose ${theme === 'light' ? 'text-slate-600' : 'text-cyan-400'}`}
             >
               <TypewriterText
                 text={`✦ 时空信件加载中  。。。\n来自 ${new Date(entry.createdAt).toLocaleDateString('zh-CN')} 信件\n信件主题：${entry.title}\n签收人：${displayIdentity}`}
@@ -253,7 +253,7 @@ export const ViewerSealedPanel: React.FC<ViewerSealedPanelProps> = ({
                     onChange={(e) => setDecryptionPassword(e.target.value)}
                     placeholder="........"
                     aria-label={t.securityCalibration}
-                    className={`w-full bg-transparent border-b py-3 font-mono text-xl outline-none transition-all text-center tracking-[1.1em] relative z-20 ${theme === 'light' ? 'border-slate-300 text-slate-900 focus:border-cyan-600' : 'border-white/10 text-white focus:border-cyan-500 shadow-[inset_0_0_40px_rgba(6,182,212,0.02)]'}`}
+                    className={`w-full bg-transparent border-b py-3 font-mono text-xl outline-none transition-all text-center tracking-[1.1em] relative z-20 ${theme === 'light' ? 'border-slate-300 text-slate-900 focus:border-cyan-600' : 'border-white/10 text-white focus:border-cyan-500 shadow-[inset_0_0_40px_color-mix(in_srgb,_var(--color-cyan-500)_2%,_transparent)]'}`}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') onOpenLetter();
                     }}
@@ -303,11 +303,11 @@ export const ViewerSealedPanel: React.FC<ViewerSealedPanelProps> = ({
                 ))}
               </div>
               <div className="flex items-center gap-4">
-                <div className="w-12 h-[1px] bg-indigo-500/20 shadow-[0_0_5px_rgba(99,102,241,0.2)]" />
-                <span className="text-[10px] font-mono uppercase tracking-[0.6em] text-indigo-400 font-bold animate-pulse neon-glow-indigo drop-shadow-[0_0_5px_rgba(99,102,241,0.4)]">
+                <div className="w-12 h-[1px] bg-indigo-500/20 shadow-[0_0_5px_color-mix(in_srgb,_var(--color-indigo-500)_20%,_transparent)]" />
+                <span className="text-[10px] font-mono uppercase tracking-[0.6em] text-indigo-400 font-bold animate-pulse neon-glow-indigo drop-shadow-[0_0_5px_color-mix(in_srgb,_var(--color-indigo-500)_40%,_transparent)]">
                   {t.timeLock}
                 </span>
-                <div className="w-12 h-[1px] bg-indigo-500/20 shadow-[0_0_5px_rgba(99,102,241,0.2)]" />
+                <div className="w-12 h-[1px] bg-indigo-500/20 shadow-[0_0_5px_color-mix(in_srgb,_var(--color-indigo-500)_20%,_transparent)]" />
               </div>
             </div>
           )}
@@ -317,7 +317,7 @@ export const ViewerSealedPanel: React.FC<ViewerSealedPanelProps> = ({
               role="alert"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-indigo-500/10 border border-indigo-500/30 p-2 text-[8px] text-[#C85F72] font-mono text-center w-full uppercase tracking-widest mt-2 shadow-[0_0_15px_rgba(200,95,114,0.1)] neon-glow-alert"
+              className="bg-indigo-500/10 border border-indigo-500/30 p-2 text-[8px] text-vector-magenta font-mono text-center w-full uppercase tracking-widest mt-2 shadow-[0_0_15px_color-mix(in_srgb,_var(--color-vector-magenta)_10%,_transparent)] neon-glow-alert"
             >
               {biometricError || decryptionError}
             </motion.div>
@@ -334,7 +334,7 @@ export const ViewerSealedPanel: React.FC<ViewerSealedPanelProps> = ({
               className="flex flex-col items-center gap-3 group/seal"
             >
               <div
-                className={`relative w-20 h-20 rounded-full border flex items-center justify-center transition-all duration-1000 ${isTimeLocked ? 'opacity-20 grayscale' : 'group-hover/seal:border-cyan-400 group-hover/seal:bg-cyan-500/10 group-hover/seal:shadow-[0_0_50px_rgba(6,182,212,0.2)]'} ${theme === 'light' ? 'border-slate-200 bg-white shadow-sm' : 'border-white/10 bg-white/[0.02]'}`}
+                className={`relative w-20 h-20 rounded-full border flex items-center justify-center transition-all duration-1000 ${isTimeLocked ? 'opacity-20 grayscale' : 'group-hover/seal:border-cyan-400 group-hover/seal:bg-cyan-500/10 group-hover/seal:shadow-[0_0_50px_color-mix(in_srgb,_var(--color-cyan-500)_20%,_transparent)]'} ${theme === 'light' ? 'border-slate-200 bg-white shadow-sm' : 'border-white/10 bg-white/[0.02]'}`}
               >
                 <motion.div
                   animate={{ rotate: 360 }}

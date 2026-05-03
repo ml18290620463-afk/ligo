@@ -249,7 +249,7 @@ export const MemoryFragments: React.FC<MemoryFragmentsProps> = ({
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200vw] h-[200vw] bg-[radial-gradient(circle,transparent_10%,black_85%)] z-10"></div>
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 z-0"></div>
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:150px_150px] [transform:perspective(500px)_rotateX(60deg)_scale(3)] animate-[tunnel_40s_linear_infinite] opacity-20"></div>
+        <div className="absolute inset-0 bg-[linear-gradient(color-mix(in_srgb,_white_2%,_transparent)_1px,transparent_1px),linear-gradient(90deg,color-mix(in_srgb,_white_2%,_transparent)_1px,transparent_1px)] bg-[size:150px_150px] [transform:perspective(500px)_rotateX(60deg)_scale(3)] animate-[tunnel_40s_linear_infinite] opacity-20"></div>
       </div>
 
       {/* Central Year */}

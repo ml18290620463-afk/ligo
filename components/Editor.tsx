@@ -236,7 +236,7 @@ export const Editor: React.FC<EditorProps> = ({
           {draftSaveError && (
             <span
               role="alert"
-              className="text-xs font-mono flex items-center gap-1 text-rose-500 drop-shadow-[0_0_5px_rgba(244,63,94,0.3)]"
+              className="text-xs font-mono flex items-center gap-1 text-rose-500 drop-shadow-glow-rose"
             >
               <AlertTriangle className="w-3 h-3" />
               {draftSaveError === 'quota'
@@ -255,7 +255,7 @@ export const Editor: React.FC<EditorProps> = ({
       </div>
 
       <div
-        className={`flex-1 border p-8 backdrop-blur-md flex flex-col gap-6 relative transition-all duration-500 ${error ? 'border-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.2)]' : theme === 'light' ? 'border-[rgba(0,122,140,0.1)] bg-white/60 shadow-lg' : 'border-cyan-500/30 bg-black/40 shadow-xl'}`}
+        className={`flex-1 border p-8 backdrop-blur-md flex flex-col gap-6 relative transition-all duration-500 ${error ? 'border-rose-500 shadow-glow-rose-mid' : theme === 'light' ? 'border-vector-cyan-brand/10 bg-white/60 shadow-lg' : 'border-cyan-500/30 bg-black/40 shadow-xl'}`}
       >
         {/* Corners */}
         <div
@@ -275,7 +275,7 @@ export const Editor: React.FC<EditorProps> = ({
         <div className="flex flex-col gap-2">
           <div className="flex justify-between">
             {error && (
-              <span className="text-xs font-mono text-rose-500 flex items-center gap-1 animate-pulse drop-shadow-[0_0_5px_rgba(244,63,94,0.3)]">
+              <span className="text-xs font-mono text-rose-500 flex items-center gap-1 animate-pulse drop-shadow-glow-rose">
                 <AlertTriangle className="w-3 h-3" /> {error}
               </span>
             )}
@@ -284,7 +284,7 @@ export const Editor: React.FC<EditorProps> = ({
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className={`text-3xl font-bold px-2 py-2 focus:outline-none transition-all ${theme === 'light' ? 'bg-transparent text-[#1a202c] placeholder:text-slate-200' : 'bg-cyan-950/20 text-white placeholder-cyan-900'} ${error ? 'border-b border-rose-500' : ''}`}
+            className={`text-3xl font-bold px-2 py-2 focus:outline-none transition-all ${theme === 'light' ? 'bg-transparent text-vector-ink-strong placeholder:text-slate-200' : 'bg-cyan-950/20 text-white placeholder-cyan-900'} ${error ? 'border-b border-rose-500' : ''}`}
             placeholder={t.titlePlaceholder}
             disabled={isSaving}
           />
@@ -300,7 +300,7 @@ export const Editor: React.FC<EditorProps> = ({
             </label>
             <button
               onClick={() => setShowGuide(!showGuide)}
-              className={`text-xs font-mono flex items-center gap-1 transition-colors ${showGuide ? (theme === 'light' ? 'text-[#007a8c]' : 'text-cyan-400') : theme === 'light' ? 'text-slate-400 hover:text-slate-600' : 'text-cyan-700 hover:text-cyan-500'}`}
+              className={`text-xs font-mono flex items-center gap-1 transition-colors ${showGuide ? (theme === 'light' ? 'text-vector-cyan-brand' : 'text-cyan-400') : theme === 'light' ? 'text-slate-400 hover:text-slate-600' : 'text-cyan-700 hover:text-cyan-500'}`}
             >
               <Layers className="w-3 h-3" /> {t.toggleGuide}
             </button>
@@ -315,11 +315,11 @@ export const Editor: React.FC<EditorProps> = ({
                 className="overflow-hidden"
               >
                 <div
-                  className={`p-4 mb-2 text-sm font-mono flex flex-col gap-2 border ${theme === 'light' ? 'bg-[#007a8c]/5 border-[rgba(0,122,140,0.1)] text-slate-600' : 'bg-cyan-950/20 border-cyan-900/30 text-cyan-500/80'}`}
+                  className={`p-4 mb-2 text-sm font-mono flex flex-col gap-2 border ${theme === 'light' ? 'bg-vector-cyan-brand/5 border-vector-cyan-brand/10 text-slate-600' : 'bg-cyan-950/20 border-cyan-900/30 text-cyan-500/80'}`}
                 >
                   <div className="flex items-start gap-2">
                     <span
-                      className={`font-bold ${theme === 'light' ? 'text-[#007a8c]' : 'text-cyan-400'}`}
+                      className={`font-bold ${theme === 'light' ? 'text-vector-cyan-brand' : 'text-cyan-400'}`}
                     >
                       01
                     </span>{' '}
@@ -327,7 +327,7 @@ export const Editor: React.FC<EditorProps> = ({
                   </div>
                   <div className="flex items-start gap-2">
                     <span
-                      className={`font-bold ${theme === 'light' ? 'text-[#007a8c]' : 'text-cyan-400'}`}
+                      className={`font-bold ${theme === 'light' ? 'text-vector-cyan-brand' : 'text-cyan-400'}`}
                     >
                       02
                     </span>{' '}
@@ -335,7 +335,7 @@ export const Editor: React.FC<EditorProps> = ({
                   </div>
                   <div className="flex items-start gap-2">
                     <span
-                      className={`font-bold ${theme === 'light' ? 'text-[#007a8c]' : 'text-cyan-400'}`}
+                      className={`font-bold ${theme === 'light' ? 'text-vector-cyan-brand' : 'text-cyan-400'}`}
                     >
                       03
                     </span>{' '}
@@ -343,7 +343,7 @@ export const Editor: React.FC<EditorProps> = ({
                   </div>
                   <div className="flex items-start gap-2">
                     <span
-                      className={`font-bold ${theme === 'light' ? 'text-[#007a8c]' : 'text-cyan-400'}`}
+                      className={`font-bold ${theme === 'light' ? 'text-vector-cyan-brand' : 'text-cyan-400'}`}
                     >
                       04
                     </span>{' '}
@@ -357,7 +357,7 @@ export const Editor: React.FC<EditorProps> = ({
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            className={`flex-1 bg-transparent border p-4 font-mono text-lg focus:outline-none resize-none min-h-[200px] transition-all ${theme === 'light' ? 'border-slate-100 text-[#4a5568] focus:border-cyan-200 focus:bg-white/50' : 'border-cyan-900/50 text-cyan-100 focus:border-cyan-500/50 focus:shadow-[inset_0_0_20px_rgba(6,182,212,0.1)]'}`}
+            className={`flex-1 bg-transparent border p-4 font-mono text-lg focus:outline-none resize-none min-h-[200px] transition-all ${theme === 'light' ? 'border-slate-100 text-vector-slate-mid focus:border-cyan-200 focus:bg-white/50' : 'border-cyan-900/50 text-cyan-100 focus:border-cyan-500/50 focus:shadow-inset-glow-cyan-mid'}`}
             placeholder={t.contentPlaceholder}
             disabled={isSaving}
           />
@@ -398,7 +398,7 @@ export const Editor: React.FC<EditorProps> = ({
                            ${
                              isSelected
                                ? theme === 'light'
-                                 ? 'bg-cyan-50 border-cyan-400 text-cyan-700 shadow-[0_4px_12px_rgba(6,182,212,0.1)]'
+                                 ? 'bg-cyan-50 border-cyan-400 text-cyan-700 shadow-glow-cyan-card'
                                  : `bg-black/80 border-cyan-700 text-gray-200`
                                : theme === 'light'
                                  ? 'bg-white/40 border-slate-200 text-slate-400 hover:text-cyan-600 hover:border-cyan-300'
@@ -464,7 +464,7 @@ export const Editor: React.FC<EditorProps> = ({
                         unlockAt <= Date.now() + 1000
                           ? theme === 'light'
                             ? 'bg-cyan-50 border-cyan-400 text-cyan-700'
-                            : 'bg-cyan-900 border-cyan-500 text-white shadow-[0_0_15px_rgba(6,182,212,0.3)]'
+                            : 'bg-cyan-900 border-cyan-500 text-white shadow-glow-cyan-mid'
                           : theme === 'light'
                             ? 'bg-white/40 border-slate-200 text-slate-400'
                             : 'bg-transparent border-cyan-900/50 text-cyan-700'
@@ -484,7 +484,7 @@ export const Editor: React.FC<EditorProps> = ({
                         Math.abs(unlockAt - (Date.now() + 60 * 1000)) < 10000
                           ? theme === 'light'
                             ? 'bg-cyan-50 border-cyan-400 text-cyan-700'
-                            : 'bg-cyan-900 border-cyan-500 text-white shadow-[0_0_15px_rgba(6,182,212,0.3)]'
+                            : 'bg-cyan-900 border-cyan-500 text-white shadow-glow-cyan-mid'
                           : theme === 'light'
                             ? 'bg-white/40 border-slate-200 text-slate-400'
                             : 'bg-transparent border-cyan-900/50 text-cyan-700'
@@ -504,7 +504,7 @@ export const Editor: React.FC<EditorProps> = ({
                         Math.abs(unlockAt - (Date.now() + 24 * 60 * 60 * 1000)) < 10000
                           ? theme === 'light'
                             ? 'bg-cyan-50 border-cyan-400 text-cyan-700'
-                            : 'bg-cyan-900 border-cyan-500 text-white shadow-[0_0_15px_rgba(6,182,212,0.3)]'
+                            : 'bg-cyan-900 border-cyan-500 text-white shadow-glow-cyan-mid'
                           : theme === 'light'
                             ? 'bg-white/40 border-slate-200 text-slate-400'
                             : 'bg-transparent border-cyan-900/50 text-cyan-700'
@@ -525,7 +525,7 @@ export const Editor: React.FC<EditorProps> = ({
                             unlockAt < Date.now() + 23 * 60 * 60 * 1000)
                             ? theme === 'light'
                               ? 'bg-cyan-50 border-cyan-400 text-cyan-700'
-                              : 'bg-cyan-900 border-cyan-500 text-white shadow-[0_0_15px_rgba(6,182,212,0.3)]'
+                              : 'bg-cyan-900 border-cyan-500 text-white shadow-glow-cyan-mid'
                             : theme === 'light'
                               ? 'bg-white/40 border-slate-200 text-slate-400'
                               : 'bg-transparent border-cyan-900/50 text-cyan-700'
@@ -543,7 +543,7 @@ export const Editor: React.FC<EditorProps> = ({
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 10 }}
-                      className={`absolute bottom-full mb-2 left-0 z-50 p-4 border rounded-lg shadow-2xl backdrop-blur-xl ${theme === 'light' ? 'bg-white/90 border-slate-200 shadow-[0_20px_50px_rgba(0,0,0,0.1)]' : 'bg-black/90 border-cyan-500/30 shadow-[0_20px_50px_rgba(0,122,140,0.3)]'}`}
+                      className={`absolute bottom-full mb-2 left-0 z-50 p-4 border rounded-lg shadow-2xl backdrop-blur-xl ${theme === 'light' ? 'bg-white/90 border-slate-200 shadow-elevation-modal-light' : 'bg-black/90 border-cyan-500/30 shadow-elevation-modal-cyan'}`}
                     >
                       <input
                         type="datetime-local"

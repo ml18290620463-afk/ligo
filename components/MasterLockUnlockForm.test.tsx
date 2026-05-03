@@ -75,10 +75,7 @@ describe('MasterLockUnlockForm', () => {
 
   it('renders the lockout badge with seconds when locked', () => {
     render(
-      <MasterLockUnlockForm
-        {...baseProps}
-        lockout={{ isLocked: true, secondsRemaining: 17 }}
-      />,
+      <MasterLockUnlockForm {...baseProps} lockout={{ isLocked: true, secondsRemaining: 17 }} />,
     );
     expect(screen.getByRole('alert').textContent).toContain('Too many attempts (17s)');
   });
@@ -107,10 +104,7 @@ describe('MasterLockUnlockForm', () => {
     );
 
     rerender(
-      <MasterLockUnlockForm
-        {...baseProps}
-        lockout={{ isLocked: true, secondsRemaining: 5 }}
-      />,
+      <MasterLockUnlockForm {...baseProps} lockout={{ isLocked: true, secondsRemaining: 5 }} />,
     );
     expect((screen.getByLabelText('Enter master password') as HTMLInputElement).disabled).toBe(
       true,

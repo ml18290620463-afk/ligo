@@ -48,7 +48,7 @@ export class ErrorBoundary extends Component<Props, State> {
   public render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-[#020508] flex items-center justify-center p-6 font-mono">
+        <div className="min-h-screen bg-vector-night-blue flex items-center justify-center p-6 font-mono">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -58,7 +58,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <div className="absolute inset-0 bg-gradient-to-br from-rose-500/5 to-transparent pointer-events-none" />
 
             <div className="relative z-10 text-center space-y-6">
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-rose-950/20 text-rose-500 mb-4 shadow-[0_0_20px_rgba(244,63,94,0.2)]">
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-rose-950/20 text-rose-500 mb-4 shadow-[0_0_20px_color-mix(in_srgb,_var(--color-rose-500)_20%,_transparent)]">
                 <AlertCircle size={40} />
               </div>
 
@@ -85,7 +85,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 <CyberButton
                   onClick={this.handleReset}
                   variant="primary"
-                  className="w-full !bg-rose-500/20 !border-rose-500/50 !text-rose-400 hover:!bg-rose-500/40 shadow-[0_0_15px_rgba(244,63,94,0.1)]"
+                  className="w-full !bg-rose-500/20 !border-rose-500/50 !text-rose-400 hover:!bg-rose-500/40 shadow-[0_0_15px_color-mix(in_srgb,_var(--color-rose-500)_10%,_transparent)]"
                 >
                   <div className="flex items-center justify-center gap-2">
                     <RotateCcw size={16} />

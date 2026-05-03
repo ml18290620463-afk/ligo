@@ -187,13 +187,13 @@ export const EntryGrid: React.FC<EntryGridProps> = ({
                   className={`w-1 h-8 rounded-full ${theme === 'light' ? 'bg-cyan-500' : 'bg-cyan-400 ring-2 ring-cyan-500/30'}`}
                 />
                 <h3
-                  className={`text-2xl md:text-3xl font-black tracking-[0.2em] uppercase ${theme === 'light' ? 'text-[#1a202c]' : 'text-white'}`}
+                  className={`text-2xl md:text-3xl font-black tracking-[0.2em] uppercase ${theme === 'light' ? 'text-vector-ink-strong' : 'text-white'}`}
                 >
                   {key}
                 </h3>
 
                 <div className="flex items-center gap-3 ml-auto px-4 py-1 rounded-full bg-white/5 border border-white/5">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)] animate-pulse" />
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_color-mix(in_srgb,_var(--color-emerald-500)_60%,_transparent)] animate-pulse" />
                   <span
                     className={`text-[10px] font-mono tracking-widest font-black uppercase ${theme === 'light' ? 'text-slate-500' : 'text-cyan-400'}`}
                   >
@@ -258,7 +258,7 @@ export const EntryGrid: React.FC<EntryGridProps> = ({
                       entry.unlockAt && entry.unlockAt > now
                         ? theme === 'light'
                           ? 'border-indigo-200/50 bg-indigo-50/5 cursor-not-allowed opacity-60'
-                          : 'border-indigo-900/40 bg-indigo-950/5 cursor-not-allowed opacity-60 shadow-[inset_0_0_20px_rgba(99,102,241,0.05)]'
+                          : 'border-indigo-900/40 bg-indigo-950/5 cursor-not-allowed opacity-60 shadow-[inset_0_0_20px_color-mix(in_srgb,_var(--color-indigo-500)_5%,_transparent)]'
                         : theme === 'light'
                           ? 'border-slate-100 bg-white/40 hover:bg-white hover:border-cyan-500 text-slate-900'
                           : 'border-white/[0.05] bg-white/[0.01] hover:bg-white/[0.03] hover:border-cyan-500/50 text-slate-300'
@@ -280,24 +280,24 @@ export const EntryGrid: React.FC<EntryGridProps> = ({
 
                   {/* Outer Frame Accent for List Item */}
                   <div
-                    className={`absolute top-0 left-0 w-full h-[1px] opacity-10 ${theme === 'light' ? 'bg-[#007a8c]' : 'bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.4)]'}`}
+                    className={`absolute top-0 left-0 w-full h-[1px] opacity-10 ${theme === 'light' ? 'bg-vector-cyan-brand' : 'bg-cyan-500 shadow-[0_0_8px_color-mix(in_srgb,_var(--color-cyan-500)_40%,_transparent)]'}`}
                   />
                   <div
-                    className={`absolute bottom-0 left-0 w-full h-[1px] opacity-10 ${theme === 'light' ? 'bg-[#007a8c]' : 'bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.4)]'}`}
+                    className={`absolute bottom-0 left-0 w-full h-[1px] opacity-10 ${theme === 'light' ? 'bg-vector-cyan-brand' : 'bg-cyan-500 shadow-[0_0_8px_color-mix(in_srgb,_var(--color-cyan-500)_40%,_transparent)]'}`}
                   />
 
                   {/* Subtle Grid Pattern Overlay (Hover) */}
                   <div
                     className="absolute inset-0 opacity-0 group-hover:opacity-[0.03] pointer-events-none transition-opacity duration-500"
                     style={{
-                      backgroundImage: `radial-gradient(circle, ${theme === 'light' ? '#000' : '#fff'} 1px, transparent 1px)`,
+                      backgroundImage: `radial-gradient(circle, ${theme === 'light' ? 'black' : 'white'} 1px, transparent 1px)`,
                       backgroundSize: '10px 10px',
                     }}
                   />
 
                   {/* Scanning Laser Line (List View) */}
                   <motion.div
-                    className={`absolute top-0 bottom-0 w-1 pointer-events-none z-10 opacity-0 group-hover:opacity-100 ${theme === 'light' ? 'bg-gradient-to-b from-transparent via-cyan-400 to-transparent' : 'bg-gradient-to-b from-transparent via-cyan-400 to-transparent shadow-[0_0_8px_rgba(34,211,238,0.4)]'}`}
+                    className={`absolute top-0 bottom-0 w-1 pointer-events-none z-10 opacity-0 group-hover:opacity-100 ${theme === 'light' ? 'bg-gradient-to-b from-transparent via-cyan-400 to-transparent' : 'bg-gradient-to-b from-transparent via-cyan-400 to-transparent shadow-[0_0_8px_color-mix(in_srgb,_var(--color-cyan-400)_40%,_transparent)]'}`}
                     initial={{ left: '-5%' }}
                     whileHover={{
                       left: ['-5%', '105%'],
@@ -320,7 +320,7 @@ export const EntryGrid: React.FC<EntryGridProps> = ({
                     <span
                       className={`transition-colors uppercase truncate tracking-[0.1em] font-bold ${
                         entry.unlockAt && entry.unlockAt > now
-                          ? 'text-indigo-500/60 drop-shadow-[0_0_3px_rgba(99,102,241,0.2)]'
+                          ? 'text-indigo-500/60 drop-shadow-[0_0_3px_color-mix(in_srgb,_var(--color-indigo-500)_20%,_transparent)]'
                           : theme === 'light'
                             ? 'group-hover:text-cyan-600 text-slate-700'
                             : 'group-hover:text-white text-slate-400'
@@ -403,12 +403,12 @@ export const EntryGrid: React.FC<EntryGridProps> = ({
 
                   {/* Inner Depth Glow (Grid) */}
                   <div
-                    className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none ${theme === 'light' ? 'shadow-[inset_0_0_30px_rgba(0,122,140,0.05)]' : 'shadow-[inset_0_0_40px_rgba(34,211,238,0.03)]'}`}
+                    className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none ${theme === 'light' ? 'shadow-[inset_0_0_30px_color-mix(in_srgb,_var(--color-vector-cyan-brand)_5%,_transparent)]' : 'shadow-[inset_0_0_40px_color-mix(in_srgb,_var(--color-cyan-400)_3%,_transparent)]'}`}
                   />
 
                   {/* Scanning Laser Line (Grid View) */}
                   <motion.div
-                    className={`absolute left-0 right-0 h-0.5 pointer-events-none z-10 opacity-0 group-hover:opacity-100 ${theme === 'light' ? 'bg-gradient-to-r from-transparent via-cyan-400 to-transparent' : 'bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_10px_rgba(34,211,238,0.4)]'}`}
+                    className={`absolute left-0 right-0 h-0.5 pointer-events-none z-10 opacity-0 group-hover:opacity-100 ${theme === 'light' ? 'bg-gradient-to-r from-transparent via-cyan-400 to-transparent' : 'bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_10px_color-mix(in_srgb,_var(--color-cyan-400)_40%,_transparent)]'}`}
                     initial={{ top: '-5%' }}
                     whileHover={{
                       top: ['-5%', '105%'],
@@ -458,7 +458,7 @@ export const EntryGrid: React.FC<EntryGridProps> = ({
                     <div
                       className={`transition-all duration-500 ${
                         entry.unlockAt && entry.unlockAt > now
-                          ? 'text-indigo-500/40 group-hover:text-indigo-400 drop-shadow-[0_0_5px_rgba(99,102,241,0.2)]'
+                          ? 'text-indigo-500/40 group-hover:text-indigo-400 drop-shadow-[0_0_5px_color-mix(in_srgb,_var(--color-indigo-500)_20%,_transparent)]'
                           : 'text-slate-700 group-hover:text-cyan-400'
                       }`}
                     >

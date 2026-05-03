@@ -170,7 +170,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className={`relative w-full max-w-2xl border p-8 md:p-12 shadow-xl overflow-hidden transition-all duration-700 mt-12 mb-12 ${theme === 'light' ? 'bg-white/90 backdrop-blur-2xl border-[rgba(0,122,140,0.1)]' : 'bg-black border-cyan-500/30'}`}
+        className={`relative w-full max-w-2xl border p-8 md:p-12 shadow-xl overflow-hidden transition-all duration-700 mt-12 mb-12 ${theme === 'light' ? 'bg-white/90 backdrop-blur-2xl border-[color-mix(in_srgb,_var(--color-vector-cyan-brand)_10%,_transparent)]' : 'bg-black border-cyan-500/30'}`}
       >
         <div className="absolute top-4 right-4 z-50 flex items-center gap-2">
           {step === 0 && (
@@ -252,7 +252,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
                 </div>
 
                 <div
-                  className={`p-6 border font-mono text-sm leading-relaxed tracking-wide space-y-4 ${theme === 'light' ? 'bg-slate-50 border-cyan-100 text-[#4a5568]' : 'bg-cyan-950/10 border-cyan-900/30 text-cyan-50'}`}
+                  className={`p-6 border font-mono text-sm leading-relaxed tracking-wide space-y-4 ${theme === 'light' ? 'bg-slate-50 border-cyan-100 text-vector-slate-mid' : 'bg-cyan-950/10 border-cyan-900/30 text-cyan-50'}`}
                 >
                   <p>
                     {language === 'zh'
@@ -320,7 +320,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
                 </div>
 
                 <p
-                  className={`text-sm font-mono leading-relaxed tracking-wider ${theme === 'light' ? 'text-[#4a5568]' : 'text-cyan-700'}`}
+                  className={`text-sm font-mono leading-relaxed tracking-wider ${theme === 'light' ? 'text-vector-slate-mid' : 'text-cyan-700'}`}
                 >
                   {t.onboardingStep1Desc}
                 </p>
@@ -337,7 +337,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
                         {[20, 40, 60, 80, 100].map((lvl) => (
                           <div
                             key={lvl}
-                            className={`h-1 w-4 rounded-full transition-all duration-300 ${getPasswordStrength(password) >= lvl ? (lvl <= 40 ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.3)]' : lvl <= 80 ? 'bg-yellow-500' : 'bg-green-500') : theme === 'light' ? 'bg-slate-100' : 'bg-cyan-950/30'}`}
+                            className={`h-1 w-4 rounded-full transition-all duration-300 ${getPasswordStrength(password) >= lvl ? (lvl <= 40 ? 'bg-rose-500 shadow-[0_0_8px_color-mix(in_srgb,_var(--color-rose-500)_30%,_transparent)]' : lvl <= 80 ? 'bg-yellow-500' : 'bg-green-500') : theme === 'light' ? 'bg-slate-100' : 'bg-cyan-950/30'}`}
                           />
                         ))}
                       </div>
@@ -347,7 +347,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
                         type={showPassword ? 'text' : 'password'}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className={`w-full border p-4 font-mono focus:outline-none transition-all ${theme === 'light' ? 'bg-slate-50 border-slate-100 text-[#1a202c] focus:border-cyan-400 placeholder:text-slate-200' : 'bg-cyan-950/20 border-cyan-900/50 text-cyan-100 focus:border-cyan-500/50 placeholder:text-cyan-900'}`}
+                        className={`w-full border p-4 font-mono focus:outline-none transition-all ${theme === 'light' ? 'bg-slate-50 border-slate-100 text-vector-ink-strong focus:border-cyan-400 placeholder:text-slate-200' : 'bg-cyan-950/20 border-cyan-900/50 text-cyan-100 focus:border-cyan-500/50 placeholder:text-cyan-900'}`}
                         placeholder="******"
                       />
                       <button
@@ -398,7 +398,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
                         type={showPassword ? 'text' : 'password'}
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        className={`w-full border p-4 font-mono focus:outline-none transition-all ${theme === 'light' ? 'bg-slate-50 border-slate-100 text-[#1a202c] focus:border-cyan-400 placeholder:text-slate-200' : 'bg-cyan-950/20 border-cyan-900/50 text-cyan-100 focus:border-cyan-500/50 placeholder:text-cyan-900'}`}
+                        className={`w-full border p-4 font-mono focus:outline-none transition-all ${theme === 'light' ? 'bg-slate-50 border-slate-100 text-vector-ink-strong focus:border-cyan-400 placeholder:text-slate-200' : 'bg-cyan-950/20 border-cyan-900/50 text-cyan-100 focus:border-cyan-500/50 placeholder:text-cyan-900'}`}
                         placeholder="******"
                       />
                     </div>
@@ -576,7 +576,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
           </AnimatePresence>
 
           {error && (
-            <div className="flex items-center gap-2 text-rose-500 text-xs font-mono animate-pulse mt-2 drop-shadow-[0_0_5px_rgba(244,63,94,0.3)]">
+            <div className="flex items-center gap-2 text-rose-500 text-xs font-mono animate-pulse mt-2 drop-shadow-[0_0_5px_color-mix(in_srgb,_var(--color-rose-500)_30%,_transparent)]">
               <AlertCircle className="w-4 h-4" />
               {error}
             </div>

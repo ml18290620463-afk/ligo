@@ -1,6 +1,6 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Archive, Database, Download, Flame } from 'lucide-react';
+import { Archive, Database, Download, Flame, Share2 } from 'lucide-react';
 import { Container, DiaryEntry, Theme } from '../types';
 import { TranslationDictionary } from '../i18n/translations';
 import { CyberButton } from './CyberButton';
@@ -16,6 +16,9 @@ interface ViewerActionFooterProps {
   onArchiveOrRestore: () => void;
   onDownload: () => void;
   onRequestBurn: () => void;
+  /** Phase 3 §3.h — open the share-card preview / export modal.
+   *  Optional so legacy callers compile without modification. */
+  onShareCard?: () => void;
 }
 
 export const ViewerActionFooter: React.FC<ViewerActionFooterProps> = ({
@@ -29,16 +32,17 @@ export const ViewerActionFooter: React.FC<ViewerActionFooterProps> = ({
   onArchiveOrRestore,
   onDownload,
   onRequestBurn,
+  onShareCard,
 }) => (
   <div
-    className={`mt-12 pt-6 border-t flex flex-col gap-4 relative z-20 ${theme === 'light' ? 'border-[rgba(0,122,140,0.05)]' : 'border-cyan-900/30'}`}
+    className={`mt-12 pt-6 border-t flex flex-col gap-4 relative z-20 ${theme === 'light' ? 'border-[color-mix(in_srgb,_var(--color-vector-cyan-brand)_5%,_transparent)]' : 'border-cyan-900/30'}`}
   >
     <div className="flex justify-center">
       <CyberButton
         variant="ghost"
         onClick={onArchiveOrRestore}
         theme={theme}
-        className={`min-w-[280px] py-4 border-b-2 font-serif text-sm tracking-[0.3em] ${theme === 'light' ? 'border-green-100 text-[#007a8c] hover:bg-green-50' : 'border-green-900/30 text-cyan-400/80 hover:bg-green-950/20'}`}
+        className={`min-w-[280px] py-4 border-b-2 font-serif text-sm tracking-[0.3em] ${theme === 'light' ? 'border-green-100 text-vector-cyan-brand hover:bg-green-50' : 'border-green-900/30 text-cyan-400/80 hover:bg-green-950/20'}`}
       >
         <Archive className="w-4 h-4 mr-3 opacity-60" />
         {entry.isArchived ? t.restoreData : t.archiveData}
@@ -92,7 +96,7 @@ export const ViewerActionFooter: React.FC<ViewerActionFooterProps> = ({
         variant="ghost"
         onClick={onDownload}
         theme={theme}
-        className={`w-full border py-2 text-[11px] ${theme === 'light' ? 'border-[#007a8c]/20 text-[#007a8c] hover:bg-[#007a8c]/5' : 'border-cyan-900/50 text-cyan-600 hover:bg-cyan-950/20'}`}
+        className={`w-full border py-2 text-[11px] ${theme === 'light' ? 'border-vector-cyan-brand/20 text-vector-cyan-brand hover:bg-vector-cyan-brand/5' : 'border-cyan-900/50 text-cyan-600 hover:bg-cyan-950/20'}`}
       >
         <Download className="w-4 h-4 mr-1 md:mr-2" /> {t.downloadNote}
       </CyberButton>
@@ -106,5 +110,20 @@ export const ViewerActionFooter: React.FC<ViewerActionFooterProps> = ({
         <Flame className="w-4 h-4 mr-1 md:mr-2" /> {t.burnMessage}
       </CyberButton>
     </div>
+
+    {onShareCard && (
+      <div className="flex justify-center">
+        <CyberButton
+          variant="ghost"
+          onClick={onShareCard}
+          theme={theme}
+          className={`min-w-[260px] py-2 text-[11px] tracking-[0.2em] ${theme === 'light' ? 'border-vector-cyan-brand/20 text-vector-cyan-brand hover:bg-vector-cyan-brand/5' : 'border-cyan-900/50 text-cyan-500 hover:bg-cyan-950/20'} border`}
+          aria-label={t.shareCardOpen ?? t.shareCardTitle ?? 'Share card'}
+        >
+          <Share2 className="w-4 h-4 mr-2" aria-hidden="true" />
+          {t.shareCardOpen ?? t.shareCardTitle ?? 'Share card'}
+        </CyberButton>
+      </div>
+    )}
   </div>
 );

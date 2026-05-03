@@ -51,7 +51,7 @@ const LoadMoreButton: React.FC<{
   <div className="flex justify-center py-8">
     <button
       onClick={onClick}
-      className={`px-8 py-3 rounded-full border font-mono text-[10px] uppercase tracking-[0.4em] transition-all duration-500 hover:scale-105 active:scale-95 ${theme === 'light' ? 'bg-white border-slate-200 text-slate-500 hover:border-cyan-500 hover:text-cyan-600' : 'bg-black border-cyan-900/40 text-cyan-800 hover:border-cyan-500 hover:text-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.05)] hover:shadow-[0_0_30px_rgba(6,182,212,0.15)]'}`}
+      className={`px-8 py-3 rounded-full border font-mono text-[10px] uppercase tracking-[0.4em] transition-all duration-500 hover:scale-105 active:scale-95 ${theme === 'light' ? 'bg-white border-slate-200 text-slate-500 hover:border-cyan-500 hover:text-cyan-600' : 'bg-black border-cyan-900/40 text-cyan-800 hover:border-cyan-500 hover:text-cyan-400 shadow-[0_0_20px_color-mix(in_srgb,_var(--color-cyan-500)_5%,_transparent)] hover:shadow-[0_0_30px_color-mix(in_srgb,_var(--color-cyan-500)_15%,_transparent)]'}`}
     >
       {language === 'zh' ? '加载更多记录' : 'LOAD MORE RECORDS'}
     </button>
@@ -116,7 +116,7 @@ export const VaultContent: React.FC<VaultContentProps> = ({
       className={`transition-all duration-700 relative overflow-hidden rounded-2xl border ${
         theme === 'light'
           ? 'bg-white/40 border-slate-200/40 shadow-sm'
-          : 'bg-[#0a0d12]/60 border-[#173242]/20 backdrop-blur-md'
+          : 'bg-vector-night-slate/60 border-vector-navy-deep/20 backdrop-blur-md'
       } ${isVaultOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-40 lg:opacity-50 grayscale blur-xl translate-y-4 cursor-pointer hover:opacity-70'}`}
     >
       <AnimatePresence>
@@ -127,7 +127,7 @@ export const VaultContent: React.FC<VaultContentProps> = ({
             exit={{ opacity: 0 }}
             className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/10 backdrop-blur-sm group"
           >
-            <div className="p-6 rounded-full border border-cyan-500/20 bg-black/60 shadow-[0_0_30px_rgba(6,182,212,0.1)] group-hover:scale-110 group-hover:border-cyan-500/50 transition-all duration-500">
+            <div className="p-6 rounded-full border border-cyan-500/20 bg-black/60 shadow-[0_0_30px_color-mix(in_srgb,_var(--color-cyan-500)_10%,_transparent)] group-hover:scale-110 group-hover:border-cyan-500/50 transition-all duration-500">
               <Lock className="w-10 h-10 text-cyan-500/60 group-hover:text-cyan-400 group-hover:animate-pulse" />
             </div>
             <p className="mt-4 text-[10px] font-mono uppercase tracking-[0.3em] text-cyan-500/60 font-bold group-hover:text-cyan-400">
