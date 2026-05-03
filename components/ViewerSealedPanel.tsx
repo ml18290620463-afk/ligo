@@ -138,6 +138,7 @@ export const ViewerSealedPanel: React.FC<ViewerSealedPanelProps> = ({
         {/* Back Button (Top Left Corner) */}
         <div className="absolute -top-4 -left-4 z-50">
           <button
+            data-testid="viewer-back"
             onClick={onBack}
             aria-label={t.abort}
             className={`w-12 h-12 rounded-full border transition-all flex items-center justify-center group backdrop-blur-md shadow-lg ${theme === 'light' ? 'text-slate-400 border-slate-200 hover:text-slate-900 hover:border-slate-400 bg-white/80' : 'text-cyan-500/60 border-cyan-500/20 hover:text-cyan-400 hover:border-cyan-500/50 bg-black/60 shadow-[0_0_20px_color-mix(in_srgb,_var(--color-cyan-500)_10%,_transparent)] neon-border-cyan'}`}

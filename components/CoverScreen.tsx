@@ -140,7 +140,9 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                             ? 'var(--color-vector-magenta-bright)'
                             : 'color-mix(in srgb, var(--color-cyan-400) 80%, transparent)',
                       textShadow:
-                        isPink && theme === 'dark' ? '0 0 10px color-mix(in srgb, var(--color-vector-magenta-bright) 30%, transparent)' : 'none',
+                        isPink && theme === 'dark'
+                          ? '0 0 10px color-mix(in srgb, var(--color-vector-magenta-bright) 30%, transparent)'
+                          : 'none',
                     }}
                   >
                     <span
@@ -258,7 +260,11 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                     y1="160"
                     x2="280"
                     y2="80"
-                    stroke={theme === 'light' ? 'var(--color-vector-cyan-brand)' : 'var(--color-vector-cyan-pure)'}
+                    stroke={
+                      theme === 'light'
+                        ? 'var(--color-vector-cyan-brand)'
+                        : 'var(--color-vector-cyan-pure)'
+                    }
                     strokeWidth="1"
                     strokeDasharray="4 2"
                   />
@@ -267,12 +273,34 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                     y1="160"
                     x2="40"
                     y2="240"
-                    stroke={theme === 'light' ? 'var(--color-vector-blue-deep)' : 'var(--color-vector-magenta-bright)'}
+                    stroke={
+                      theme === 'light'
+                        ? 'var(--color-vector-blue-deep)'
+                        : 'var(--color-vector-magenta-bright)'
+                    }
                     strokeWidth="1"
                     strokeDasharray="4 2"
                   />
-                  <circle cx="280" cy="80" r="2" fill={theme === 'light' ? 'var(--color-vector-cyan-brand)' : 'var(--color-vector-cyan-pure)'} />
-                  <circle cx="40" cy="240" r="2" fill={theme === 'light' ? 'var(--color-vector-blue-deep)' : 'var(--color-vector-magenta-bright)'} />
+                  <circle
+                    cx="280"
+                    cy="80"
+                    r="2"
+                    fill={
+                      theme === 'light'
+                        ? 'var(--color-vector-cyan-brand)'
+                        : 'var(--color-vector-cyan-pure)'
+                    }
+                  />
+                  <circle
+                    cx="40"
+                    cy="240"
+                    r="2"
+                    fill={
+                      theme === 'light'
+                        ? 'var(--color-vector-blue-deep)'
+                        : 'var(--color-vector-magenta-bright)'
+                    }
+                  />
                 </svg>
               </div>
 
@@ -317,6 +345,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                   className={`absolute -inset-1 rounded-lg blur opacity-20 group-hover:opacity-80 transition duration-500 ${theme === 'light' ? 'bg-gradient-to-r from-vector-cyan-brand to-blue-600' : 'bg-gradient-to-r from-cyan-600 to-indigo-600'}`}
                 ></div>
                 <CyberButton
+                  data-testid="cover-initialize"
                   onClick={handleInitialize}
                   className={`!px-8 md:!px-16 !py-4 md:!py-5 text-xl relative ${theme === 'light' ? 'bg-white border-vector-cyan-brand/30' : 'bg-black border-cyan-500/50'}`}
                   theme={theme}
@@ -411,6 +440,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                   </p>
                 </div>
                 <CyberButton
+                  data-testid="cover-initialize"
                   onClick={onStart}
                   variant="primary"
                   className="w-full py-4"
@@ -440,6 +470,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
               </div>
               <div className="mt-12">
                 <CyberButton
+                  data-testid="cover-initialize"
                   onClick={onStart}
                   variant="ghost"
                   className={`border-cyan-900 hover:border-cyan-500 ${theme === 'light' ? 'border-vector-cyan-brand/30 hover:border-vector-cyan-brand' : ''}`}
@@ -476,6 +507,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
         className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-2 border p-2 rounded-full backdrop-blur-md shadow-2xl transition-all duration-700 ${theme === 'light' ? 'bg-white/80 border-vector-cyan-brand/10' : 'bg-black/80 border-cyan-900/50'}`}
       >
         <button
+          data-testid="cover-version-star-tunnel"
           onClick={() => setVersion('STAR_TUNNEL')}
           className={`p-2 rounded-full transition-all ${version === 'STAR_TUNNEL' ? (theme === 'light' ? 'bg-vector-cyan-brand text-white shadow-md' : 'bg-cyan-500 text-black') : theme === 'light' ? 'text-slate-400 hover:text-vector-cyan-brand' : 'text-cyan-800 hover:text-cyan-500'}`}
           title={t.starTunnelTitle}
@@ -483,6 +515,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
           <Star className="w-4 h-4" />
         </button>
         <button
+          data-testid="cover-version-warp-speed"
           onClick={() => setVersion('WARP_SPEED')}
           className={`p-2 rounded-full transition-all ${version === 'WARP_SPEED' ? (theme === 'light' ? 'bg-vector-cyan-brand text-white shadow-md' : 'bg-cyan-500 text-black') : theme === 'light' ? 'text-slate-400 hover:text-vector-cyan-brand' : 'text-cyan-800 hover:text-cyan-500'}`}
           title={t.warpSpeedTitle}
@@ -490,6 +523,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
           <Zap className="w-4 h-4" />
         </button>
         <button
+          data-testid="cover-version-gate"
           onClick={() => setVersion('GATE')}
           className={`p-2 rounded-full transition-all ${version === 'GATE' ? (theme === 'light' ? 'bg-vector-cyan-brand text-white shadow-md' : 'bg-cyan-500 text-black') : theme === 'light' ? 'text-slate-400 hover:text-vector-cyan-brand' : 'text-cyan-800 hover:text-cyan-500'}`}
           title={t.gateTitle}
@@ -497,6 +531,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
           <Layers className="w-4 h-4" />
         </button>
         <button
+          data-testid="cover-version-terminal"
           onClick={() => setVersion('TERMINAL')}
           className={`p-2 rounded-full transition-all ${version === 'TERMINAL' ? (theme === 'light' ? 'bg-vector-cyan-brand text-white shadow-md' : 'bg-cyan-500 text-black') : theme === 'light' ? 'text-slate-400 hover:text-vector-cyan-brand' : 'text-cyan-800 hover:text-cyan-500'}`}
           title={t.terminalTitle}

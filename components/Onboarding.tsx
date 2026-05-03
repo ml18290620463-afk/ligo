@@ -344,6 +344,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
                     </div>
                     <div className="relative">
                       <input
+                        data-testid="onboarding-password"
                         type={showPassword ? 'text' : 'password'}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
@@ -395,6 +396,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
                     </label>
                     <div className="relative">
                       <input
+                        data-testid="onboarding-password-confirm"
                         type={showPassword ? 'text' : 'password'}
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
@@ -448,6 +450,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
                 </div>
 
                 <div
+                  data-testid="onboarding-recovery-saved"
                   role="checkbox"
                   tabIndex={0}
                   aria-checked={isRecoverySaved}
@@ -530,6 +533,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
                     return (
                       <button
                         key={persona}
+                        data-testid={`onboarding-star-${personaKey}`}
                         onClick={() => toggleStar(persona)}
                         className={`
                           flex items-center justify-between p-4 border font-mono text-xs transition-all duration-300
@@ -585,6 +589,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({
           <div className={`flex ${step > 0 ? 'justify-between' : 'justify-end'} mt-8`}>
             {step > 0 && (
               <button
+                data-testid="onboarding-back"
                 onClick={handlePrevStep}
                 className={`text-xs font-mono uppercase tracking-[0.2em] transition-colors ${theme === 'light' ? 'text-slate-400 hover:text-slate-700' : 'text-cyan-900 hover:text-cyan-500'}`}
               >
@@ -592,7 +597,11 @@ export const Onboarding: React.FC<OnboardingProps> = ({
               </button>
             )}
 
-            <CyberButton onClick={handleNextStep} theme={theme}>
+            <CyberButton
+              data-testid={step === 3 ? 'onboarding-finish' : 'onboarding-next'}
+              onClick={handleNextStep}
+              theme={theme}
+            >
               {step === 3 ? t.startJourney || 'START' : language === 'zh' ? '下一步' : 'NEXT'}{' '}
               <ArrowRight className="ml-2 w-4 h-4" />
             </CyberButton>

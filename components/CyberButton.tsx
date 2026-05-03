@@ -51,6 +51,11 @@ export const CyberButton: React.FC<CyberButtonProps> = ({
 
   const composedClassName = `${baseStyles} ${variants[variant]} ${className} ${as === 'label' ? 'cursor-pointer inline-block text-center' : ''}`;
 
+  // W4.1 — propagate data-testid through every polymorphic branch.
+  // The HTMLButtonElement spread below already carries it, but the
+  // 'label' / 'div' branches need an explicit pass-through.
+  const testId = (props as { 'data-testid'?: string })['data-testid'];
+
   if (as === 'label') {
     // <label htmlFor=...> is keyboard-accessible by definition (focus
     // and Enter/Space go through the bound control), so the extra
@@ -59,6 +64,7 @@ export const CyberButton: React.FC<CyberButtonProps> = ({
     return (
       // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions
       <label
+        data-testid={testId}
         className={composedClassName}
         htmlFor={htmlFor}
         onClick={props.onClick as unknown as React.MouseEventHandler<HTMLLabelElement> | undefined}
@@ -76,6 +82,7 @@ export const CyberButton: React.FC<CyberButtonProps> = ({
     const onClick = props.onClick as unknown as React.MouseEventHandler<HTMLDivElement> | undefined;
     return (
       <div
+        data-testid={testId}
         role="button"
         tabIndex={0}
         aria-disabled={props.disabled || undefined}

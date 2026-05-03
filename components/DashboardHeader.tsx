@@ -192,6 +192,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
         </button>
 
         <CyberButton
+          data-testid="dashboard-open-archive"
           onClick={onOpenArchive}
           variant="ghost"
           className="text-[10px] tracking-[0.2em] h-12 px-6"
@@ -200,6 +201,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
           <Archive className="w-4 h-4 mr-2" /> {t.archive}
         </CyberButton>
         <CyberButton
+          data-testid="dashboard-new-entry"
           onClick={onNewEntry}
           theme={theme}
           className="h-12 px-8 uppercase font-black tracking-widest text-base shadow-[0_8px_32px_color-mix(in_srgb,_var(--color-vector-cyan-neon)_15%,_transparent)]"

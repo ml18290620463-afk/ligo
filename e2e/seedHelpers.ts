@@ -32,36 +32,30 @@ export const seedOnboardedApp = async (
   await page.goto('/', { waitUntil: 'domcontentloaded' });
 
   // Cover screen → Onboarding intro.
-  await page.locator('button[title="终端启动"]').dispatchEvent('click');
-  await page
-    .getByRole('button', { name: /静听|initialize/i })
-    .dispatchEvent('click');
+  // W4.1 — testid-first locators with i18n regex fallbacks. The
+  // testids (cover-version-terminal, cover-initialize, etc.) are
+  // assigned at the source component, so changing the visible label
+  // never breaks these selectors.
+  await page.getByTestId('cover-version-terminal').dispatchEvent('click');
+  await page.getByTestId('cover-initialize').dispatchEvent('click');
 
   // Onboarding step 1 (intro) → next.
-  await page.getByRole('button', { name: /下一步|next/i }).click();
+  await page.getByTestId('onboarding-next').click();
 
   // Onboarding step 2: master password (twice).
-  const passwordInputs = page.locator('input[type="password"]');
-  await passwordInputs.nth(0).fill(password);
-  await passwordInputs.nth(1).fill(password);
-  await page.getByRole('button', { name: /下一步|next/i }).click();
+  await page.getByTestId('onboarding-password').fill(password);
+  await page.getByTestId('onboarding-password-confirm').fill(password);
+  await page.getByTestId('onboarding-next').click();
 
   // Onboarding step 3: acknowledge the recovery key, then continue.
-  await page.getByText('我已保存好这把钥匙').click();
-  await page.getByRole('button', { name: /下一步|next/i }).click();
+  await page.getByTestId('onboarding-recovery-saved').click();
+  await page.getByTestId('onboarding-next').click();
 
   // Onboarding step 4: pick three guiding stars then enter Dashboard.
-  await page
-    .getByRole('button', { name: /马斯克|Elon Musk/i })
-    .first()
-    .click();
-  await page
-    .getByRole('button', { name: /老子|Laozi/i })
-    .first()
-    .click();
-  await page
-    .getByRole('button', { name: /加缪|Camus/i })
-    .first()
-    .click();
-  await page.getByRole('button', { name: /留下判断|start/i }).click();
+  // The persona keys are derived in Onboarding.tsx as the lowercased
+  // last-word of the persona name, so e.g. 'Elon Musk' → 'musk'.
+  await page.getByTestId('onboarding-star-musk').first().click();
+  await page.getByTestId('onboarding-star-laozi').first().click();
+  await page.getByTestId('onboarding-star-camus').first().click();
+  await page.getByTestId('onboarding-finish').click();
 };

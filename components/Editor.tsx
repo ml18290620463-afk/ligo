@@ -281,6 +281,7 @@ export const Editor: React.FC<EditorProps> = ({
             )}
           </div>
           <input
+            data-testid="editor-title"
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -355,6 +356,7 @@ export const Editor: React.FC<EditorProps> = ({
           </AnimatePresence>
 
           <textarea
+            data-testid="editor-content"
             value={content}
             onChange={(e) => setContent(e.target.value)}
             className={`flex-1 bg-transparent border p-4 font-mono text-lg focus:outline-none resize-none min-h-[200px] transition-all ${theme === 'light' ? 'border-slate-100 text-vector-slate-mid focus:border-cyan-200 focus:bg-white/50' : 'border-cyan-900/50 text-cyan-100 focus:border-cyan-500/50 focus:shadow-inset-glow-cyan-mid'}`}
@@ -574,6 +576,7 @@ export const Editor: React.FC<EditorProps> = ({
 
         <div className="flex justify-end pt-4">
           <CyberButton
+            data-testid="editor-save"
             onClick={handleSave}
             disabled={!isValid || isSaving || !!error}
             theme={theme}

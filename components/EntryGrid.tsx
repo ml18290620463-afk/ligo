@@ -239,6 +239,7 @@ export const EntryGrid: React.FC<EntryGridProps> = ({
                 </div>
 
                 <div
+                  data-testid={`entry-card-${entry.id}`}
                   role="button"
                   tabIndex={0}
                   aria-label={entry.title}
