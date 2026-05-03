@@ -16,6 +16,13 @@ export default defineConfig(({ mode }) => {
       },
     },
     build: {
+      // Phase 4 §W1.5 — emit hidden sourcemaps so the CI Sentry upload
+      // step has them, but no `//# sourceMappingURL=...` comment is
+      // appended to the JS bundles. The map files themselves are
+      // deleted from `dist/` after upload (see
+      // `.github/workflows/ci.yml`) so the deployed static assets
+      // don't expose them publicly.
+      sourcemap: 'hidden',
       rollupOptions: {
         output: {
           manualChunks(id) {
@@ -53,6 +60,17 @@ export default defineConfig(({ mode }) => {
       'process.env.API_KEY': 'undefined',
       'process.env.GEMINI_API_KEY': 'undefined',
       'process.env.SENTRY_DSN': JSON.stringify(env.SENTRY_DSN || ''),
+      // Phase 4 §W1.5 — surface the Sentry release tag (typically the
+      // commit SHA injected by CI) so the runtime SDK can match
+      // exceptions to the sourcemaps the CI step uploaded.
+      // Reads from process.env (NOT vite's loadEnv) because CI sets
+      // these as workflow `env:` vars, not via .env files.
+      'process.env.SENTRY_RELEASE': JSON.stringify(
+        process.env.SENTRY_RELEASE || process.env.GITHUB_SHA || process.env.COMMIT_SHA || '',
+      ),
+      'process.env.SENTRY_ENV': JSON.stringify(
+        process.env.SENTRY_ENV || (mode === 'production' ? 'production' : 'development'),
+      ),
     },
     resolve: {
       alias: {

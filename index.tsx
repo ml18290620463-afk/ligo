@@ -22,6 +22,14 @@ const scrubText = (input: string): string => {
 if (process.env.SENTRY_DSN) {
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
+    // Phase 4 §W1.5 — release matches the SHA the CI sentry-cli step
+    // uploaded sourcemaps under, so Sentry can de-minify stack traces
+    // automatically. Falls back to undefined (Sentry's own auto-detect)
+    // if the build didn't set the env var.
+    release: process.env.SENTRY_RELEASE || undefined,
+    environment:
+      process.env.SENTRY_ENV ||
+      (process.env.NODE_ENV === 'production' ? 'production' : 'development'),
     sendDefaultPii: false,
     beforeSend(event) {
       if (event.request) {

@@ -45,7 +45,40 @@ jobs:
         run: npm test
 
       - name: Build
+        env:
+          # Bake the commit SHA into the bundle so the runtime
+          # Sentry SDK tags every event with the same release id
+          # the sourcemap upload step uses below.
+          SENTRY_RELEASE: ${{ github.sha }}
         run: npm run build
+
+      # Phase 4 §W1.5 — Sentry release + sourcemap upload.
+      #
+      # Only runs on push to main (PR builds skip — they don't
+      # produce a deployable artefact). Gated on the SENTRY_AUTH_TOKEN
+      # secret being set so contributors who fork the repo without
+      # adding the secret still see the rest of the pipeline pass.
+      #
+      # `sourcemap: 'hidden'` in vite.config.ts emits .map files
+      # without referencing them from the bundles. The cleanup step
+      # below deletes them after upload so production users never
+      # download the sourcemaps.
+      - name: Sentry release + sourcemap upload
+        if: github.event_name == 'push' && env.SENTRY_AUTH_TOKEN != ''
+        uses: getsentry/action-release@v1
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        with:
+          environment: production
+          version: ${{ github.sha }}
+          sourcemaps: ./dist/assets
+          url_prefix: '~/assets'
+
+      - name: Strip sourcemaps from deployable artefact
+        if: always()
+        run: find dist -name '*.map' -delete
 
       - name: Audit (production deps, advisory only)
         run: npm audit --omit=dev --audit-level=high
