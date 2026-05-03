@@ -14,6 +14,22 @@ export const AppStorageKeys = {
    * X days" banner once the gap exceeds `BACKUP_REMINDER_DAYS`.
    */
   lastBackupAt: 'vector_last_backup_at',
+  /**
+   * Phase 3 §3.g — timestamp of the last "not now" dismissal of the
+   * PWA install banner. The banner stays hidden for
+   * `usePwaInstallPrompt`'s `dismissalDays` (30 by default) so we
+   * don't nag every visit.
+   */
+  pwaInstallDismissedAt: 'vector_pwa_install_dismissed_at',
+  /**
+   * Phase 3 §3.h — persisted share-card privacy options.
+   * Stored as JSON: `{ showBody, showTags, showAttachmentBadge,
+   *   theme }`. The `useShareCardOptions` hook owns the
+   * read / write contract. Defaults intentionally privacy-on
+   * (body masked) so an accidental "Share Card" tap never leaks
+   * sensitive content.
+   */
+  shareCardOptions: 'vector_share_card_options',
 } as const;
 
 /** How stale a backup must be before the Dashboard banner appears. */
