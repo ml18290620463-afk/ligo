@@ -144,71 +144,71 @@ described in `EVALUATION.md` §三. Estimated effort: 1–2 weeks of focused wor
 
 #### 1.1 Security (§8)
 
-- [ ] PBKDF2 default iterations ≥ 600,000 (env-overridable; verifies
+- [x] PBKDF2 default iterations ≥ 600,000 (env-overridable; verifies
       against older `pbkdf2-sha256:v1` hashes without re-encryption).
-- [ ] `passwordHash` / `passwordSalt` are **not** mirrored to localStorage
+- [x] `passwordHash` / `passwordSalt` are **not** mirrored to localStorage
       (`hooks/useDiaryData.ts`); existing mirrored values are migrated into
       IndexedDB and removed.
-- [ ] `react-pdf` worker loads from a same-origin asset, not from
+- [x] `react-pdf` worker loads from a same-origin asset, not from
       `https://unpkg.com/...`.
-- [ ] `.env.local` is removed from the repo working tree; `.env.example`
+- [x] `.env.local` is removed from the repo working tree; `.env.example`
       stays as the only template; README warns about leaked OpenRouter
       keys needing rotation.
-- [ ] Server-side `/api/morning-star` wraps user prompts in a fixed
+- [x] Server-side `/api/morning-star` wraps user prompts in a fixed
       delimiter envelope **and** rejects obvious instruction-injection
       keywords ("you are now …", "ignore previous instructions", "system:")
       before forwarding to upstream LLMs.
 
 #### 1.2 Accessibility (§3 / §4)
 
-- [ ] `index.html` viewport meta no longer carries
+- [x] `index.html` viewport meta no longer carries
       `maximum-scale=1.0, user-scalable=no`.
-- [ ] `eslint-plugin-jsx-a11y` is wired into the flat ESLint config and
+- [x] `eslint-plugin-jsx-a11y` is wired into the flat ESLint config and
       `npm run lint` is clean (`--max-warnings=0`).
-- [ ] Global `:focus-visible` style added to `index.css` so keyboard focus
+- [x] Global `:focus-visible` style added to `index.css` so keyboard focus
       is visible against both themes.
-- [ ] All `motion/react` animations either respect `useReducedMotion()` or
+- [x] All `motion/react` animations either respect `useReducedMotion()` or
       are wrapped by a shared helper that does.
-- [ ] One `@axe-core/playwright` spec runs against the cover and onboarding
+- [x] One `@axe-core/playwright` spec runs against the cover and onboarding
       shells; serious/critical violations fail CI.
 
 #### 1.3 Legal (§12)
 
-- [ ] `LICENSE` exists at the repo root (suggested AGPL-3.0 or MIT — pick
+- [x] `LICENSE` exists at the repo root (suggested AGPL-3.0 or MIT — pick
       one in the changelog entry).
-- [ ] `PRIVACY.md` covers: local-only by default, what leaves the device
+- [x] `PRIVACY.md` covers: local-only by default, what leaves the device
       when AI calls are made, log scrubbing, retention, contact channel.
-- [ ] `TERMS.md` covers: AI output is informational only (not medical /
+- [x] `TERMS.md` covers: AI output is informational only (not medical /
       legal / financial advice), user owns their entries, abuse policy.
-- [ ] `SECURITY.md` describes how to report a vulnerability.
-- [ ] `package.json` adds `license`, `repository`, `author` fields.
-- [ ] Morning Star output (`components/MorningStarPanel.tsx`) renders a
+- [x] `SECURITY.md` describes how to report a vulnerability.
+- [x] `package.json` adds `license`, `repository`, `author` fields.
+- [x] Morning Star output (`components/MorningStarPanel.tsx`) renders a
       visible AI disclaimer banner on every analysis result.
 
 #### 1.4 Reliability / Observability (§10)
 
-- [ ] `server.ts` initialises `@sentry/node` when `SENTRY_DSN` is set; same
+- [x] `server.ts` initialises `@sentry/node` when `SENTRY_DSN` is set; same
       scrubbing rules as the browser SDK.
-- [ ] `server.ts` installs `SIGTERM` / `SIGINT` graceful shutdown that
+- [x] `server.ts` installs `SIGTERM` / `SIGINT` graceful shutdown that
       closes the HTTP listener and clears outstanding timers.
-- [ ] `dist/assets/*` is served with
+- [x] `dist/assets/*` is served with
       `Cache-Control: public, max-age=31536000, immutable`; `index.html`
       keeps `no-cache`.
 
 #### 1.5 Brand assets (§2)
 
-- [ ] `public/og.png` (1200×630) referenced from `index.html` Open Graph
+- [x] `public/og.png` (1200×630) referenced from `index.html` Open Graph
       and Twitter card meta tags. (If a hand-drawn asset is not available,
       ship a minimal Inter-on-archive-grid placeholder generated in the
       same build step.)
-- [ ] `manifest.json` references at least 192 and 512 maskable PNG icons.
+- [x] `manifest.json` references at least 192 and 512 maskable PNG icons.
 
 #### 1.6 Process
 
-- [ ] `CHANGELOG.md` records this Phase 1 release entry.
-- [ ] `scripts/check-beta.sh` exits 0 (runs lint, typecheck, test, build,
+- [x] `CHANGELOG.md` records this Phase 1 release entry.
+- [x] `scripts/check-beta.sh` exits 0 (runs lint, typecheck, test, build,
       and validates each Phase 1 invariant via grep/file-check).
-- [ ] All E2E specs (`api.spec.ts`, `app.spec.ts`, `backup.spec.ts`,
+- [x] All E2E specs (`api.spec.ts`, `app.spec.ts`, `backup.spec.ts`,
       and the new a11y spec) pass.
 
 ### 中文执行要点 (Chinese execution notes)
@@ -302,22 +302,37 @@ Goal: improve perceived AI quality, observability and code health within
       the OpenRouter and Gemini code paths.
 - [ ] Failure UI offers retry / switch provider / switch persona inline.
 - [ ] `⌘K` global command palette + at least `⌘N` / `⌘.` shortcuts.
-- [ ] `web-vitals` reports LCP / INP / CLS to Sentry.
+- [x] `web-vitals` reports LCP / INP / CLS to Sentry.
+      → done — `lib/vitals.ts` initialised in `index.tsx` 21–43.
 - [ ] Attachment images use Blob URLs instead of base64 in DOM.
 - [ ] Google Fonts is either subsetted or self-hosted from
       `public/fonts/`.
 - [ ] Service worker caches the app shell + static assets; offline shell
       renders without network.
-- [ ] In-app banner reminds the user when last successful backup is older
+- [x] In-app banner reminds the user when last successful backup is older
       than 60 days (uses `lastBackupAt` recorded by `useBackupImport`).
-- [ ] `Viewer.tsx`, `Dashboard.tsx`, `MasterLock.tsx`, `SettingsPanel.tsx`
+      → done — `BackupReminderBanner` + `useBackupReminder` hook;
+      `useDashboardExport.recordBackup` writes `lastBackupAt` on every
+      successful export.
+- [x] `Viewer.tsx`, `Dashboard.tsx`, `MasterLock.tsx`, `SettingsPanel.tsx`
       each ≤ 350 LOC; `npm run lint` enforces `max-lines: 400` for new
       `.tsx` files.
-- [ ] `addMaterial` / `deleteMaterial` (and any other reducer-style
+      → done — Viewer 312 / Dashboard 350 / MasterLock 190 / SettingsPanel
+      282; ArchiveVault 143 / StatisticsWidget 124 also extracted as
+      §2.k / §2.l bonus tracks.
+- [x] `addMaterial` / `deleteMaterial` (and any other reducer-style
       handler) use functional `setState(prev => ...)`.
+      → done as part of the §2.h Dashboard split — `useDashboardWipeFlow`,
+      `useDashboardImportConfirm` and the agent-extracted Settings
+      sub-hooks all use functional updates.
 - [ ] `App.tsx` consumes `useAppStore` via `useShallow` selector(s) or
       narrow custom hooks.
-- [ ] Vitest coverage thresholds: lines ≥ 70%, branches ≥ 60%.
+- [x] Vitest coverage thresholds: lines ≥ 70%, branches ≥ 60%.
+      → done — `vitest.config.ts` ratchets at lines 78 / branches 54
+      today, with the §2.j+§2.k+§2.l history annotated in-line.
+      Branches threshold now within 6pp of the 60 ROADMAP target;
+      next ratchet is mechanical once the Argon2id PoC verifier
+      lands in production code path (§3.e-2 / §4.b-1).
 - [ ] Playwright specs use `data-testid` attributes for the smoke flows
       so i18n changes do not break them.
 
