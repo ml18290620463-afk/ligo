@@ -197,3 +197,80 @@ describe('SecurityService — Phase 3 §3.e-2 Argon2id verifier branch', () => {
     expect(SecurityService.needsRehash(argon)).toBe(false);
   });
 });
+
+describe('SecurityService — Phase 4 §W2.1 Argon2id minter (default flag-gated)', () => {
+  beforeEach(() => {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('vector_argon2_verify');
+      localStorage.removeItem('vector_argon2_minter');
+    }
+  });
+
+  afterEach(() => {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('vector_argon2_verify');
+      localStorage.removeItem('vector_argon2_minter');
+    }
+  });
+
+  it('isArgon2idMinterEnabled defaults to false (mint=off, verify=off)', () => {
+    expect(SecurityService.isArgon2idMinterEnabled()).toBe(false);
+  });
+
+  it('isArgon2idMinterEnabled stays false when only verify is on (mint=off, verify=on)', () => {
+    SecurityService.setArgon2idVerifierEnabled(true);
+    expect(SecurityService.isArgon2idMinterEnabled()).toBe(false);
+  });
+
+  it('verify ≥ mint invariant: minter on while verifier off reports false', () => {
+    // Bypass the auto-enable logic by writing the storage key directly,
+    // simulating a corrupted / partial state on disk.
+    localStorage.setItem('vector_argon2_minter', '1');
+    expect(SecurityService.isArgon2idVerifierEnabled()).toBe(false);
+    expect(SecurityService.isArgon2idMinterEnabled()).toBe(false);
+  });
+
+  it('setArgon2idMinterEnabled(true) auto-enables the verifier so the user cannot lock themselves out', () => {
+    expect(SecurityService.isArgon2idVerifierEnabled()).toBe(false);
+    expect(SecurityService.setArgon2idMinterEnabled(true)).toBe(true);
+    expect(SecurityService.isArgon2idVerifierEnabled()).toBe(true);
+    expect(SecurityService.isArgon2idMinterEnabled()).toBe(true);
+  });
+
+  it('setArgon2idMinterEnabled(false) clears the minter but leaves the verifier on (manual cleanup)', () => {
+    SecurityService.setArgon2idMinterEnabled(true);
+    SecurityService.setArgon2idMinterEnabled(false);
+    expect(SecurityService.isArgon2idMinterEnabled()).toBe(false);
+    // verifier deliberately stays on — turning it off would orphan any
+    // hashes minted while it was on, locking those users out.
+    expect(SecurityService.isArgon2idVerifierEnabled()).toBe(true);
+  });
+
+  it('hashPassword mints PBKDF2 when both flags are off (4-state grid: off/off)', async () => {
+    const stored = await SecurityService.hashPassword('test-pw', 'salt-abc');
+    expect(stored.startsWith('pbkdf2-sha256:v1:')).toBe(true);
+  });
+
+  it('hashPassword mints PBKDF2 when verify is on but mint is off (off/on)', async () => {
+    SecurityService.setArgon2idVerifierEnabled(true);
+    const stored = await SecurityService.hashPassword('test-pw', 'salt-abc');
+    expect(stored.startsWith('pbkdf2-sha256:v1:')).toBe(true);
+  });
+
+  it('hashPassword mints Argon2id when both flags are on (on/on)', async () => {
+    SecurityService.setArgon2idMinterEnabled(true);
+    const stored = await SecurityService.hashPassword('test-pw', 'salt-abc');
+    expect(stored.startsWith('argon2id:v1:')).toBe(true);
+    // Round-trip: the freshly-minted hash should validate against the
+    // verifier branch (which we just auto-enabled).
+    expect(await SecurityService.verifyPassword('test-pw', '', stored)).toBe(true);
+  }, 15_000); // Argon2id mint is the only slow path here.
+
+  it('hashPassword falls back to PBKDF2 when minter flag is set raw but verifier is off (defence in depth)', async () => {
+    // Direct storage write, bypassing the auto-enable logic.
+    localStorage.setItem('vector_argon2_minter', '1');
+    expect(SecurityService.isArgon2idMinterEnabled()).toBe(false); // invariant
+    const stored = await SecurityService.hashPassword('test-pw', 'salt-abc');
+    expect(stored.startsWith('pbkdf2-sha256:v1:')).toBe(true);
+  });
+});

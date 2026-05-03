@@ -34,13 +34,20 @@ export const AppStorageKeys = {
    * Phase 3 §3.e-2 — per-installation feature flag for the Argon2id
    * verifier branch in `SecurityService.verifyPassword`. Stored as
    * the literal string `"1"` when on, removed when off.
-   *
-   * Default minter (`hashPassword`) stays on PBKDF2 even when the
-   * flag is on. Promotion to default minter is tracked as
-   * Phase 4 §4.b-1 — see `docs/security/argon2-eval.md` for the
-   * rollout plan.
    */
   argon2VerifierEnabled: 'vector_argon2_verify',
+  /**
+   * Phase 4 §W2.1 — per-installation feature flag for the Argon2id
+   * MINTER branch in `SecurityService.hashPassword`. When on (and
+   * `argon2VerifierEnabled` is also on, the "verify ≥ mint"
+   * invariant), every NEW password hash is minted as Argon2id
+   * instead of PBKDF2. Existing PBKDF2 hashes continue to verify
+   * against the PBKDF2 branch.
+   *
+   * Phase 4 §W2.2 ships the Settings → Security toggle that flips
+   * this through `SecurityService.setArgon2idMinterEnabled`.
+   */
+  argon2MinterEnabled: 'vector_argon2_minter',
 } as const;
 
 /** How stale a backup must be before the Dashboard banner appears. */

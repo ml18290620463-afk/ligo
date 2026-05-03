@@ -54,6 +54,7 @@ export class SecurityService {
   private static PASSWORD_HASH_PREFIX = 'pbkdf2-sha256:v1';
   private static ARGON2_HASH_PREFIX = 'argon2id:v1';
   private static ARGON2_VERIFIER_FLAG_KEY = 'vector_argon2_verify';
+  private static ARGON2_MINTER_FLAG_KEY = 'vector_argon2_minter';
   private static RECOVERY_HASH_PREFIX = 'recovery-sha256:v1';
   private static MAX_VERIFY_ITERATIONS = PBKDF2_MAX_VERIFY_ITERATIONS;
   private static ALGO = 'AES-GCM';
@@ -97,6 +98,56 @@ export class SecurityService {
         localStorage.setItem(this.ARGON2_VERIFIER_FLAG_KEY, '1');
       } else {
         localStorage.removeItem(this.ARGON2_VERIFIER_FLAG_KEY);
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * W2.1 (Phase 4) — true when the per-installation feature flag at
+   * `localStorage["vector_argon2_minter"]` is set AND the verifier flag
+   * is also set.
+   *
+   * The "verify ≥ mint" invariant is enforced HERE, not by the UI:
+   * minting Argon2id while verify is off would leave the user with a
+   * hash they cannot validate next session — i.e. permanently locked
+   * out — so we silently treat (mint=on, verify=off) as (mint=off).
+   * This is defence in depth even if the UI accidentally sets the keys
+   * out of order.
+   */
+  static isArgon2idMinterEnabled(): boolean {
+    if (!this.isArgon2idVerifierEnabled()) return false;
+    try {
+      if (typeof localStorage === 'undefined') return false;
+      const value = localStorage.getItem(this.ARGON2_MINTER_FLAG_KEY);
+      if (value === null) return false;
+      return value === '1' || value.toLowerCase() === 'true';
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Settings-screen helper. Pass `true` to opt this installation into
+   * the Argon2id MINTER (verifier MUST also be on — see the verify ≥
+   * mint invariant in `isArgon2idMinterEnabled`). When called with
+   * `true` while verifier is off, also enables the verifier so the new
+   * Argon2id hash can be read back next session.
+   */
+  static setArgon2idMinterEnabled(enabled: boolean): boolean {
+    try {
+      if (typeof localStorage === 'undefined') return false;
+      if (enabled) {
+        // Auto-enable verifier so the user can never lock themselves
+        // out by minting without the matching verifier branch.
+        if (!this.isArgon2idVerifierEnabled()) {
+          this.setArgon2idVerifierEnabled(true);
+        }
+        localStorage.setItem(this.ARGON2_MINTER_FLAG_KEY, '1');
+      } else {
+        localStorage.removeItem(this.ARGON2_MINTER_FLAG_KEY);
       }
       return true;
     } catch {
@@ -242,8 +293,23 @@ export class SecurityService {
   /**
    * Generates a hash of the password for local verification (Master Lock).
    * Note: We don't store the password, only this hash.
+   *
+   * W2.1 — when the per-installation Argon2id MINTER flag is on
+   * (`vector_argon2_minter`, with verifier also on per the invariant
+   * in `isArgon2idMinterEnabled`), we route through the Argon2id
+   * pipeline. The resulting hash is self-describing
+   * (`argon2id:v1:<m>:<t>:<p>:<saltB64>:<hashB64>`) and embeds its
+   * own random salt, so the `salt` argument is intentionally unused
+   * on this branch — passed only for API symmetry with PBKDF2.
+   *
+   * The lazy import keeps the `hash-wasm` blob (~52 kB gzip) out of
+   * the production bundle until the user actually opts in.
    */
   static async hashPassword(password: string, salt: string): Promise<string> {
+    if (this.isArgon2idMinterEnabled()) {
+      const { hashArgon2idPassword } = await import('./argon2idPoc');
+      return hashArgon2idPassword(password);
+    }
     const saltBytes = this.saltToBytes(salt);
     const bits = await this.derivePasswordHashBits(password, saltBytes);
     return `${this.PASSWORD_HASH_PREFIX}:${this.ITERATIONS}:${this.uint8ToBase64(bits)}`;
