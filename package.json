@@ -28,6 +28,7 @@
     "audit:lighthouse": "node scripts/lighthouse-audit.mjs",
     "audit:lighthouse:soft": "node scripts/lighthouse-audit.mjs --no-fail",
     "license:mint": "node scripts/dev-mint-license.mjs",
+    "billing:smoke-bootstrap": "node scripts/billing-smoke-bootstrap.mjs",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build -o storybook-static",
     "prepare": "husky"
