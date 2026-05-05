@@ -137,11 +137,32 @@ const streamFromSecureBackend = async (
  * Morning Star endpoints send. Pulled out of `getMorningStarAnalysis`
  * so the new streaming entry point can share it byte-for-byte (so the
  * fallback path produces identical output).
+ *
+ * Phase 4 §5.1.A — `customPersonaPrompts` is an optional map of
+ * `name → systemPrompt` for user-created custom 启明星 (Persona
+ * Builder). When a selected persona is keyed in this map, the user's
+ * AI-generated systemPrompt replaces the generic "请以这位智者或偶像
+ * 的口吻说话" fallback so the custom persona's voice carries through.
+ *
+ * Phase 4 §5.1.B — `memoirRecallByPersona` is the per-persona
+ * long-term-memory recall map. For Memoir personas, the parent
+ * (Viewer) calls `useMemoryStore.recallForMemoir(memoirId, query)`
+ * and forwards the resulting top-N memories keyed by the Memoir's
+ * **name** (same key shape used by `customPersonaPrompts`). When a
+ * recall list is non-empty, this builder appends a
+ * "【你与用户共同记得的事】" block to that Memoir's persona section
+ * so the Memoir actually "remembers" past conversations.
+ *
+ * Memory body format injected into the prompt is just the literal
+ * memory text — categories are NOT surfaced to the LLM because they
+ * are an implementation detail of the recall ranker.
  */
 const buildMorningStarPrompt = (
   entryContent: string,
   reflectionContext: string | undefined,
   personas: MorningStarPersona[],
+  customPersonaPrompts: Record<string, string> = {},
+  memoirRecallByPersona: Record<string, ReadonlyArray<{ body: string }>> = {},
 ): string => {
   const personaPrompts: Record<string, string> = {
     'Elon Musk':
@@ -160,10 +181,25 @@ const buildMorningStarPrompt = (
 
   const combinedPersonaPrompt = personas
     .map((p) => {
-      const prompt =
-        personaPrompts[p] ||
-        `${p}：请以这位智者或偶像的口吻说话。展现出你作为指引之星的智慧和魅力。`;
-      return prompt;
+      // 1. Built-in 7-sage description wins.
+      // 2. Then user-created custom persona (Phase 4 §5.1.A).
+      // 3. Finally a generic "speak in this voice" fallback.
+      const builtIn = personaPrompts[p];
+      const customPrompt = customPersonaPrompts[p];
+      const recall = memoirRecallByPersona[p] ?? [];
+      // Phase 4 §5.1.B — append the long-term recall block when
+      // present. We append it AFTER the persona's main description
+      // so the LLM treats the recall list as live context, not as
+      // identity definition.
+      const recallBlock =
+        recall.length > 0
+          ? `\n\n【你与用户共同记得的事】\n${recall.map((m, i) => `${i + 1}. ${m.body}`).join('\n')}\n（请在合适的时机自然引用这些记忆,不要罗列。）`
+          : '';
+      if (builtIn) return `${builtIn}${recallBlock}`;
+      if (customPrompt) {
+        return `${p}（用户的自定义启明星）：${customPrompt}${recallBlock}`;
+      }
+      return `${p}：请以这位智者或偶像的口吻说话。展现出你作为指引之星的智慧和魅力。${recallBlock}`;
     })
     .join('\n\n');
 
@@ -226,13 +262,26 @@ const MORNING_STAR_FALLBACK_PAYLOAD = JSON.stringify({
  * full prompt and waits for the complete response in one round trip.
  * Used by both the legacy non-streaming UI path and the streaming
  * path's fallback when SSE fails.
+ *
+ * Phase 4 §5.1.A — `customPersonaPrompts` (optional) wires user-created
+ * Persona Builder prompts into the persona description block so a
+ * selected custom 启明星 actually speaks in its own voice instead of
+ * the generic "speak as this guiding star" fallback.
  */
 export const getMorningStarAnalysis = async (
   entryContent: string,
   reflectionContext: string | undefined,
   personas: MorningStarPersona[],
+  customPersonaPrompts: Record<string, string> = {},
+  memoirRecallByPersona: Record<string, ReadonlyArray<{ body: string }>> = {},
 ): Promise<string> => {
-  const prompt = buildMorningStarPrompt(entryContent, reflectionContext, personas);
+  const prompt = buildMorningStarPrompt(
+    entryContent,
+    reflectionContext,
+    personas,
+    customPersonaPrompts,
+    memoirRecallByPersona,
+  );
   try {
     return await fetchFromSecureBackend(prompt);
   } catch (error: unknown) {
@@ -264,8 +313,16 @@ export const streamMorningStarAnalysis = async (
   personas: MorningStarPersona[],
   onChunk: MorningStarChunkHandler,
   signal?: AbortSignal,
+  customPersonaPrompts: Record<string, string> = {},
+  memoirRecallByPersona: Record<string, ReadonlyArray<{ body: string }>> = {},
 ): Promise<string> => {
-  const prompt = buildMorningStarPrompt(entryContent, reflectionContext, personas);
+  const prompt = buildMorningStarPrompt(
+    entryContent,
+    reflectionContext,
+    personas,
+    customPersonaPrompts,
+    memoirRecallByPersona,
+  );
   try {
     return await streamFromSecureBackend(prompt, onChunk, signal);
   } catch (streamError: unknown) {

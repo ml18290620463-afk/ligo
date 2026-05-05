@@ -108,6 +108,21 @@ bold "==> Phase 3 §3.d — i18n drift (soft mode)"
 # this guard switches to strict mode (drop the `-- --soft` argument).
 check "i18n: no extras / empty-value bugs"  "npm run i18n:diff --silent -- --soft"
 
+# Phase 4.5 §D — opt-in Lighthouse audit. Off by default because each
+# run takes ~25 s (boots vite preview, launches headless Chrome, runs
+# both mobile + desktop categories). Pre-release engineers can enable
+# it ahead of tagging by exporting RUN_LIGHTHOUSE=1, or invoke
+# `npm run audit:lighthouse` directly for the same effect. The script
+# threshold-fails if any of mobile|desktop × performance|accessibility|
+# best-practices|seo drops below the budget in `lighthouse-budget.json`
+# (currently 90 across the board).
+if [ "${RUN_LIGHTHOUSE:-0}" = "1" ]; then
+  bold "==> Phase 4.5 §D — Lighthouse audit (mobile + desktop, ≥90)"
+  check "lighthouse audit (90/90/90/90)"  "npm run audit:lighthouse --silent"
+else
+  yellow "SKIP  Phase 4.5 §D — Lighthouse audit (export RUN_LIGHTHOUSE=1 to enable)"
+fi
+
 bold "==> Summary"
 echo  "PASS=$PASS_COUNT  FAIL=$FAIL_COUNT"
 

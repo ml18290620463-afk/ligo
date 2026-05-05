@@ -16,7 +16,7 @@ const entry = (overrides: Partial<DiaryEntry>): DiaryEntry => ({
 const now = new Date('2026-05-01T10:20:30.000Z');
 
 describe('dashboardExport', () => {
-  it('builds a stable backup filename and schema-tagged JSON payload', () => {
+  it('builds a stable backup filename and schema-tagged JSON payload (v2 — Phase 4 §5.1.A)', () => {
     const result = buildBackupExport({
       version: 'v1.2.3',
       entries: [entry({ id: 'backup-entry' })],
@@ -25,9 +25,14 @@ describe('dashboardExport', () => {
     });
 
     expect(result.filename).toBe('VECTOR_PILOT_EXAMPLE.COM_BACKUP_2026-05-01T10-20-30-000Z.json');
+    // schemaVersion = 5 since Phase 4 §4.b-3 (Ed25519 signature +
+    // publicKey fields added to the schema; signature itself is
+    // injected by `signBackup` later in the pipeline, not by
+    // buildBackupExport, so a "regular" Settings export is still
+    // unsigned at the buildBackupExport stage).
     expect(JSON.parse(result.content)).toEqual({
       type: 'vector-vault-backup',
-      schemaVersion: 1,
+      schemaVersion: 5,
       version: 'v1.2.3',
       exportedAt: '2026-05-01T10:20:30.000Z',
       entryCount: 1,

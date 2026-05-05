@@ -34,6 +34,19 @@ interface EditorProps {
   onCancel: () => void;
   onGoHome?: () => void;
   existingTitles: string[]; // New prop for validation
+  /**
+   * Phase 4.5 follow-ups (F4) — pre-seed the editor when opened
+   * via a Proactive Recall card. The seed is applied AFTER the
+   * draft restore step, but ONLY when each respective field
+   * arrives empty (so we never clobber an in-progress draft the
+   * user has typed previously). Optional; legacy callers behave
+   * unchanged.
+   */
+  seed?: {
+    title?: string;
+    content?: string;
+    tags?: string;
+  } | null;
 }
 
 export const Editor: React.FC<EditorProps> = ({
@@ -44,6 +57,7 @@ export const Editor: React.FC<EditorProps> = ({
   onCancel,
   onGoHome,
   existingTitles,
+  seed,
 }) => {
   const t = TRANSLATIONS[language];
   const { scheduleTimeout } = useTimeoutManager();
@@ -92,15 +106,26 @@ export const Editor: React.FC<EditorProps> = ({
     },
   ];
 
-  // 1. Restore Draft on Mount
+  // 1. Restore Draft on Mount.
+  // Phase 4.5 follow-ups (F4) — when a `seed` prop is provided
+  // (e.g. ProactiveRecallCard opened the composer), apply each
+  // seed field ONLY when the corresponding draft field is empty.
+  // This way:
+  //   - First-time recall click → empty draft → seed wins.
+  //   - Recall click while a draft already has content → user's
+  //     draft is preserved verbatim; seed is silently dropped.
   useEffect(() => {
     const loadDraft = async () => {
       const draft = await loadEditorDraft(masterPassword);
-      setTitle(draft.title);
-      setContent(draft.content);
-      setTags(draft.tags);
+      setTitle(draft.title || seed?.title || '');
+      setContent(draft.content || seed?.content || '');
+      setTags(draft.tags || seed?.tags || '');
     };
     loadDraft();
+    // The seed is treated as a one-shot snapshot at mount time;
+    // re-running on seed identity change would clobber the user's
+    // typing mid-session. Lint disable kept local.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [masterPassword]);
 
   // 2. Auto-save Draft on Change

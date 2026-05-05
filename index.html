@@ -37,10 +37,32 @@
          @fontsource (imported at the top of index.css) so the strict
          production CSP (fontSrc 'self') can actually serve them.
          No more 3rd-party Google Fonts request from the critical
-         path. -->
+         path.
+
+         Phase 4.5 §D — the previous hand-rolled stylesheet link
+         (rel=stylesheet href=/index.css) was a dev-mode artefact:
+         in production vite already injects the hashed equivalent
+         when index.tsx does import "./index.css". Keeping the
+         manual link meant the browser tried to fetch the unhashed
+         path on every cold load (returning the SPA fallback HTML →
+         silently failing to apply any styles for ~50 ms), AND it
+         landed AFTER the JS modules in the parsed head, slowing
+         render-blocking CSS dispatch.
+
+         Phase 4.5 §D — the vite plugin `vector-hoist-stylesheet`
+         in vite.config.ts now relocates the auto-injected hashed
+         stylesheet link to BEFORE the entry script tag, so the
+         browser's preload scanner dispatches the render-blocking
+         CSS request first instead of after every modulepreload. -->
     <style>
+      /* Tiny critical-path style block. Anything that fights flash-
+         of-unstyled-content on the cover screen lives here so the
+         browser can paint a recognisable shell before the hashed
+         CSS bundle finishes loading. */
       body {
         overflow-x: hidden;
+        background: #030303; /* matches manifest background_color */
+        color: #f3f4f6;
       }
 
       .font-mono {
@@ -60,7 +82,6 @@
         font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', sans-serif;
       }
     </style>
-    <link rel="stylesheet" href="/index.css" />
   </head>
   <body>
     <div id="root"></div>

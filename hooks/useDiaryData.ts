@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { del, get, set } from 'idb-keyval';
 import { DiaryEntry, Language, Principle, Attachment, Container } from '../types';
-import { MOCK_ENTRIES } from '../constants';
 import { AppError, reportError } from '../lib/error';
+import { getSampleEntries } from '../services/sampleEntries';
 import { getStoredString } from '../services/browserStorage';
 import {
   DiaryStorageKeys,
@@ -70,6 +70,7 @@ const sanitizeEntry = (entry: unknown): DiaryEntry => {
       typeof safeEntry.unlockAt === 'number' && !Number.isNaN(safeEntry.unlockAt)
         ? safeEntry.unlockAt
         : undefined,
+    isSample: Boolean(safeEntry.isSample),
   };
 };
 
@@ -149,7 +150,13 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
         }
 
         if ((!currentEntries || currentEntries.length === 0) && !isInitialized) {
-          currentEntries = MOCK_ENTRIES[language];
+          // Phase 4 §4.a-1 — seed two sample reflections so the user
+          // sees the value proposition the first time they land in the
+          // Dashboard (instead of an empty grid). Lifecycle option C:
+          // these are auto-pruned by `addEntry` once the user writes
+          // their first real (non-sample) entry. See
+          // `services/sampleEntries.ts` for the full rationale.
+          currentEntries = getSampleEntries(language);
           await set(keys.entries, currentEntries).catch(() => {});
           mirrorDiaryValue(keys.entries, JSON.stringify(currentEntries));
         }
@@ -195,7 +202,10 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
         if (isStale()) return;
 
         reportError(AppError.fromError(error), 'loadData');
-        setEntries(MOCK_ENTRIES[language] || []);
+        // If the IDB read pipeline crashed entirely, fall back to the
+        // same first-day sample reflections so the user still has
+        // something to look at (better than an empty error screen).
+        setEntries(getSampleEntries(language));
         setPrinciples([]);
         setPasswordHash(null);
         setPasswordSalt(null);
@@ -396,11 +406,13 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
     [persistContainersArray, persistEntries],
   );
 
+  // Phase 4.5 §A — `data.id` is optional; when omitted (the legacy
+  // editor path), we mint one. The letter-delivery sweep pre-mints
+  // an id so it can record `PendingLetter.replyEntryId` atomically.
   const addEntry = useCallback(
-    async (data: Omit<DiaryEntry, 'id' | 'createdAt' | 'isLocked'>) => {
+    async (data: Omit<DiaryEntry, 'id' | 'createdAt' | 'isLocked'> & { id?: string }) => {
       const now = Date.now();
       const newEntry: DiaryEntry = {
-        id: generateSecureId(),
         createdAt: now,
         updatedAt: now,
         isLocked: false,
@@ -408,8 +420,13 @@ export const useDiaryData = (userId: string | undefined, language: Language = 'z
         migrated: false,
         archivedToShip: false,
         ...data,
+        id: data.id ?? generateSecureId(),
       };
-      persistEntries([newEntry, ...entries]);
+      // Phase 4 §4.a-1 — first real entry prunes seeded samples
+      // (option C in services/sampleEntries.ts). isSample additions
+      // (e.g. future re-seed flow) leave samples alone.
+      const baseEntries = newEntry.isSample ? entries : entries.filter((e) => !e.isSample);
+      persistEntries([newEntry, ...baseEntries]);
     },
     [entries, persistEntries],
   );

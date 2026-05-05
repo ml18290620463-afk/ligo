@@ -3,7 +3,7 @@ import { renderHook, act } from '@testing-library/react';
 import { useDiaryData } from './useDiaryData';
 import * as idb from 'idb-keyval';
 import { DiaryStorageKeys, getDiaryStorageKeys } from '../services/diaryStorage';
-import { MOCK_ENTRIES } from '../constants';
+import { getSampleEntries } from '../services/sampleEntries';
 
 // Mock idb-keyval
 vi.mock('idb-keyval', () => ({
@@ -38,14 +38,16 @@ describe('useDiaryData', () => {
     expect(result.current.entries.length).toBeGreaterThan(0);
   });
 
-  it('should add an entry', async () => {
+  it('should add an entry (and prune sample reflections — Phase 4 §4.a-1)', async () => {
     const { result } = renderHook(() => useDiaryData(userId));
 
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
-    const initialCount = result.current.entries.length;
+    // Before the user's first real write, the seeded samples are
+    // present. They all carry isSample=true.
+    expect(result.current.entries.every((e) => e.isSample)).toBe(true);
 
     await act(async () => {
       await result.current.addEntry({
@@ -55,9 +57,39 @@ describe('useDiaryData', () => {
       });
     });
 
-    expect(result.current.entries.length).toBe(initialCount + 1);
+    // Lifecycle option C (per docs/product-vision-2026Q2.md §5.1.B
+    // and services/sampleEntries.ts): writing the FIRST real entry
+    // prunes every sample. So after addEntry the list contains
+    // exactly the new entry — not new+samples.
+    expect(result.current.entries).toHaveLength(1);
     expect(result.current.entries[0].title).toBe('New Entry');
+    // isSample is optional; undefined / false both mean "real entry".
+    expect(result.current.entries[0].isSample).toBeFalsy();
     expect(idb.set).toHaveBeenCalled();
+  });
+
+  it('keeps samples when the entry being added is itself a sample', async () => {
+    // Defensive: a future "send sample to a friend" path or an
+    // accidental import of a sample backup must not trigger the
+    // prune. Adding an isSample entry leaves the existing samples
+    // alone.
+    const { result } = renderHook(() => useDiaryData(userId));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    const initialCount = result.current.entries.length;
+
+    await act(async () => {
+      await result.current.addEntry({
+        title: 'Another sample',
+        content: 'sample content',
+        tags: ['sample'],
+        isSample: true,
+      });
+    });
+
+    expect(result.current.entries.length).toBe(initialCount + 1);
+    expect(result.current.entries.every((e) => e.isSample)).toBe(true);
   });
 
   it('should update an entry', async () => {
@@ -222,14 +254,19 @@ describe('useDiaryData', () => {
       await new Promise((resolve) => setTimeout(resolve, 10));
     });
 
-    expect(result.current.entries[0]?.title).toBe(MOCK_ENTRIES.en[0].title);
+    // Phase 4 §4.a-1: empty IDB now seeds the two sample reflections
+    // from `services/sampleEntries.ts` instead of the old MOCK_ENTRIES.
+    // The first entry (memoir teaser) sits at index 0 since
+    // `getSampleEntries` orders [memoir, daily] for the descending UI.
+    const expectedFirstTitle = getSampleEntries('en')[0].title;
+    expect(result.current.entries[0]?.title).toBe(expectedFirstTitle);
 
     await act(async () => {
       resolveFirstGet?.(undefined);
       await new Promise((resolve) => setTimeout(resolve, 10));
     });
 
-    expect(result.current.entries[0]?.title).toBe(MOCK_ENTRIES.en[0].title);
+    expect(result.current.entries[0]?.title).toBe(expectedFirstTitle);
   });
 
   it('should hydrate persisted vault metadata from storage', async () => {

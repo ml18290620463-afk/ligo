@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import type { DiaryEntry } from '../types';
+import type { CustomPersona, DiaryEntry, Memory } from '../types';
 import type { TranslationDictionary } from '../i18n/translations';
 import { downloadTextFile } from '../services/fileDownload';
 import {
@@ -15,6 +15,14 @@ export interface UseDashboardExportArgs {
   t: TranslationDictionary;
   /** Marks "the user just exported" so the backup-recency banner clears. */
   recordBackup: () => void;
+  /** Phase 4 §5.1.A — user-created custom 启明星. Bundled into the v2+
+   *  backup so a restore on a new device carries them across.
+   *  Optional so legacy callers compile unchanged. */
+  customPersonas?: CustomPersona[];
+  /** Phase 4 §5.1.B — Memoir long-term memories. Bundled into the
+   *  v3+ backup so Memoirs keep "remembering" past conversations
+   *  after a restore. Optional. */
+  memories?: Memory[];
 }
 
 export interface DashboardExport {
@@ -48,6 +56,8 @@ export const useDashboardExport = ({
   currentUser,
   t,
   recordBackup,
+  customPersonas,
+  memories,
 }: UseDashboardExportArgs): DashboardExport => {
   const dynamicVersion = useMemo(() => {
     const years = new Set(entries.map((e) => new Date(e.createdAt).getFullYear()));
@@ -62,10 +72,12 @@ export const useDashboardExport = ({
       version: dynamicVersion,
       entries,
       currentUser,
+      customPersonas,
+      memories,
     });
     downloadTextFile(backup.content, backup.filename);
     recordBackup();
-  }, [currentUser, dynamicVersion, entries, recordBackup]);
+  }, [currentUser, customPersonas, dynamicVersion, entries, memories, recordBackup]);
 
   const handleDownloadNotes = useCallback(
     (mode: NotesExportMode = 'all') => {

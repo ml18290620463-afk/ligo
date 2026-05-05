@@ -14,6 +14,7 @@ import {
   Globe,
 } from 'lucide-react';
 import { Language, Theme } from '../types';
+import { NOISE_BG_STYLE } from '../lib/noiseTexture';
 import { useTransientState } from '../hooks/useTransientState';
 import { TRANSLATIONS, PERSONAS, GUIDING_STAR_DEFAULTS } from '../constants';
 import { AppStorageKeys } from '../services/appSettings';
@@ -165,7 +166,8 @@ export const Onboarding: React.FC<OnboardingProps> = ({
     <div
       className={`fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-xl overflow-y-auto transition-colors duration-700 ${theme === 'light' ? 'bg-slate-900/40' : 'bg-black/95'}`}
     >
-      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none"></div>
+      {/* Phase 4.5 §D — inline noise SVG (see lib/noiseTexture.ts). */}
+      <div className="absolute inset-0 opacity-20 pointer-events-none" style={NOISE_BG_STYLE}></div>
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}

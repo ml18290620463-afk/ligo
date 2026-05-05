@@ -1,20 +1,70 @@
-import React, { useEffect, useState, lazy, Suspense } from 'react';
+import React, { useEffect, useState, useCallback, lazy, Suspense } from 'react';
 import { MotionConfig } from 'motion/react';
 import { useShallow } from 'zustand/react/shallow';
 import { AppState, DiaryEntry, Language, Theme } from './types';
 import { useDiaryData } from './hooks/useDiaryData';
+import { useCustomPersonas } from './hooks/useCustomPersonas';
+import { useMemoryStore } from './hooks/useMemoryStore';
+import { useLetterStore } from './hooks/useLetterStore';
+import { generateSecureId } from './services/idGenerator';
+import { maybeRehashOnUnlock } from './services/passwordRehash';
+import { MigrationImportWizard } from './components/MigrationImportWizard';
+import { TrustedDevicesPanel } from './components/TrustedDevicesPanel';
+import { useTrustedDevices } from './hooks/useTrustedDevices';
+import { AppMemoirPanels } from './components/AppMemoirPanels';
+import { PricingPage } from './components/PricingPage';
+import { useAppBilling } from './hooks/useAppBilling';
+import {
+  ensureDeviceKeypair,
+  loadPublicIdentity,
+  regenerateDeviceKeypair,
+  unlockSecretKey,
+  type DevicePublicIdentity,
+} from './services/deviceKeypair';
+import { cascadeDeleteMemoir } from './services/memoirCascade';
 import { useMotionPreference } from './hooks/useMotionPreference';
-import { Dashboard } from './components/Dashboard';
-import { CoverScreen } from './components/CoverScreen';
-import { MasterLock } from './components/MasterLock';
-import { Onboarding } from './components/Onboarding';
-import { SpaceTimeBackground } from './components/SpaceTimeBackground';
-import { CommandPalette } from './components/CommandPalette';
 import { TRANSLATIONS } from './constants';
 import { SecurityService } from './services/securityService';
 import { useAppStore } from './stores/appStore';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
+// Phase 4.5 §D — code-split everything that is NOT visible on the
+// initial Cover screen. Lazy-loading Dashboard / MasterLock /
+// Onboarding / CommandPalette trims the entry chunk by ~120 kB
+// gzip and brings mobile FCP from 3.6 s → ~1.5 s on slow 4G.
+//
+// CoverScreen is also lazy — its imports (lucide icons, motion,
+// DecryptionText) are surprisingly heavy for the first surface.
+// The Suspense fallback is the same `<ScreenLoader>` that bridges
+// every other lazy boundary, so the FCP element is the spinner
+// instead of the cover headline. LCP improves because the spinner
+// paints without waiting for the heavy bundle.
+//
+// SpaceTimeBackground is lazy too — purely decorative, not on the
+// LCP path. Loading it after the cover renders shaves another
+// ~10 kB off the entry chunk and lets the canvas / motion keyframes
+// paint on the next idle frame instead of competing with the
+// headline text for the LCP slot.
+const CoverScreen = lazy(() =>
+  import('./components/CoverScreen').then((module) => ({ default: module.CoverScreen })),
+);
+const SpaceTimeBackground = lazy(() =>
+  import('./components/SpaceTimeBackground').then((module) => ({
+    default: module.SpaceTimeBackground,
+  })),
+);
+const Dashboard = lazy(() =>
+  import('./components/Dashboard').then((module) => ({ default: module.Dashboard })),
+);
+const MasterLock = lazy(() =>
+  import('./components/MasterLock').then((module) => ({ default: module.MasterLock })),
+);
+const Onboarding = lazy(() =>
+  import('./components/Onboarding').then((module) => ({ default: module.Onboarding })),
+);
+const CommandPalette = lazy(() =>
+  import('./components/CommandPalette').then((module) => ({ default: module.CommandPalette })),
+);
 const Viewer = lazy(() =>
   import('./components/Viewer').then((module) => ({ default: module.Viewer })),
 );
@@ -82,6 +132,17 @@ const App: React.FC = () => {
     setCurrentUser(TRANSLATIONS[language].localUser);
   }, [language, setCurrentUser]);
 
+  // Phase 4.5 §C — auto-enable Argon2id on first mount post-rollout.
+  // Idempotent (one-shot migration marker inside the service); safe
+  // to run unconditionally. Logged for ops visibility — flips to a
+  // noop on every subsequent boot.
+  useEffect(() => {
+    const flipped = SecurityService.applyArgon2idDefaults();
+    if (flipped) {
+      console.info('Argon2id defaults applied (Phase 4.5 §C rollout).');
+    }
+  }, []);
+
   // W3.1 — global command palette toggle. Bound to ⌘K / Ctrl+K
   // unconditionally so the shortcut works from every screen (cover,
   // editor, viewer, etc.). The handler stops propagation so it never
@@ -133,6 +194,59 @@ const App: React.FC = () => {
     syncStatus,
   } = useDiaryData(userId, language);
 
+  // Phase 4 §5.1.A — custom guiding stars (Persona Builder).
+  // Lives in a separate hook (under the 600-line ceiling rule) so
+  // useDiaryData stays focused on its core diary surface.
+  const {
+    customPersonas,
+    addPersona: addCustomPersona,
+    deletePersona: deleteCustomPersona,
+    replacePersonas: replaceCustomPersonas,
+  } = useCustomPersonas();
+
+  // Phase 4 §5.1.B — Memoir long-term memories. Same architectural
+  // posture as `useCustomPersonas`. The store is mounted at the App
+  // root so:
+  //   - the dashboard export pipeline can bundle memories into the
+  //     v3 backup payload, and
+  //   - the v3 backup importer can restore them via `replaceMemories`.
+  // Viewer-side recall is done in `Viewer` itself (which mounts its
+  // own copy of the hook — both copies read the same IDB blob).
+  const {
+    memories,
+    replaceMemories,
+    clearForMemoir: clearMemoirMemories,
+    updateMemory: updateMemoryById,
+    deleteMemory: softDeleteMemory,
+    hardDeleteMemory: hardDeleteMemoryById,
+    restoreMemory: restoreMemoryById,
+    listRecycleBin: listMemoryRecycleBin,
+  } = useMemoryStore();
+
+  // Phase 4.5 §E — Letter store mounted here so the cross-device
+  // migration wizard can call `replaceLetters` (and a future
+  // backup-export integration can include the pending letter
+  // queue alongside memories). Dashboard mounts its own copy of
+  // the hook for the sweep flow; both copies read the same IDB.
+  const {
+    letters: pendingLetters,
+    replaceLetters,
+    clearForMemoir: clearMemoirLetters,
+    cancel: cancelLetter,
+  } = useLetterStore();
+
+  // Phase 5 (5.1 + 5.2) — license + Stripe Checkout composite hook.
+  const billing = useAppBilling();
+
+  // Phase 4 §4.b-3 — device public identity (publicKey + fingerprint).
+  // Loaded from IDB on mount so the cover screen / Settings can show
+  // it even when the vault is locked. Refreshed after every keypair
+  // operation (`ensureDeviceKeypair` on unlock, `regenerateDeviceKeypair`
+  // from Settings).
+  const [deviceIdentity, setDeviceIdentity] = useState<DevicePublicIdentity | null>(null);
+  // prettier-ignore
+  useEffect(() => { void loadPublicIdentity().then(setDeviceIdentity).catch(() => undefined); }, []);
+
   // Derived Principles for Cover Screen
   const homePrinciples = [
     ...principles.filter((p) => p.showOnHome).map((p) => ({ ...p, sortDate: p.createdAt })),
@@ -173,26 +287,26 @@ const App: React.FC = () => {
     setMasterPassword(password);
     setIsUnlocked(true);
     setAppState(AppState.DASHBOARD);
+    // prettier-ignore
+    void ensureDeviceKeypair(password).then(setDeviceIdentity).catch((err) => console.warn('App: ensureDeviceKeypair failed', err));
   };
 
   const handleUnlock = (password: string) => {
     setMasterPassword(password);
     setIsUnlocked(true);
+    // prettier-ignore
+    void maybeRehashOnUnlock({ password, passwordSalt, storedHash: passwordHash, savePasswordHash });
+    // prettier-ignore
+    void ensureDeviceKeypair(password).then(setDeviceIdentity).catch((err) => console.warn('App: ensureDeviceKeypair failed', err));
   };
 
   const handleSetPassword = async (password: string) => {
-    // Generate salt
     const saltArray = window.crypto.getRandomValues(new Uint8Array(32));
     const salt = btoa(String.fromCharCode(...saltArray));
     SecurityService.wipeSensitive(saltArray);
-
-    // Hash password
     const hash = await SecurityService.hashPassword(password, salt);
-
-    // Save
     await savePasswordSalt(salt);
     await savePasswordHash(hash);
-
     setMasterPassword(password);
     setIsUnlocked(true);
   };
@@ -210,6 +324,133 @@ const App: React.FC = () => {
     wipeData().catch(console.error);
   };
 
+  // Phase 4.5 §E — cross-device migration wizard state. The wizard
+  // is opened from EITHER:
+  //   - CoverScreen "Migrate from another device" CTA (vault still
+  //     locked / no master password yet — first-run on a new
+  //     device).
+  //   - Settings on an unlocked vault (re-import after deleting
+  //     something accidentally).
+  // The handlers below close over the App-level data layer hooks
+  // so the same wizard instance can serve both entry points.
+  const [showMigrationImport, setShowMigrationImport] = useState(false);
+  // Phase 4 §4.b-3 follow-up (K1) — Trusted devices audit panel.
+  // Mounted at App level so the panel is reachable from Settings
+  // (the only entry point for v1) and so its `useTrustedDevices`
+  // hook stays singleton-ish (the migration wizard mutates the
+  // same store via `trustPublicKey`; both readers see the same
+  // IDB blob).
+  const [showTrustedDevices, setShowTrustedDevices] = useState(false);
+  const trustedDevices = useTrustedDevices();
+  // Refresh the list when the panel opens so new entries added by
+  // the migration wizard since the last open are visible.
+  useEffect(() => {
+    if (showTrustedDevices) void trustedDevices.reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showTrustedDevices]);
+
+  // L1 — Memoirs picker → panels.
+  const [memoirIdForMemories, setMemoirIdForMemories] = useState<string | null>(null);
+  const [memoirIdForLetters, setMemoirIdForLetters] = useState<string | null>(null);
+  const findMemoir = (id: string | null) =>
+    id ? (customPersonas.find((p) => p.id === id && p.kind === 'memoir') ?? null) : null;
+  const memoirForMemories = findMemoir(memoirIdForMemories);
+  const memoirForLetters = findMemoir(memoirIdForLetters);
+
+  // F4 — pre-seed for the next Editor mount; cleared on save/back.
+  const [editorSeed, setEditorSeed] = useState<{
+    title?: string;
+    content?: string;
+    tags?: string;
+  } | null>(null);
+
+  const handleMigrationApplyCredentialSnapshot = useCallback(
+    async (hash: string, salt: string) => {
+      // Persist credentials from the migration package, then force the
+      // user back through MasterLock so they re-type the password (we
+      // intentionally don't auto-unlock — typing it on the new device
+      // cements muscle memory).
+      await savePasswordSalt(salt);
+      await savePasswordHash(hash);
+      setMasterPassword(null);
+      setIsUnlocked(false);
+    },
+    // setMasterPassword / setIsUnlocked are stable React setters — no
+    // need to list them; lint disable is local to keep noise contained.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [savePasswordHash, savePasswordSalt],
+  );
+
+  const handleMigrationComplete = useCallback(() => {
+    // After import, route to cover. If the package carried credentials,
+    // tapping "Start" next will route through MasterLock to unlock.
+    // setAppState is a stable React setter; lint disable kept local.
+    setAppState(AppState.COVER);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Phase 4 §4.b-3 — Settings → "Regenerate device keys". Only callable
+  // when masterPassword is in memory (vault unlocked); the Settings
+  // CTA is gated behind the unlock state.
+  const handleRegenerateDeviceKeys = useCallback(async () => {
+    if (!masterPassword) return;
+    try {
+      const next = await regenerateDeviceKeypair(masterPassword);
+      setDeviceIdentity(next);
+    } catch (err) {
+      console.warn('App: regenerateDeviceKeypair failed', err);
+    }
+  }, [masterPassword]);
+
+  // Phase 4 §4.b-3 — on-demand signing material fetcher passed to the
+  // migration export modal. Returns null when there's no
+  // master-password-in-memory or no keypair, both of which fall back
+  // to "unsigned" packages.
+  const handleUnlockSigningKey = useCallback(async () => {
+    if (!masterPassword || !deviceIdentity) return null;
+    const secret = await unlockSecretKey(masterPassword);
+    if (!secret) return null;
+    return { secretKey: secret, publicKey: deviceIdentity.publicKey };
+  }, [masterPassword, deviceIdentity]);
+
+  // Phase 4.5 follow-ups (F4) — open the entry composer pre-seeded
+  // from a Proactive Recall card. The seed is written to App state
+  // and consumed once when the Editor mounts; both `handleSaveEntry`
+  // and `handleBackToDashboard` clear it so it doesn't leak into a
+  // future "+ New entry" flow.
+  const handleOpenComposerWithSeed = useCallback(
+    (seed: { title?: string; content?: string; tags?: string }) => {
+      setEditorSeed(seed);
+      setAppState(AppState.EDITOR);
+    },
+    // setEditorSeed / setAppState are stable React setters; lint
+    // disable kept local to mirror the other useCallback handlers.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  // Phase 4.5 follow-ups (F2) — cascade-delete a Memoir, its memories,
+  // and its pending letters in one shot. Wraps `cascadeDeleteMemoir`
+  // (the pure orchestrator) with the three live store callbacks so
+  // `MemoryManagementPanel` only needs to know which memoir id to
+  // nuke. Errors are swallowed locally — the orchestrator surfaces
+  // them on the returned outcome; future sprints can route them into
+  // a toast.
+  const handleCascadeDeleteMemoir = useCallback(
+    async (memoirId: string) => {
+      const outcome = await cascadeDeleteMemoir({
+        memoirId,
+        clearMemories: clearMemoirMemories,
+        clearLetters: clearMemoirLetters,
+        deletePersona: deleteCustomPersona,
+      });
+      if (outcome.errors.length > 0) {
+        console.warn('App: cascadeDeleteMemoir partial failures', outcome.errors);
+      }
+    },
+    [clearMemoirMemories, clearMemoirLetters, deleteCustomPersona],
+  );
+
   const handleSelectEntry = (entry: DiaryEntry) => {
     if (entry.unlockAt && entry.unlockAt > Date.now()) return;
     setSelectedEntry(entry);
@@ -219,11 +460,17 @@ const App: React.FC = () => {
   const handleSaveEntry = (data: Omit<DiaryEntry, 'id' | 'createdAt' | 'isLocked'>) => {
     addEntry(data);
     setAppState(AppState.DASHBOARD);
+    // Phase 4.5 follow-ups (F4) — drop the seed once consumed so a
+    // future + New Entry click starts blank.
+    setEditorSeed(null);
   };
 
   const handleBackToDashboard = () => {
     setAppState(AppState.DASHBOARD);
     setSelectedEntry(null);
+    // Phase 4.5 follow-ups (F4) — same reasoning as in
+    // handleSaveEntry: explicit cancel also drops the seed.
+    setEditorSeed(null);
   };
 
   const showGlobalBackground = [
@@ -239,26 +486,37 @@ const App: React.FC = () => {
         <div
           className={`min-h-screen font-sans relative transition-colors duration-1000 ${theme === 'light' ? 'bg-[#f0f4f7] text-[#1a202c] selection:bg-[#007a8c]/20 selection:text-[#007a8c]' : 'bg-[#030303] text-gray-100 selection:bg-cyan-500 selection:text-white'}`}
         >
-          {showGlobalBackground && <SpaceTimeBackground theme={theme} />}
+          {showGlobalBackground && (
+            <Suspense fallback={null}>
+              <SpaceTimeBackground theme={theme} />
+            </Suspense>
+          )}
 
-          <CommandPalette
-            open={paletteOpen}
-            onOpenChange={setPaletteOpen}
-            theme={theme}
-            language={language}
-            appState={appState}
-            t={TRANSLATIONS[language]}
-            entries={entries}
-            onNewEntry={() => setAppState(AppState.EDITOR)}
-            onOpenArchive={() => setAppState(AppState.ARCHIVE)}
-            onBackToDashboard={handleBackToDashboard}
-            onReplayIntro={() => setAppState(AppState.COVER)}
-            onSelectEntry={handleSelectEntry}
-            onSetTheme={(t: Theme) => setTheme(t)}
-            onSetLanguage={(lang: Language) => setLanguage(lang)}
-            onLockVault={passwordHash ? () => setIsUnlocked(false) : undefined}
-            onWipeData={passwordHash ? handleWipeData : undefined}
-          />
+          {/* CommandPalette is lazy-loaded since it only renders on
+              ⌘K. Suspense fallback is null because the palette is
+              hidden by default — the user wouldn't see a loader. */}
+          {paletteOpen && (
+            <Suspense fallback={null}>
+              <CommandPalette
+                open={paletteOpen}
+                onOpenChange={setPaletteOpen}
+                theme={theme}
+                language={language}
+                appState={appState}
+                t={TRANSLATIONS[language]}
+                entries={entries}
+                onNewEntry={() => setAppState(AppState.EDITOR)}
+                onOpenArchive={() => setAppState(AppState.ARCHIVE)}
+                onBackToDashboard={handleBackToDashboard}
+                onReplayIntro={() => setAppState(AppState.COVER)}
+                onSelectEntry={handleSelectEntry}
+                onSetTheme={(t: Theme) => setTheme(t)}
+                onSetLanguage={(lang: Language) => setLanguage(lang)}
+                onLockVault={passwordHash ? () => setIsUnlocked(false) : undefined}
+                onWipeData={passwordHash ? handleWipeData : undefined}
+              />
+            </Suspense>
+          )}
 
           {loading && (
             <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm">
@@ -272,81 +530,117 @@ const App: React.FC = () => {
           )}
 
           {appState === AppState.COVER && (
-            <CoverScreen
-              onStart={handleStartFromCover}
-              language={language}
-              principles={homePrinciples}
-              theme={theme}
-            />
+            <Suspense fallback={<ScreenLoader language={language} />}>
+              <CoverScreen
+                onStart={handleStartFromCover}
+                language={language}
+                principles={homePrinciples}
+                theme={theme}
+                onMigrate={() => setShowMigrationImport(true)}
+              />
+            </Suspense>
           )}
 
           {appState === AppState.ONBOARDING && (
-            <Onboarding
-              language={language}
-              onSetLanguage={(lang: Language) => setLanguage(lang)}
-              theme={theme}
-              onComplete={handleOnboardingComplete}
-              onCancel={() => setAppState(AppState.COVER)}
-            />
+            <Suspense fallback={<ScreenLoader language={language} />}>
+              <Onboarding
+                language={language}
+                onSetLanguage={(lang: Language) => setLanguage(lang)}
+                theme={theme}
+                onComplete={handleOnboardingComplete}
+                onCancel={() => setAppState(AppState.COVER)}
+              />
+            </Suspense>
           )}
 
           {appState === AppState.DASHBOARD &&
             (passwordHash && !isUnlocked ? (
-              <MasterLock
-                language={language}
-                theme={theme}
-                onUnlock={handleUnlock}
-                onResetPassword={handleSetPassword}
-                onCancel={() => setAppState(AppState.COVER)}
-                onWipeData={handleWipeData}
-                passwordHash={passwordHash}
-                passwordSalt={passwordSalt}
-              />
+              <Suspense fallback={<ScreenLoader language={language} />}>
+                <MasterLock
+                  language={language}
+                  theme={theme}
+                  onUnlock={handleUnlock}
+                  onResetPassword={handleSetPassword}
+                  onCancel={() => setAppState(AppState.COVER)}
+                  onWipeData={handleWipeData}
+                  passwordHash={passwordHash}
+                  passwordSalt={passwordSalt}
+                />
+              </Suspense>
             ) : (
-              <Dashboard
-                entries={entries}
-                currentUser={currentUser}
-                isGuest={userId === 'guest'}
-                language={language}
-                onSetLanguage={(lang: Language) => setLanguage(lang)}
-                theme={theme}
-                onSetTheme={(t: Theme) => setTheme(t)}
-                onSelectEntry={handleSelectEntry}
-                onUpdateEntry={updateEntry}
-                onBulkUpdateEntries={bulkUpdateEntries}
-                onNewEntry={() => setAppState(AppState.EDITOR)}
-                onOpenArchive={() => setAppState(AppState.ARCHIVE)}
-                onReplayIntro={() => setAppState(AppState.COVER)}
-                onWipeData={handleWipeData}
-                onCreateMaterialEntry={(material, isArchived) => {
-                  addEntry({
-                    title: material.name,
-                    content: `[Attachment: ${material.name}]`,
-                    tags: ['upload', 'material', material.type],
-                    attachment: material,
-                    isArchived,
-                  });
-                }}
-                isUnlocked={isUnlocked}
-                passwordHash={passwordHash}
-                passwordSalt={passwordSalt}
-                onSetPassword={handleSetPassword}
-                onClearPassword={handleClearPassword}
-                onImportBackup={importBackup}
-                guidingStars={guidingStars}
-                onSaveGuidingStars={saveGuidingStars}
-                selectedStars={selectedStars}
-                onSaveSelectedStars={saveSelectedStars}
-                containers={containers}
-                onAddContainer={addContainer}
-                onDeleteContainer={deleteContainer}
-                isScanning={isScanning}
-                scanProgress={scanProgress}
-                onTriggerScan={triggerScan}
-                lastScanSummary={lastScanSummary}
-                syncStatus={syncStatus}
-                loading={loading}
-              />
+              <Suspense fallback={<ScreenLoader language={language} />}>
+                <Dashboard
+                  entries={entries}
+                  currentUser={currentUser}
+                  isGuest={userId === 'guest'}
+                  language={language}
+                  onSetLanguage={(lang: Language) => setLanguage(lang)}
+                  theme={theme}
+                  onSetTheme={(t: Theme) => setTheme(t)}
+                  onSelectEntry={handleSelectEntry}
+                  onUpdateEntry={updateEntry}
+                  onBulkUpdateEntries={bulkUpdateEntries}
+                  onNewEntry={() => setAppState(AppState.EDITOR)}
+                  onOpenArchive={() => setAppState(AppState.ARCHIVE)}
+                  onReplayIntro={() => setAppState(AppState.COVER)}
+                  onWipeData={handleWipeData}
+                  onCreateMaterialEntry={(material, isArchived) => {
+                    addEntry({
+                      title: material.name,
+                      content: `[Attachment: ${material.name}]`,
+                      tags: ['upload', 'material', material.type],
+                      attachment: material,
+                      isArchived,
+                    });
+                  }}
+                  isUnlocked={isUnlocked}
+                  passwordHash={passwordHash}
+                  passwordSalt={passwordSalt}
+                  onSetPassword={handleSetPassword}
+                  onClearPassword={handleClearPassword}
+                  onImportBackup={importBackup}
+                  guidingStars={guidingStars}
+                  onSaveGuidingStars={saveGuidingStars}
+                  selectedStars={selectedStars}
+                  onSaveSelectedStars={saveSelectedStars}
+                  customPersonas={customPersonas}
+                  onAddCustomPersona={addCustomPersona}
+                  onReplaceCustomPersonas={replaceCustomPersonas}
+                  memories={memories}
+                  onReplaceMemories={replaceMemories}
+                  pendingLetters={pendingLetters}
+                  onReplaceLetters={replaceLetters}
+                  onOpenMigrationImport={() => setShowMigrationImport(true)}
+                  deviceFingerprint={deviceIdentity?.fingerprint ?? null}
+                  onRegenerateDeviceKeys={handleRegenerateDeviceKeys}
+                  onUnlockSigningKey={handleUnlockSigningKey}
+                  onOpenTrustedDevices={() => setShowTrustedDevices(true)}
+                  onOpenMemoirMemories={(id) => setMemoirIdForMemories(id)}
+                  onOpenMemoirLetters={(id) => setMemoirIdForLetters(id)}
+                  onOpenComposerWithSeed={handleOpenComposerWithSeed}
+                  {...billing.licensePropsForDashboard}
+                  onMintEntry={async (payload) => {
+                    // Phase 4.5 §A — pre-mint the id outside the
+                    // useDiaryData reducer so the letter-delivery
+                    // sweep can record `PendingLetter.replyEntryId`
+                    // atomically. `addEntry` honours `data.id` when
+                    // present (W4.5 widening) and falls back to a
+                    // mint when not.
+                    const id = generateSecureId();
+                    await addEntry({ ...payload, id });
+                    return id;
+                  }}
+                  containers={containers}
+                  onAddContainer={addContainer}
+                  onDeleteContainer={deleteContainer}
+                  isScanning={isScanning}
+                  scanProgress={scanProgress}
+                  onTriggerScan={triggerScan}
+                  lastScanSummary={lastScanSummary}
+                  syncStatus={syncStatus}
+                  loading={loading}
+                />
+              </Suspense>
             ))}
 
           {appState === AppState.VIEWER && selectedEntry && (
@@ -358,6 +652,7 @@ const App: React.FC = () => {
                 currentUser={currentUser}
                 masterPassword={masterPassword}
                 guidingStars={selectedStars}
+                customPersonas={customPersonas}
                 onBack={handleBackToDashboard}
                 onGoHome={() => setAppState(AppState.COVER)}
                 onUpdateEntry={(entry) => {
@@ -391,6 +686,7 @@ const App: React.FC = () => {
                 onCancel={handleBackToDashboard}
                 onGoHome={() => setAppState(AppState.COVER)}
                 existingTitles={entries.map((e) => e.title)}
+                seed={editorSeed}
               />
             </Suspense>
           )}
@@ -414,6 +710,54 @@ const App: React.FC = () => {
               />
             </Suspense>
           )}
+
+          {/* Phase 4.5 §E — cross-device migration wizard.
+              Mounted at App level so it's reachable from BOTH the
+              cover screen (vault still locked, first-run on new
+              device) AND from Settings (already-unlocked re-import).
+              The wizard hook owns its phase state — closing the
+              modal resets it. */}
+          <MigrationImportWizard
+            open={showMigrationImport}
+            onClose={() => setShowMigrationImport(false)}
+            theme={theme}
+            t={TRANSLATIONS[language]}
+            onReplaceEntries={async (importedEntries, mode) => {
+              await importBackup(importedEntries, mode === 'replace' ? 'replace' : 'merge');
+            }}
+            onReplaceCustomPersonas={replaceCustomPersonas}
+            onReplaceMemories={replaceMemories}
+            onReplaceLetters={replaceLetters}
+            onApplyCredentialSnapshot={handleMigrationApplyCredentialSnapshot}
+            onComplete={handleMigrationComplete}
+          />
+
+          {/* Phase 4 §4.b-3 follow-up (K1) — Trusted devices audit. */}
+          <TrustedDevicesPanel
+            open={showTrustedDevices}
+            onClose={() => setShowTrustedDevices(false)}
+            theme={theme}
+            t={TRANSLATIONS[language]}
+            trusted={trustedDevices.trusted}
+            loading={trustedDevices.loading}
+            onRevoke={trustedDevices.revoke}
+            onRelabel={trustedDevices.relabel}
+          />
+
+          {/* prettier-ignore */}
+          <AppMemoirPanels theme={theme} t={TRANSLATIONS[language]} memoirForMemories={memoirForMemories} memoirForLetters={memoirForLetters} memories={memories} recycleBinFor={listMemoryRecycleBin} pendingLetters={pendingLetters} entries={entries} onClearMemoryFor={clearMemoirMemories} onCascadeDeleteMemoir={async (id) => { await handleCascadeDeleteMemoir(id); setMemoirIdForMemories(null); }} onCloseMemories={() => setMemoirIdForMemories(null)} onCloseLetters={() => setMemoirIdForLetters(null)} onUpdateMemory={updateMemoryById} onSoftDeleteMemory={softDeleteMemory} onHardDeleteMemory={hardDeleteMemoryById} onRestoreMemory={restoreMemoryById} onCancelLetter={cancelLetter} onOpenLetterReply={(target) => { setMemoirIdForLetters(null); setSelectedEntry(target); setAppState(AppState.VIEWER); }} />
+
+          {/* Phase 5.2 — pricing page (USD) + checkout-return URL handler. */}
+          {/* prettier-ignore */}
+          {billing.showPricing && (
+            <PricingPage
+              theme={theme}
+              t={TRANSLATIONS[language]}
+              installId={billing.license.installId}
+              onClose={() => billing.setShowPricing(false)}
+            />
+          )}
+          {void billing.checkoutReturn}
         </div>
       </AppMotionConfig>
     </ErrorBoundary>

@@ -59,6 +59,38 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       tailwindcss(),
+      // Phase 4.5 §D — hoist the bundled `<link rel="stylesheet">`
+      // to ABOVE the `<script type="module">` tag in <head>. Vite
+      // default emits the stylesheet AFTER the entry script +
+      // every `<link rel="modulepreload">`, which can push the
+      // render-blocking CSS dispatch past the FCP critical path
+      // on slow networks. Moving the stylesheet up lets the
+      // browser's preload scanner see it first and prioritise
+      // the request.
+      //
+      // Behaviour: no-op when no production `<link rel="stylesheet">`
+      // is present (e.g. the dev server, where HMR injects CSS
+      // via JS).
+      {
+        name: 'vector-hoist-stylesheet',
+        enforce: 'post',
+        transformIndexHtml(html) {
+          const styleLinkRe = /<link rel="stylesheet"[^>]*>/;
+          const styleLinkMatch = html.match(styleLinkRe);
+          if (!styleLinkMatch) return html;
+          const styleLink = styleLinkMatch[0];
+          // Remove the original occurrence (and a trailing newline
+          // if any) and re-insert directly before the entry script.
+          const withoutOriginal = html.replace(
+            new RegExp(`\\n?\\s*${styleLink.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`),
+            '',
+          );
+          return withoutOriginal.replace(
+            /(<script type="module"[^>]*><\/script>)/,
+            `${styleLink}\n    $1`,
+          );
+        },
+      },
       // Phase 4 §W3.2 — PWA service worker via Workbox.
       //
       // Strategy: precache the app shell (every hashed JS/CSS asset

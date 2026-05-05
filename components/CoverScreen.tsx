@@ -12,6 +12,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { PRESET_PRINCIPLES, TRANSLATIONS } from '../constants';
+import { NOISE_BG_STYLE } from '../lib/noiseTexture';
 import { CyberButton } from './CyberButton';
 import { DecryptionText } from './DecryptionText';
 import { Language, Principle, Theme } from '../types';
@@ -24,6 +25,12 @@ interface CoverScreenProps {
   language: Language;
   principles: Principle[];
   theme?: Theme;
+  /** Phase 4.5 §E — opens the cross-device migration import wizard.
+   *  Visible from the cover screen so first-run users on a new
+   *  device can import without first being forced to set up a
+   *  master password. Optional: callers that don't pass this
+   *  simply omit the CTA. */
+  onMigrate?: () => void;
 }
 
 type CoverVersion = 'STAR_TUNNEL' | 'WARP_SPEED' | 'GATE' | 'TERMINAL';
@@ -39,6 +46,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
   language,
   principles,
   theme = 'dark',
+  onMigrate,
 }) => {
   const [version, setVersion] = useState<CoverVersion>('STAR_TUNNEL');
   const [isWarping, setIsWarping] = useState(false);
@@ -112,7 +120,20 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
               <div
                 className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60vw] h-[60vw] rounded-full blur-[100px] mix-blend-screen animate-pulse ${theme === 'light' ? 'bg-cyan-100/10' : 'bg-indigo-900/10'}`}
               ></div>
-              <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
+              {/* Phase 4.5 §D — replaced the 3rd-party
+                  `grainy-gradients.vercel.app/noise.svg` reference
+                  with an inline `style={{ backgroundImage }}`
+                  data-URI SVG. The previous request was on the FCP
+                  critical path and added ~200ms of third-party
+                  DNS+TLS+download. Inline `style` (vs Tailwind
+                  arbitrary value) keeps the data-URI legible to
+                  the build pipeline — Tailwind's arbitrary value
+                  parser chokes on the escaped quotes inside the
+                  long data URI. */}
+              <div
+                className="absolute inset-0 opacity-20 mix-blend-overlay"
+                style={NOISE_BG_STYLE}
+              ></div>
             </div>
 
             {/* The Data Wall */}
@@ -304,8 +325,16 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                 </svg>
               </div>
 
+              {/* Phase 4.5 §D — `font-black` (900) was being
+                  synthesised by the browser because we only ship
+                  Inter 400-700 in the eager bundle (latin-ext +
+                  900 dropped in §D for FCP/LCP wins). The synth
+                  introduced a paint delay big enough to push LCP
+                  past the 90-score threshold. `font-bold` (700)
+                  uses the real TTF — same heroic visual weight,
+                  no paint delay. */}
               <h1
-                className={`text-5xl sm:text-7xl md:text-9xl font-black tracking-tighter mb-2 glitch-text mix-blend-overlay ${theme === 'light' ? 'text-vector-ink-strong' : 'text-white'}`}
+                className={`text-5xl sm:text-7xl md:text-9xl font-bold tracking-tighter mb-2 glitch-text mix-blend-overlay ${theme === 'light' ? 'text-vector-ink-strong' : 'text-white'}`}
                 data-text="VECTOR"
               >
                 VECTOR
@@ -360,6 +389,26 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                 </CyberButton>
               </div>
             </div>
+
+            {/* Phase 4.5 §E — secondary CTA: cross-device migration.
+                Lives below the primary INITIALIZE button so first-run
+                users on a fresh install can find it without setting up
+                a master password first. Hidden when the consumer
+                doesn't pass `onMigrate` (keeps the cover identical
+                in tests / storybook). */}
+            {onMigrate && (
+              <div className="text-center mt-6">
+                <button
+                  type="button"
+                  onClick={onMigrate}
+                  data-testid="cover-migrate"
+                  aria-label={(t.migrationImportOpenAria as string) ?? 'Open migration wizard'}
+                  className={`text-[11px] font-mono tracking-widest uppercase underline-offset-4 hover:underline transition-opacity ${theme === 'light' ? 'text-vector-slate-soft hover:text-vector-cyan-brand' : 'text-cyan-300/60 hover:text-cyan-300'}`}
+                >
+                  {(t.migrationImportOpenLabel as string) ?? 'Migrate from another device'}
+                </button>
+              </div>
+            )}
 
             {isWarping && (
               <div

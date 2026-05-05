@@ -65,6 +65,8 @@ const defaultProps = {
   onSaveGuidingStars: vi.fn(),
   selectedStars: [],
   onSaveSelectedStars: vi.fn(),
+  customPersonas: [],
+  onAddCustomPersona: vi.fn(),
   containers: [],
   onAddContainer: vi.fn(),
   onDeleteContainer: vi.fn(),

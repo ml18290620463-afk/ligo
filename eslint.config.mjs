@@ -119,6 +119,17 @@ export default [
   // violations resolved. The previous file-scoped `max-lines: off` /
   // four jsx-a11y `off` overrides have been retired in their entirety;
   // the codebase now lives under one uniform rule set.
+  // Phase 4.5 §E — locale dictionaries are pure data tables; the
+  // 600-line LOC ceiling doesn't make sense for a `key: value` map
+  // that grows with every feature. We exempt them rather than
+  // sharding into language modules (single-import simplicity wins
+  // for a translation file).
+  {
+    files: ['i18n/locales/**/*.ts'],
+    rules: {
+      'max-lines': 'off',
+    },
+  },
   {
     files: ['**/*.test.{ts,tsx}', '**/*.spec.{ts,tsx}', 'e2e/**/*.{ts,tsx}'],
     languageOptions: {

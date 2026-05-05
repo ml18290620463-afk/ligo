@@ -106,4 +106,37 @@ describe('ViewerReadingPanel', () => {
     fireEvent.click(screen.getByText(t.confirm));
     expect(onExecuteBurn).toHaveBeenCalled();
   });
+
+  /* -------------------------------------------------------------- *
+   * Phase 4.5 follow-ups (F3) — Echo Chamber preface                *
+   * -------------------------------------------------------------- */
+
+  it('renders the echo-chamber preface block when entry.isEchoChamber + echoChamberQuery are present', () => {
+    const echoEntry: DiaryEntry = {
+      ...baseEntry,
+      isEchoChamber: true,
+      echoChamberQuery: '我应该接受这份 offer 吗?',
+    };
+    render(<ViewerReadingPanel {...baseProps} entry={echoEntry} />);
+    expect(screen.getByTestId('viewer-echo-preface')).toBeTruthy();
+    expect(screen.getByText('我应该接受这份 offer 吗?')).toBeTruthy();
+    expect(screen.getByText(t.echoChamberPrefaceLabel as string)).toBeTruthy();
+  });
+
+  it('does not render the preface block for a regular non-echo entry', () => {
+    render(<ViewerReadingPanel {...baseProps} />);
+    expect(screen.queryByTestId('viewer-echo-preface')).toBeNull();
+  });
+
+  it('does not render the preface block until the entry is decrypted', () => {
+    const echoEntry: DiaryEntry = {
+      ...baseEntry,
+      isEchoChamber: true,
+      echoChamberQuery: 'Should I switch jobs?',
+    };
+    render(
+      <ViewerReadingPanel {...baseProps} entry={echoEntry} decrypted={false} decryptedContent="" />,
+    );
+    expect(screen.queryByTestId('viewer-echo-preface')).toBeNull();
+  });
 });

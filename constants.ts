@@ -1,4 +1,4 @@
-import { DiaryEntry, Language } from './types';
+import { Language } from './types';
 
 export const APP_VERSION = 'vector_core_v0.2.8';
 
@@ -98,61 +98,11 @@ export const GUIDING_STAR_DEFAULTS: Record<Language, string[]> = {
 
 export { TRANSLATIONS } from './i18n/translations';
 
-export const MOCK_ENTRIES: Record<Language, DiaryEntry[]> = {
-  zh: [
-    {
-      id: '1',
-      title: '系统初始化日志_001',
-      content:
-        '第一天。城市的灯光比往常更亮。霓虹灯的嗡嗡声震耳欲聋。我已经成功绕过了公司防火墙，建立了这个安全节点。没人能在这里找到我的想法。',
-      createdAt: Date.now() - 86400000 * 3,
-      tags: ['职业发展', '个人成长'],
-      isLocked: false,
-      isEncrypted: false,
-      isArchived: false,
-    },
-    {
-      id: '2',
-      title: '情感模块_异常波动',
-      content:
-        '原型失败了。神经链接一直拒绝宿主同步。我怀疑是第九课的特工进行了破坏。在这混乱的数据流中，我感到一种久违的恐惧... 这不该是代码能产生的情绪。我需要重新校准我的杏仁核模拟器。',
-      createdAt: Date.now() - 3600000,
-      tags: ['职业发展', '家庭情感'],
-      isLocked: false,
-      isEncrypted: false,
-      isArchived: false,
-    },
-  ],
-  en: [
-    {
-      id: '1',
-      title: 'SYSTEM_INIT_LOG_001',
-      content:
-        "Day one. The city lights are brighter than usual. The hum of neon is deafening. I've successfully bypassed the corporate firewall and established this secure node. No one can find my thoughts here.",
-      createdAt: Date.now() - 86400000 * 3,
-      tags: ['CAREER', 'GROWTH'],
-      isLocked: false,
-      isEncrypted: false,
-      isArchived: false,
-    },
-    {
-      id: '2',
-      title: 'EMOTIONAL_MODULE_ANOMALY',
-      content:
-        'The prototype failed. The neural link keeps rejecting host synchronization. I suspect sabotage by agents of the Ninth Lesson. In this chaotic data stream, I feel a long-forgotten fear... This is not an emotion code should produce. I need to recalibrate my amygdala simulator.',
-      createdAt: Date.now() - 3600000,
-      tags: ['CAREER', 'FAMILY'],
-      isLocked: false,
-      isEncrypted: false,
-      isArchived: false,
-    },
-  ],
-  ja: [],
-  ko: [],
-  fr: [],
-  es: [],
-  de: [],
-};
+// Phase 4 §4.a-1 — the cyberpunk `MOCK_ENTRIES` fixture (formerly here)
+// was retired and replaced with `services/sampleEntries.ts::getSampleEntries`.
+// The new sample set demonstrates the actual product value (a real
+// reflection + a Morning Star reply + a Memoir teaser) instead of
+// fictional system-init logs that confused first-day users.
 
 export const PRESET_PRINCIPLES: Record<Language, { source: string; text: string }[]> = {
   zh: [

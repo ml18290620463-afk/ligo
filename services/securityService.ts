@@ -55,6 +55,23 @@ export class SecurityService {
   private static ARGON2_HASH_PREFIX = 'argon2id:v1';
   private static ARGON2_VERIFIER_FLAG_KEY = 'vector_argon2_verify';
   private static ARGON2_MINTER_FLAG_KEY = 'vector_argon2_minter';
+  /**
+   * Phase 4.5 §C — one-shot migration marker.
+   *
+   * Without this flag we cannot distinguish "user has never touched
+   * the Argon2id toggle" from "user explicitly turned it OFF". Both
+   * present as a missing `vector_argon2_minter` key. The marker
+   * lets `applyArgon2idDefaults` run exactly once per installation:
+   *
+   *   - Marker absent ⇒ this is either a fresh install OR an
+   *     existing install booting the §C release for the first
+   *     time. We auto-enable verifier + minter so Argon2id becomes
+   *     the default.
+   *   - Marker present ⇒ the auto-enable already ran. Anything the
+   *     user did via the Settings toggle since then is the
+   *     authoritative choice — never overwrite it.
+   */
+  private static ARGON2_DEFAULT_APPLIED_KEY = 'vector_argon2_default_v45';
   private static RECOVERY_HASH_PREFIX = 'recovery-sha256:v1';
   private static MAX_VERIFY_ITERATIONS = PBKDF2_MAX_VERIFY_ITERATIONS;
   private static ALGO = 'AES-GCM';
@@ -156,20 +173,58 @@ export class SecurityService {
   }
 
   /**
-   * Returns true when the supplied stored hash was minted with fewer
-   * iterations than the current default and should be re-minted on the
-   * next successful verification. Returns false for unknown / legacy
-   * hash formats.
+   * Phase 4.5 §C — auto-enable Argon2id on first mount post-rollout.
+   *
+   * Idempotent: relies on the `ARGON2_DEFAULT_APPLIED_KEY` marker so
+   * subsequent calls are no-ops AND any explicit user toggle since
+   * the marker was set is preserved. Safe to call from `App.tsx`
+   * mount; in non-browser / no-localStorage environments it
+   * silently no-ops.
+   *
+   * Returns true when this call actually flipped the defaults
+   * (useful for telemetry / one-shot Settings banner). Returns
+   * false on every subsequent call OR when localStorage is
+   * unavailable.
+   */
+  static applyArgon2idDefaults(): boolean {
+    try {
+      if (typeof localStorage === 'undefined') return false;
+      if (localStorage.getItem(this.ARGON2_DEFAULT_APPLIED_KEY) !== null) {
+        return false;
+      }
+      // Mark BEFORE flipping so a partial failure leaves us in a
+      // consistent "we tried" state rather than re-firing forever.
+      localStorage.setItem(this.ARGON2_DEFAULT_APPLIED_KEY, '1');
+      // Both flags ON. setArgon2idMinterEnabled handles the
+      // verify-≥-mint invariant internally.
+      this.setArgon2idMinterEnabled(true);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Returns true when the supplied stored hash should be re-minted
+   * on the next successful verification. Two reasons trigger:
+   *   1. Iteration ratchet — a PBKDF2 hash was minted with fewer
+   *      iterations than the current `ITERATIONS` default.
+   *   2. **Algorithm upgrade (Phase 4.5 §C)** — the install is now
+   *      configured to mint Argon2id (`isArgon2idMinterEnabled`)
+   *      and the stored hash is anything other than Argon2id
+   *      (legacy PBKDF2 / pre-prefix legacy SHA-256). The next
+   *      successful unlock opportunistically rehashes via
+   *      `services/passwordRehash.ts`.
    *
    * Argon2id-prefixed hashes always return false here: Argon2id is
-   * already the strongest algorithm we recognise and re-minting one
-   * back to PBKDF2 would be a downgrade. (When Phase 4 §4.b-1 makes
-   * Argon2id the default minter, this function will start ratcheting
-   * Argon2id parameters too.)
+   * already the strongest algorithm we recognise. (A future
+   * Argon2id-parameter ratchet would extend this branch.)
    */
   static needsRehash(storedHash: string | null): boolean {
     if (!storedHash) return false;
     if (storedHash.startsWith(this.ARGON2_HASH_PREFIX)) return false;
+    // Algorithm upgrade: minter on + non-Argon2id hash → rehash.
+    if (this.isArgon2idMinterEnabled()) return true;
     if (!storedHash.startsWith(this.PASSWORD_HASH_PREFIX)) return true;
     const [, , iterationsRaw] = storedHash.split(':');
     const iterations = Number(iterationsRaw);

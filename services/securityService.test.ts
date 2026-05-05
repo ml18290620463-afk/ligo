@@ -203,6 +203,9 @@ describe('SecurityService — Phase 4 §W2.1 Argon2id minter (default flag-gated
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem('vector_argon2_verify');
       localStorage.removeItem('vector_argon2_minter');
+      // Phase 4.5 §C — also clear the migration marker so each
+      // test starts from a "never been migrated" baseline.
+      localStorage.removeItem('vector_argon2_default_v45');
     }
   });
 
@@ -210,6 +213,7 @@ describe('SecurityService — Phase 4 §W2.1 Argon2id minter (default flag-gated
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem('vector_argon2_verify');
       localStorage.removeItem('vector_argon2_minter');
+      localStorage.removeItem('vector_argon2_default_v45');
     }
   });
 
@@ -272,5 +276,80 @@ describe('SecurityService — Phase 4 §W2.1 Argon2id minter (default flag-gated
     expect(SecurityService.isArgon2idMinterEnabled()).toBe(false); // invariant
     const stored = await SecurityService.hashPassword('test-pw', 'salt-abc');
     expect(stored.startsWith('pbkdf2-sha256:v1:')).toBe(true);
+  });
+});
+
+describe('SecurityService — Phase 4.5 §C Argon2id default-on rollout', () => {
+  beforeEach(() => {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('vector_argon2_verify');
+      localStorage.removeItem('vector_argon2_minter');
+      localStorage.removeItem('vector_argon2_default_v45');
+    }
+  });
+
+  afterEach(() => {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('vector_argon2_verify');
+      localStorage.removeItem('vector_argon2_minter');
+      localStorage.removeItem('vector_argon2_default_v45');
+    }
+  });
+
+  describe('applyArgon2idDefaults', () => {
+    it('returns true on first call and flips both flags ON', () => {
+      const flipped = SecurityService.applyArgon2idDefaults();
+      expect(flipped).toBe(true);
+      expect(SecurityService.isArgon2idVerifierEnabled()).toBe(true);
+      expect(SecurityService.isArgon2idMinterEnabled()).toBe(true);
+      expect(localStorage.getItem('vector_argon2_default_v45')).toBe('1');
+    });
+
+    it('is idempotent — subsequent calls return false', () => {
+      expect(SecurityService.applyArgon2idDefaults()).toBe(true);
+      expect(SecurityService.applyArgon2idDefaults()).toBe(false);
+      expect(SecurityService.applyArgon2idDefaults()).toBe(false);
+    });
+
+    it('respects an explicit user-off choice on subsequent runs', () => {
+      // First boot — auto-enables.
+      SecurityService.applyArgon2idDefaults();
+      expect(SecurityService.isArgon2idMinterEnabled()).toBe(true);
+      // User explicitly turns the toggle OFF in Settings.
+      SecurityService.setArgon2idMinterEnabled(false);
+      expect(SecurityService.isArgon2idMinterEnabled()).toBe(false);
+      // Next mount — must NOT re-enable.
+      const flipped = SecurityService.applyArgon2idDefaults();
+      expect(flipped).toBe(false);
+      expect(SecurityService.isArgon2idMinterEnabled()).toBe(false);
+    });
+  });
+
+  describe('needsRehash with the algorithm-upgrade branch', () => {
+    it('returns true for a legacy PBKDF2 hash when the minter is on (algorithm upgrade)', () => {
+      SecurityService.setArgon2idMinterEnabled(true);
+      const pbkdf2 = `pbkdf2-sha256:v1:600000:abc==`;
+      expect(SecurityService.needsRehash(pbkdf2)).toBe(true);
+    });
+
+    it('returns false for a PBKDF2 hash at the current iteration count when the minter is OFF', () => {
+      // Minter off — only the iteration ratchet matters; an at-spec
+      // hash should NOT be flagged.
+      const pbkdf2 = `pbkdf2-sha256:v1:${SecurityService.getCurrentIterations()}:abc==`;
+      expect(SecurityService.needsRehash(pbkdf2)).toBe(false);
+    });
+
+    it('returns false for an Argon2id hash even when the minter is on', () => {
+      SecurityService.setArgon2idMinterEnabled(true);
+      // The exact body bytes don't matter for `needsRehash`; only the prefix.
+      const argon = 'argon2id:v1:65536:3:4:saltbase64:hashbase64';
+      expect(SecurityService.needsRehash(argon)).toBe(false);
+    });
+
+    it('returns true for legacy non-prefixed hashes regardless of flag state', () => {
+      expect(SecurityService.needsRehash('legacy-base64==')).toBe(true);
+      SecurityService.setArgon2idMinterEnabled(true);
+      expect(SecurityService.needsRehash('legacy-base64==')).toBe(true);
+    });
   });
 });

@@ -4,6 +4,2068 @@ All notable changes to this project are documented in this file. Format
 loosely follows [Keep a Changelog](https://keepachangelog.com/) and
 versioning follows [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Added (Phase 5.2 — Stripe Checkout (USD), 商业化通路打通)
+
+The second deliverable of the Phase 5 (subscription billing)
+umbrella. Closes the loop on Phase 5.1: a user can now click
+Subscribe in `/pricing`, pay USD via Stripe Checkout, and have
+their license auto-activate when Stripe redirects them back to
+the app. **All prices remain USD** (`$X.XX USD` literal suffix
+preserved end-to-end).
+
+#### What ships
+
+- **`services/stripeIds.ts`** _(new)_ — server-only bridge from
+  `(tier, period)` SKU to its Stripe `price_xxx` id. Reads
+  `process.env` directly so the bundler dead-strips it from the
+  browser build. Returns null on the client (defence in depth)
+  and on missing env vars (lets the pricing UI surface a clean
+  `sku-not-configured` message instead of an opaque Stripe
+  error). 10 tests.
+- **`server/licenseMinter.ts`** _(new)_ — Ed25519 signer that
+  bootstraps from `VECTOR_LICENSE_MASTER_SECRET_KEY_BASE64` env
+  var. Validates the secret length (32 bytes) at boot so a
+  misconfigured deploy fails loudly. Exposes only `mintToken` +
+  `getPublicKey`; secret bytes never leave the closure. 11 tests.
+- **`server/stripeRoutes.ts`** _(new)_ — three routes, all
+  registered only when the required env vars are set:
+  - `POST /api/checkout/create-session` — validates input,
+    resolves the env-side Stripe price id, asks Stripe for a
+    Checkout Session URL with `metadata.installId/tier/period`.
+  - `POST /api/stripe/webhook` — raw-body signature verify
+    (the global `express.json()` parser is gated to skip this
+    path so Stripe's verifier sees the raw bytes). On
+    `checkout.session.completed`, mints a license token via
+    `licenseMinter.mintToken` and stashes it in an in-memory
+    session→token Map (30-min TTL, 5-min sweeper). Returns 200
+    to Stripe even on internal mint errors so Stripe doesn't
+    bombard us with retries.
+  - `POST /api/checkout/claim-token` — single-shot lookup the
+    client polls with the session id from the post-Stripe
+    redirect.
+  - 13 tests including signature forgery rejection,
+    happy/cancel/non-event paths, missing-metadata handling,
+    and second-claim 404.
+- **`lib/licenseKeyring.ts`** — production gate. The `dev-2026`
+  kid is dropped from `LICENSE_KEYRING` when
+  `import.meta.env.MODE === 'production'` (Vite rewrites this
+  at build time), so a user pasting a dev-minted token into
+  production gets `unknown-kid` instead of accidental access.
+  2 tests.
+- **`services/checkoutService.ts`** _(new)_ — client wrappers
+  `startCheckout({tier, period, installId})` and
+  `claimToken({sessionId})` with tagged failure reasons
+  (`invalid-input`, `sku-not-configured`, `stripe-rejected`,
+  `not-ready`, `unreachable`, `unknown`). Optional `fetchImpl`
+  param for tests. 10 tests.
+- **`components/PricingPage.tsx`** _(new)_ — public USD pricing
+  landing page. Three-column grid (Stardust / Polaris / Owner),
+  monthly/annual toggle (Owner pinned to lifetime), per-tier
+  feature list (4-5 bullets), Subscribe button → Stripe redirect.
+  Inline failure banner with localised copy for every
+  `StartCheckoutFailure` reason. Disabled while install id
+  hasn't hydrated. 7 component tests.
+- **`hooks/useCheckoutReturn.ts`** _(new)_ — listens to URL
+  `?activate_session_id=…` (Stripe success_url) and
+  `?activate_cancelled=1` (cancel_url) on mount. Polls
+  `claim-token` with 1.5s backoff for up to ~60s, hands the
+  token to `onActivate`, cleans the URL via
+  `history.replaceState` so the token never lands in browser
+  history or shared URLs. 6 tests.
+- **`hooks/useAppBilling.ts`** _(new)_ — composite hook bundling
+  `useLicense` + `useCheckoutReturn` + `showPricing` state + a
+  pre-bundled `licensePropsForDashboard` so App.tsx can pass
+  everything down through one prop spread instead of 7
+  individual props. Keeps App.tsx under the 600-LOC ceiling.
+- **`components/LicenseSection.tsx`** — adds an Upgrade /
+  Change plan CTA next to Deactivate. Visible whenever
+  `onOpenPricing` is wired; copy adapts to the current tier
+  ("Upgrade" for Free, "Change plan" for paid users).
+- **App / Dashboard / Settings wiring**: `useAppBilling`
+  mounted at App root; `PricingPage` mounted as a top-level
+  overlay toggled by `?pricing=1` URL param OR Settings →
+  LicenseSection → Upgrade button. The Settings drawer's
+  LicenseSection now exposes the Upgrade CTA, and the
+  post-Stripe URL hijack (via `useCheckoutReturn`) auto-
+  activates the freshly-minted token without any user action.
+- **`server.ts`** — registers the Stripe routes only when
+  `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` +
+  `VECTOR_LICENSE_MASTER_SECRET_KEY_BASE64` are ALL set;
+  missing any logs a one-line warning at startup. The global
+  JSON body parser is gated to skip `/api/stripe/webhook` so
+  Stripe's signature verifier sees the raw bytes.
+- **i18n**: 35 new keys per locale (zh + en) covering the
+  pricing page heading + subtitle, the period labels (per
+  month / per year / one-time), the savings copy
+  (`save {percent}%`), footer trust copy, 3 subscribe-aria
+  templates, 4-5 features per tier (12 feature copy keys total),
+  5 failure-reason copy keys, the Upgrade / Change plan
+  Settings CTAs.
+- **`docs/billing.md`** — appended a full Phase 5.2 section:
+  end-to-end flow ASCII diagram, module map, env vars
+  inventory, production gate explainer, webhook security
+  checklist, and out-of-scope items for 5.3 / 5.4.
+
+#### Currency policy (preserved)
+
+- Every price renders as `$X.XX USD` via `formatUsdPrice`. The
+  literal `USD` suffix is intentional so users in CAD / AUD /
+  SGD / HKD jurisdictions don't mistake it for their local
+  currency. Stripe Checkout itself shows the user's local-
+  currency total at the payment step (Stripe handles FX); we
+  never show a converted price in our own UI.
+
+#### Dependencies
+
+- Added `stripe` (server-side Stripe SDK).
+- Added `supertest` + `@types/supertest` (dev) for testing
+  Express routes end-to-end.
+
+#### Quality gates
+
+- `npx tsc --noEmit` clean.
+- `npm run lint --max-warnings=0` clean (App.tsx + Dashboard.tsx
+  held under 600 LOC via `useAppBilling` extraction + prop
+  bundling).
+- `npm run build` clean (PWA precache 51 entries / 3574 KiB).
+- `npx vitest run` 1308/1308 (164 test files).
+
+### Added (Phase 5.1 — License token data layer, USD pricing, no Stripe yet)
+
+The first deliverable of the Phase 5 (subscription billing) umbrella.
+Lays the offline license-token plumbing the future Stripe Checkout
+integration (Phase 5.2) will hand tokens into. **All prices are USD**
+(explicit product decision — see `docs/billing.md` for the rationale).
+
+#### Currency policy
+
+- Every price renders as `$X.XX USD` via `formatUsdPrice`. The
+  literal `USD` suffix is intentional so users in CAD / AUD / SGD /
+  HKD jurisdictions don't mistake it for their local currency.
+- The i18n layer translates ONLY the surrounding copy
+  ("month" / "Subscription" / etc.) — never the number or the
+  currency suffix.
+- Multi-currency support is explicitly **out of scope** until at
+  least Phase 5.2; FX rounding is misleading and the SKU table
+  multiplies per currency.
+
+#### Pricing matrix (locked alpha)
+
+| Tier     | Monthly   | Annual (~17% off) | Lifetime    |
+| -------- | --------- | ----------------- | ----------- |
+| Stardust | $4.99 USD | $49.90 USD        | —           |
+| Polaris  | $9.99 USD | $99.90 USD        | —           |
+| Owner    | —         | —                 | $199.00 USD |
+
+#### What ships
+
+- **`services/licenseToken.ts`** _(new)_ — wire format
+  `vector-license-v1.<base64url-payload>.<base64url-signature>`
+  with Ed25519 signature. Payload is a 5-field JSON
+  (`tier` / `sub` / `iat` / `exp` / `kid`). Verifier returns 8
+  tagged failure reasons. 12 tests.
+- **`lib/licenseKeyring.ts`** _(new)_ — single source of truth for
+  `kid → publicKey` lookup. Ships `dev-2026` (deterministic from
+  `vector-dev-license-seed-2026`) and a placeholder slot for the
+  future production key. The dev kid is intentionally
+  reproducible by `scripts/dev-mint-license.mjs` so anyone can
+  mint a working test token without standing up a server.
+- **`services/licenseStore.ts`** _(new)_ — IDB-backed token
+  persistence + anonymous install id generator (32-char base32,
+  persisted in localStorage so it survives IDB wipes). Verifies
+  BEFORE persisting (so a paste of garbage doesn't end up in IDB
+  and cause confusing follow-up errors). Enforces
+  `payload.sub === installId` so a leaked token is useless on a
+  different device. 9 tests.
+- **`hooks/useLicense.ts`** _(new)_ — React hook around the store.
+  Exposes `installId`, `currentTier` (`'free'` when no token),
+  `payload`, `failure` (null / specific reason), `activate(token)`,
+  `deactivate()`, `reload()`. 6 tests.
+- **`lib/pricing.ts`** _(new)_ — pricing single source of truth.
+  Five locked alpha SKUs, `formatUsdPrice`, `findSku`,
+  `annualSavingsPercent`. Stripe price ids all `null` until Phase
+  5.2 wires them. 10 tests.
+- **`services/quotaService.ts`** — adds `tierFromLicense(payload)`
+  bridge between license types and paywall predicates' `UserTier`.
+  Existing predicates already accept an optional `tier` parameter
+  (no breakage); Phase 5.4 will wire the live license tier through
+  in earnest. +2 tests.
+- **`components/LicenseSection.tsx`** _(new)_ — Settings-mounted
+  card with: tier badge + expires-on date, install id with
+  copy-to-clipboard, paste-license input + Activate, Deactivate
+  button (when active), collapsible USD pricing reference,
+  inline failure banner with localised copy for every
+  `LoadLicenseFailure` reason. 9 component tests.
+- **`scripts/dev-mint-license.mjs`** _(new)_ + npm script
+  `license:mint` — single-file Node CLI. Derives the same private
+  key the embedded public key was generated from
+  (`SHA-256('vector-dev-license-seed-2026')`), signs an arbitrary
+  `(tier, install-id, days)` payload, prints a `vector-license-v1.…`
+  token. End-to-end roundtrip verified: minter → embedded keyring
+  → noble verify all agree.
+- **App wiring** (`App.tsx`, `dashboardProps.ts`, `Dashboard.tsx`,
+  `DashboardSettingsModal.tsx`, `SettingsPanel.tsx`):
+  `useLicense` mounted at App root; install id / current tier /
+  payload / failure / activate / deactivate plumbed through to
+  the `LicenseSection` card in Settings. Bundled into a single
+  `licenseProps` const at both ends to keep the App.tsx +
+  Dashboard.tsx LOC counts under the 600-line ceiling.
+- **`services/diaryStorage.ts`** — adds `license` IDB key. Wiped
+  by `wipeData` so an "I'm done with this device" reset also
+  drops the license (the user can re-paste it on the next
+  device — the license is bound to `installId`, not to a
+  physical device).
+- **i18n**: 30 new keys per locale (zh + en) covering the section
+  heading, 4 tier labels, 3 period labels (`monthly` / `annual` /
+  `lifetime`), install id copy, activate / deactivate copy, plus
+  9 localised `licenseFailure_*` reasons.
+- **Docs**: `docs/billing.md` _(new)_ — full Phase 5 phasing plan
+  - Phase 5.1 design rationale (currency policy, wire format,
+    install id semantics, master keyring + rotation, verification
+    flow, dev minter, out-of-scope items for 5.2 / 5.3 / 5.4).
+
+#### Quality gates
+
+- `npx tsc --noEmit` clean.
+- `npm run lint --max-warnings=0` clean.
+- `npm run build` clean (PWA precache 51 entries / 3562 KiB).
+- `npx vitest run` 1249/1249 (157 test files).
+
+### Added (Phase 4.5 §E follow-up — L1 · Memoirs picker)
+
+A 1-day sprint that finally surfaces the Memory Management panel
+(Phase 4 W3 + F2 cascade) and the Letter History panel (Phase 4.5
+F1) into a real Settings entry point. Both panels were built +
+tested in isolation by their respective sprints but had no
+user-clickable path; the picker closes that loop. 1201/1201
+vitest cases passing (1196 → 1201, +5).
+
+- **`components/MemoirsPickerSection.tsx`** _(new)_ — Settings-
+  mounted section listing every Memoir-kind custom persona with
+  two CTAs per row:
+  - **Memories** → opens `MemoryManagementPanel` (Phase 4 W3 with
+    F2 cascade-delete CTA).
+  - **Letters** → opens `LetterHistoryPanel` (Phase 4.5 F1).
+  - Hidden entirely when the user has no Memoirs (empty state
+    would add noise to Settings for the majority who haven't
+    used the feature; the Memoir Builder remains the discovery
+    path).
+  - 5 component tests covering filter (non-memoirs dropped),
+    per-row Memories CTA, per-row Letters CTA, copy rendering,
+    no-memoir no-render.
+- **`components/AppMemoirPanels.tsx`** _(new)_ — thin wrapper
+  that mounts `MemoryManagementPanel` + `LetterHistoryPanel` at
+  the App root for the currently-selected memoir. Extracted from
+  `App.tsx` so the App module stays under the 600-LOC ceiling.
+  Has no state of its own; the parent owns the picker selection
+  and clears it when either panel closes.
+- **Wiring** (`dashboardProps.ts`, `Dashboard.tsx`,
+  `DashboardSettingsModal.tsx`, `SettingsPanel.tsx`): thread a
+  single `customPersonas` prop + two `onOpenMemoir*` callbacks
+  down so the Settings drawer can render the picker between the
+  existing cross-device migration row and the wipe section.
+- **App-level handlers** (`App.tsx`):
+  - `memoirIdForMemories` / `memoirIdForLetters` state pair,
+    cleared when either panel closes.
+  - Memory panel's `onCascadeDeleteMemoir` routes to
+    `handleCascadeDeleteMemoir(id)` (the F2 orchestrator) then
+    closes the panel; the `useCustomPersonas` removal causes
+    `findMemoirById` to return null on next render, which
+    unmounts the panel automatically.
+  - Letter History panel's `onOpenReply` routes through
+    `setSelectedEntry` + `setAppState(AppState.VIEWER)` so the
+    existing Viewer path picks up the reply entry.
+  - Memory store + letter store destructures expanded to surface
+    `updateMemory` / `deleteMemory` / `hardDeleteMemory` /
+    `restoreMemory` / `listRecycleBin` / `cancel` so the panels
+    have everything they need without each becoming an IDB
+    consumer.
+- **i18n**: 6 new keys per locale (zh + en) — `memoirsPickerTitle`,
+  `memoirsPickerSubtitle`, `memoirsPickerMemories`,
+  `memoirsPickerLetters`, plus two ARIA templates with `{name}`
+  interpolation.
+
+#### Quality gates
+
+- `npx tsc --noEmit` clean.
+- `npm run lint --max-warnings=0` clean (App.tsx growth fits
+  inside the LOC budget after extracting `AppMemoirPanels`).
+- `npm run build` clean (PWA precache 51 entries / 3547 KiB).
+- `npx vitest run` 1201/1201 (152 test files).
+
+### Added (Phase 4 §4.b-3 follow-ups — K1 + K2)
+
+A 1.5-day sprint that closes two ergonomic gaps in the original
+Ed25519 signed-backups ship. 1196/1196 vitest cases passing
+(1170 → 1196, +26).
+
+#### K1 — Trusted devices audit panel
+
+- **`services/trustedDevices.ts`** — new pure helper
+  `relabelTrust(trusted, publicKey, nextLabel)` that updates a
+  record's label without touching `trustedAt`. Returns the same
+  array reference when the label is unchanged or the key is absent
+  (so React render checks short-circuit). Plus an IDB-backed
+  wrapper `relabelTrustedPublicKey(publicKey, nextLabel)`. +6 new
+  tests in the existing suite (20/20 total).
+- **`hooks/useTrustedDevices.ts`** _(new)_ — React hook around the
+  trust store with optimistic local updates + IDB persistence.
+  Exposes `{ trusted, loading, reload, revoke, relabel }`. The
+  panel calls `reload()` on open so newly-trusted entries added by
+  the migration wizard since the last open are visible. 6 tests.
+- **`components/TrustedDevicesPanel.tsx`** _(new)_ — modal listing
+  every trust record (most-recent-first):
+  - Per-row fingerprint chip, label, trustedAt date.
+  - Inline label edit (pencil icon → input → Save / Cancel).
+  - Revoke action with the same two-step "tap-to-arm,
+    confirm-within-5s" pattern used by `MemoryManagementPanel`'s
+    clear-all action.
+  - Loading / empty states.
+  - 7 component tests covering loading / empty / row render /
+    relabel / two-step revoke / close button / italic placeholder
+    for empty labels.
+- **`App.tsx`** — mounts `useTrustedDevices` + `TrustedDevicesPanel`
+  at root level. Threads `setShowTrustedDevices` down through
+  `Dashboard` → `DashboardSettingsModal` → `SettingsPanel` so the
+  Settings device-fingerprint chip renders a "Trusted devices"
+  link alongside the existing "Regenerate device keys" CTA. The
+  panel mount also runs `trustedDevices.reload()` on open so
+  entries added by the migration wizard since the last open
+  appear without a hard refresh.
+- **i18n**: 11 new keys per locale (`trustedDevicesTitle`,
+  `trustedDevicesSubtitle`, `trustedDevicesEmpty`,
+  `trustedDevicesEditLabel`, `trustedDevicesSave`,
+  `trustedDevicesRevoke` / `Confirm` / `Aria`,
+  `trustedDevicesNoLabel`, `trustedDevicesTrustedAt`,
+  `trustedDevicesOpenLabel` / `Aria`).
+
+#### K2 — Fingerprint QR codes
+
+- **`qrcode-svg`** added as a runtime dep (~10 KB minified, pure
+  JS, no canvas). Picked over `qrcode` (~46 KB) because we just
+  need to display 16 chars; canvas / dataURL would be overkill.
+- **`lib/fingerprintQr.ts`** _(new)_ — pure
+  `fingerprintToQrSvg(fingerprint, options)` encoder. Uses ECC
+  level `M` (~15% redundancy, plenty for screen-to-screen reading
+  distance), zero padding, defaults to `currentColor` foreground +
+  `transparent` background so the QR adopts the parent's text
+  colour automatically (no theme palette lookup at render time).
+  Strips the leading `<?xml ?>` decl so React's
+  `dangerouslySetInnerHTML` accepts it. 6 tests covering inline
+  SVG, sizing, colour overrides, defaults, determinism.
+- **`components/FingerprintQr.tsx`** _(new)_ — tiny
+  `useMemo`-wrapped React wrapper. Renders inside `<div role="img"
+aria-label="...">` so screen readers describe what's on-screen
+  without reading the QR pixel-by-pixel. The fingerprint string
+  itself is always displayed adjacent to the QR in every consumer
+  surface, so the QR is purely a visual aid.
+- **Three consumer surfaces**:
+  - `components/MigrationExportModal.tsx` — when a signed package
+    is built, the success pane shows the fingerprint string
+    side-by-side with an 88 px QR.
+  - `components/MigrationImportWizard.tsx` (`VerifyTrustPane`) —
+    the verify-trust phase shows the incoming package's
+    fingerprint side-by-side with a 112 px QR (slightly larger so
+    the user can grab their other phone and visually compare).
+    +1 wizard UI test asserting QR presence in the pane.
+  - `components/SettingsPanel.tsx` — device-fingerprint chip in
+    the migration row gets an 80 px QR next to the user's own
+    fingerprint, so they can scan it from another device with any
+    QR app.
+- **i18n**: 1 new key per locale (`fingerprintQrAria` —
+  `'设备指纹二维码:{fingerprint}'` / `'QR of device fingerprint
+{fingerprint}'`).
+- **Out of scope**: a QR scanner. The QR is purely a "compare two
+  pictures" aid; building a scanner adds zero security (the
+  fingerprint is a public checksum) and would need camera
+  permissions + a much heavier library.
+
+#### Quality gates
+
+- `npx tsc --noEmit` clean.
+- `npm run lint --max-warnings=0` clean.
+- `npm run build` clean (PWA precache 51 entries / 3524 KiB).
+- `npx vitest run` 1196/1196 (151 test files).
+
+### Added (Phase 4.5 follow-ups — F1 / F2 / F3 / F4)
+
+A 3-day sprint that clears the four follow-up debts left over from
+Phase 4.5 §A-E. 1170/1170 vitest cases passing (1145 → 1170, +25).
+
+#### F1 — Letter history view
+
+- **`components/LetterHistoryPanel.tsx`** _(new)_ — three-section
+  read-only inspector for every letter the user has written to a
+  specific Memoir, regardless of status:
+  - **Pending** (`status: 'pending'`) — sorted by `deliverAt` ASC
+    so the next-to-arrive sits on top. Each row shows the
+    "Arrives in N day(s)" / "N hour(s)" countdown plus a Cancel
+    button that calls `onCancelLetter(letterId)`.
+  - **Delivered** (`status: 'delivered'`) — sorted by `composedAt`
+    DESC. When `letter.replyEntryId` is set, an "Open reply"
+    button routes back to the diary entry minted by the delivery
+    sweep.
+  - **Other** (`status: 'cancelled' | 'failed'`) — collapsed
+    footer block with `⊘ cancelled` or `⚠ failed (3×)` chips per
+    row. Hidden entirely when there's nothing to show.
+- **i18n**: 16 new keys per locale (`letterHistoryTitle`,
+  `letterHistoryPending`, `letterHistoryDelivered`,
+  `letterHistoryArrivesInDays/Hours`, etc.).
+- **Tests**: 8 component tests covering filter (other-memoir
+  letters dropped), sort, cancel, open-reply, empty-state
+  rendering, "other" section visibility, and title-with-memoir
+  interpolation.
+- **Wiring**: deferred to a follow-up sprint that adds a Settings
+  → Memoirs picker. The panel is built + tested in isolation; the
+  data layer (`useLetterStore.cancel` / `replyEntryId` lookup) is
+  already wired by §A.
+
+#### F2 — Memoir cascade-clears-letters
+
+- **`services/memoirCascade.ts`** _(new)_ — pure orchestrator.
+  `cascadeDeleteMemoir({ memoirId, clearMemories, clearLetters,
+deletePersona })` runs the three callbacks in order; each step
+  has its own try/catch so a failure in one bucket doesn't poison
+  the others. Returns `{ memoriesCleared, lettersCleared,
+personaDeleted, errors[] }`. Order is **memories → letters →
+  persona** so partial-failure is user-recoverable: the persona
+  is the LAST thing to disappear, so the user can retry by
+  re-clicking "delete this memoir" while the upstream cleanup is
+  re-attempted.
+- **`components/MemoryManagementPanel.tsx`** — new optional
+  `onCascadeDeleteMemoir` prop renders an amber "Delete this
+  memoir entirely" footer below the existing clear-all action,
+  with the same two-step "tap-to-arm → confirm-within-5s"
+  pattern. Hidden entirely when the prop is omitted (legacy
+  callers compile unchanged).
+- **`App.tsx`** — `handleCascadeDeleteMemoir(memoirId)` wraps
+  `cascadeDeleteMemoir` with the live store callbacks
+  (`useMemoryStore.clearForMemoir`,
+  `useLetterStore.clearForMemoir`,
+  `useCustomPersonas.deletePersona`). Errors land in
+  `console.warn` for now; future surface: a toast.
+- **i18n**: 4 new keys per locale (`memoryCascadeDelete`,
+  `memoryCascadeDeleteConfirm`, `memoryCascadeDeleteAria`,
+  `memoryCascadeDeleteHint`).
+- **Tests**: 7 service-level cascade tests (clean run + ordering
+  - 3 partial-failure variants + total-failure + non-Error throw)
+    and 3 panel UI tests (footer visibility, two-step trigger,
+    panel close after fire).
+
+#### F3 — Viewer echoChamberQuery preface
+
+- **`components/ViewerReadingPanel.tsx`** — when an entry was
+  captured from an Echo Chamber session (`entry.isEchoChamber ===
+true` AND `entry.echoChamberQuery` is present AND the entry is
+  decrypted), render the original round-table prompt in a small
+  cyan-bordered preface card above the main content:
+  - `text-[10px]` "Round-table prompt" / "圆桌提问" kicker.
+  - The user's question rendered in italics as `whitespace-pre-wrap`
+    so multi-line prompts read naturally.
+  - Hidden until decryption succeeds so a locked entry never
+    leaks the prompt.
+- **i18n**: 1 new key per locale (`echoChamberPrefaceLabel`).
+- **Tests**: 3 viewer-panel tests (renders for echo entries,
+  absent for regular entries, gated on decryption).
+
+#### F4 — Proactive recall → composer pre-seed
+
+- **`components/Editor.tsx`** — new optional `seed` prop:
+  `{ title?, content?, tags? }`. When present, each field is
+  applied AFTER the draft restore step but ONLY when the
+  corresponding draft field is empty. This way a recall click on
+  an empty composer pre-fills helpful copy; a recall click while
+  a draft is in progress preserves the user's typing verbatim.
+  The seed is treated as a one-shot snapshot at mount time — the
+  effect's deps deliberately exclude `seed` so re-renders don't
+  clobber typing.
+- **`App.tsx`** — `editorSeed` state + `handleOpenComposerWithSeed`
+  callback. Both `handleSaveEntry` and `handleBackToDashboard`
+  clear the seed so it never leaks into a future "+ New entry"
+  flow.
+- **`components/Dashboard.tsx`** + **`dashboardProps.ts`** — new
+  optional `onOpenComposerWithSeed` prop wired into the existing
+  `ProactiveRecallCard.onOpen`. Replaces the prior `TODO(Phase
+4.5)` placeholder with the real composer hand-off:
+  - `title` → `${proactiveSeedTitlePrefix} ${memoirName}`
+    (localised "For Grandma" / "写给奶奶").
+  - `content` → the localised `promptHintKey` body the card
+    already shows (`proactiveSilenceHint` / `…AnniversaryHint` /
+    `…FollowupHint`).
+  - `tags` → the memoir name (so the entry threads back to the
+    memoir on the dashboard grid).
+- **i18n**: 1 new key per locale (`proactiveSeedTitlePrefix`).
+- **Tests**: 4 editor tests (seed applied with all fields, seed
+  applied with only some fields, `seed={null}` legacy, `seed`
+  prop omitted legacy).
+
+#### Quality gates
+
+- `npx tsc --noEmit` clean.
+- `npm run lint --max-warnings=0` clean.
+- `npm run build` clean (PWA precache 51 entries / 3495 KiB).
+- `npx vitest run` 1170/1170 (148 test files).
+
+### Added (Phase 4 §4.b-3 — Ed25519 signed backups)
+
+A 3-day sprint that closes the "checksum is not a signature" caveat
+from Phase 4.5 §E. Per-device Ed25519 keypair, AES-GCM-encrypted
+secret in IndexedDB, fingerprint-based TOFU on the receiving side.
+1145/1145 vitest cases passing (1095 → 1145, +50 new).
+
+- **`services/edBootstrap.ts`** _(new)_ — wires SHA-512 globally for
+  `@noble/ed25519` (the audited, ~5 KB pure-JS Ed25519 library we
+  picked over Web Crypto Ed25519 because Safari < 17 still has
+  format quirks). Total dep cost ~11 KB minified including
+  `@noble/hashes`.
+- **`services/deviceKeypair.ts`** _(new)_ — per-device keypair
+  lifecycle: `ensureDeviceKeypair(password)` (idempotent),
+  `regenerateDeviceKeypair(password)`, `loadPublicIdentity()`
+  (vault-locked-safe), `unlockSecretKey(password)`, `wipeSecret()`.
+  Storage: `vector_master_vault_device_keypair` —
+  `{ publicKey: base64, encryptedSecret: AES-GCM(secret, password),
+createdAt: ISO }`. The encrypted blob is useless to a physical
+  IDB attacker without the master password.
+- **`services/backupSignature.ts`** _(new)_ — `signBackup` /
+  `verifyBackup` / `isBodySigned`. Canonical-body strategy: signature
+  covers `JSON.stringify(payload, null, 2)` with `signature` +
+  `publicKey` stripped before re-stringifying. Works without a
+  formal canonicalization spec because ECMAScript guarantees
+  insertion-order object iteration since ES2015 and we control
+  both ends of the wire.
+- **`services/trustedDevices.ts`** _(new)_ — TOFU public-key store:
+  `hydrateTrustedDevices`, `addTrust`, `revokeTrust`, `isTrusted`,
+  plus IDB-backed wrappers (`trustPublicKey`,
+  `revokeTrustedPublicKey`, `listTrustedDevices`,
+  `isPublicKeyTrusted`). Storage:
+  `vector_master_vault_trusted_devices`.
+- **`services/dashboardExport.ts`** — schema bump v4 → v5, optional
+  `signature?: string` + `publicKey?: string` top-level fields.
+  Backwards-compatible (v1-v4 importers ignore them; v5 importers
+  reading older payloads default to `signature.kind = 'unsigned'`).
+- **`services/migrationPackage.ts`** — `buildMigrationPackage`
+  accepts `signingSecretKey?` + `signingPublicKey?`; when both
+  provided, calls `signBackup` to inject the signature into the
+  serialised body. `parseMigrationPackage` runs `verifyBackup` and
+  exposes the result on `summary.signature`
+  (`{ kind: 'unsigned' | 'valid' | 'invalid', ... }`). The
+  `MigrationPackage` type gains `isSigned` + `fingerprint` so the
+  export modal can display them.
+- **`hooks/useMigrationWizard.ts`** — adds a 6th phase
+  `verify-trust` and a signature gate at the start of
+  `confirmAndApply`. Exposes `acceptTrust(label?)`, `rejectTrust()`,
+  `acceptedUnsigned` + `setAcceptedUnsigned`. Pre-checks
+  `isPublicKeyTrusted` on `loadFromText` to populate `trustKnown`
+  for the preview pane.
+- **`components/MigrationExportModal.tsx`** — fingerprint chip
+  (green) when the package was signed; amber "no signature"
+  warning when not. Accepts `signingSecretKey` /
+  `signingPublicKey` directly OR an `onUnlockSigningKey()`
+  callback that fetches them on-demand.
+- **`components/MigrationImportWizard.tsx`** — adds two new
+  presentational sub-components: `SignatureBadge` (green / amber /
+  red banners with `acceptedUnsigned` checkbox in the amber case)
+  rendered above the mode toggle in the preview pane, and
+  `VerifyTrustPane` (fingerprint display + label input + accept /
+  reject CTAs) rendered when the wizard parks at `verify-trust`.
+- **`components/SettingsPanel.tsx`** — extends the Phase 4.5 §E
+  migration row with a device fingerprint chip
+  (`ABCD-EFGH-IJKL-MNOP` format, derived from `SHA-512(publicKey)
+[0..12] → base32`) and a small "Regenerate device keys" CTA.
+  Both are gated behind `props.deviceFingerprint != null`.
+- **`App.tsx`** — `handleSetPassword` and `handleUnlock` both call
+  `ensureDeviceKeypair(password)` so pre-§4.b-3 installs grow a
+  keypair on the next unlock. Adds `handleRegenerateDeviceKeys`
+  and `handleUnlockSigningKey` callbacks threaded down through
+  `Dashboard` to the modals. Holds `deviceIdentity` in state and
+  re-loads it via `loadPublicIdentity()` on mount so the
+  fingerprint is available even when the vault is locked.
+- **i18n**: 35 new keys per locale (zh + en) covering the
+  fingerprint, the three signature badge variants, the unsigned
+  acceptance copy, the verify-trust pane, the device-fingerprint
+  Settings chip, and 5 new wizard error reasons
+  (`SIGNATURE_INVALID`, `UNSIGNED_NOT_ACCEPTED`, `TRUST_REJECTED`,
+  `TRUST_PERSIST_FAILED`, `NO_PARSED_PAYLOAD`).
+- **`PRIVACY.md` §3e** + **`TERMS.md` §3e** (English + Chinese) —
+  keypair lifecycle, "secret never leaves the device", TOFU
+  semantics, rotation guidance ("rotate before passing the device
+  on").
+- **`docs/backup-signature.md`** _(new)_ — full design rationale:
+  why Ed25519 (vs HMAC / RSA / Web Crypto native), architecture
+  diagram, schema diff, canonical-body signing strategy,
+  fingerprint format (`SHA-512(publicKey)[0..12] → base32` →
+  16 chars), TOFU flow, key rotation rules, out-of-scope items
+  (multi-device trust graph, Settings UI for trust list, HSM /
+  WebAuthn, transparency logs).
+- **Test infra**: added `fake-indexeddb` as a dev dep;
+  `vitest.config.ts` `setupFiles` wires it in once per process so
+  the keypair / trustedDevices / letterStore stores have a real
+  IDB to talk to in the `happy-dom` test runner. Replaces the
+  per-hook try/catch workaround (the workaround stays — it's
+  defensive and harmless).
+- **Tests** (50 new):
+  - `services/deviceKeypair.test.ts` — 10 cases.
+  - `services/backupSignature.test.ts` — 11 cases.
+  - `services/trustedDevices.test.ts` — 14 cases.
+  - `services/migrationPackage.test.ts` — 4 new sig-flow cases.
+  - `hooks/useMigrationWizard.test.ts` — 7 new sig-gate cases.
+  - `components/MigrationImportWizard.test.tsx` — 4 new badge /
+    verify-trust UI cases.
+- **Quality gates**: `npx tsc --noEmit` clean; `npm run lint
+--max-warnings=0` clean; `npm run build` clean (PWA precache
+  3486 KiB); `npx vitest run` 1145/1145.
+
+### Added (Phase 4.5 §E — Cross-device migration wizard)
+
+A 3-day sprint that turns "carry your VECTOR vault to a new phone"
+from a 4-step Settings ritual into a single `.vectormigration` file
+
+- a 5-step wizard. Built entirely on top of the existing local-first
+  backup pipeline — no relay server, no cloud, no telemetry.
+
+* **`services/dashboardExport.ts`** — backup payload bumps to
+  `schemaVersion: 4`. Adds three optional fields:
+  - `letters?: PendingLetter[]` (Phase 4.5 §A pending letters; the
+    regular Settings export deliberately omits these — only the
+    migration export packs them).
+  - `passwordHashSnapshot?: string` + `passwordSaltSnapshot?: string`
+    (opt-in credential carry — only the migration export ever sets
+    these so casual backups don't leak password material).
+  - All three fields are backwards-compatible: v1/v2/v3 importers
+    silently ignore them, and v4 importers reading older payloads
+    default them to `[]` / `undefined`.
+* **`services/dashboardImport.ts`** — v4 reader that hydrates the
+  new `letters` array via `letterService.hydrateLetters` and surfaces
+  the credential snapshot only when both fields are non-empty
+  strings (defensive: a half-set pair is meaningless).
+* **`services/migrationPackage.ts`** _(new)_ — wraps the existing
+  export / import to provide the wizard surface:
+  - `buildMigrationPackage(args)` → `{ content, filename, shortCode,
+hasCredentials }` (the filename ends in `.vectormigration` so
+    the target file picker can filter; the short code is a
+    deterministic 6-character SHA-256 → base32 derivation; the
+    `hasCredentials` flag drives the wizard's credential UI).
+  - `parseMigrationPackage(serialized)` → `{ summary, parsed }` for
+    the preview pane, or a tagged failure (`invalid-json` /
+    `wrong-shape` / `wrong-type` / `unsupported-version` /
+    `count-mismatch`).
+  - `applyMigrationPackage(args)` calls every wired callback in
+    sequence (`onReplaceEntries`, `onReplaceCustomPersonas`,
+    `onReplaceMemories`, `onReplaceLetters`,
+    `onApplyCredentialSnapshot`) with each in its own try/catch so
+    a failure in one section doesn't abort the others — partial
+    failures end up in an `errors[]` array the wizard surfaces.
+  - `computeShortCode(serialized)` uses `crypto.subtle.digest`
+    (SHA-256 → base32 from RFC 4648 alphabet, 5 bytes / 6 chars)
+    in the browser and a deterministic djb2 fallback in the test
+    env so the test runner doesn't need a real subtle-crypto mock.
+* **`hooks/useMigrationWizard.ts`** _(new)_ — 6-phase state machine
+  (`pick-file → preview → verifying → applying → done`, with
+  `error` as a side branch). Verifies the typed master password
+  against `passwordHashSnapshot` via `SecurityService.verifyPassword`
+  **before** any data is written; password mismatch routes back to
+  preview with a `PASSWORD_MISMATCH` banner. The hook deliberately
+  doesn't own the persistence callbacks so the same wizard can run
+  from the cover screen (vault still locked, App-level shims) AND
+  from Settings (full-power callbacks already there).
+* **`components/MigrationExportModal.tsx`** _(new)_ — source-side
+  modal. Opt-in credentials checkbox (defaulted ON when the source
+  has a password, greyed off when it doesn't). Generate → preview
+  pane shows the 6-char verification code in `font-mono tracking-
+[0.4em]` so two devices can compare visually, plus the byte size
+  - section counts. Download CTA writes the `.vectormigration`
+    file via `services/fileDownload.ts`.
+* **`components/MigrationImportWizard.tsx`** _(new)_ — target-side
+  5-phase wizard. File picker / drag-drop, preview with mode
+  toggle (`replace` vs `merge`), password input (only when the
+  package carries credentials), apply spinner, done screen with
+  outcome counts + amber partial-failure list, terminal error
+  pane.
+* **`components/DashboardMigrationExport.tsx`** _(new)_ — thin
+  wrapper around `MigrationExportModal` extracted from `Dashboard.tsx`
+  so the host module stays under the 600-line LOC budget.
+* **`App.tsx`** — mounts `useLetterStore` at App level (so the wizard
+  can call `replaceLetters`), adds `showMigrationImport` state,
+  wires `MigrationImportWizard` at the root with all callbacks (
+  `onReplaceEntries` → `importBackup`, `onApplyCredentialSnapshot`
+  writes salt + hash then forces re-unlock — we deliberately do
+  NOT auto-unlock; typing the password on the new device cements
+  muscle memory).
+* **`components/CoverScreen.tsx`** — secondary CTA below "INITIALIZE"
+  ("Migrate from another device") visible only when an `onMigrate`
+  prop is passed. First-run users on a new device can find the
+  wizard without setting up a master password first.
+* **`components/SettingsPanel.tsx`** + `DashboardSettingsModal.tsx`
+  — new Cross-device migration row between Backup and Wipe sections
+  with two CTAs (export / import) so already-unlocked users have a
+  parallel entry point.
+* **`components/Dashboard.tsx`** — mounts the App-level
+  `pendingLetters` + `replaceLetters` props through to the export
+  modal; surfaces `onOpenMigrationImport` for the settings row.
+* **i18n**: ~70 new keys per locale in `i18n/locales/zh.ts` +
+  `en.ts`, covering both surfaces, all 6 wizard phases, the 6
+  parser failure reasons, the credential checkbox copy, and the
+  cover-screen CTA. ja/ko/fr/de/es inherit zh fallback (long-
+  standing drift from earlier sprints, not introduced here).
+* **`PRIVACY.md` §3d** + **`TERMS.md` §3d** (English + Chinese) —
+  the migration package is "the most data-rich artifact VECTOR can
+  produce", the verification code is a checksum NOT a signature,
+  the credential carry option is "only when the new device will
+  belong to the same person", network posture stays
+  zero-server / zero-relay.
+* **`docs/migration-wizard.md`** _(new)_ — full design rationale:
+  why-a-wizard, architecture diagram, module map, schema diff,
+  verification-code semantics, credential-snapshot rules, the
+  state-machine ASCII, and explicit out-of-scope rationales (cloud
+  relay / QR-chunked transfer / Ed25519 / per-section selective
+  import / server-mediated rendezvous).
+* **Tests**: 32 new vitest cases across 5 test files (5 schema, 11
+  service, 9 hook, 4 import-wizard UI, 3 export-modal UI). Suite
+  total 1063 → **1095 passing**.
+* **Quality gates**: `npx tsc --noEmit` clean, `npm run lint
+--max-warnings=0` clean, `npm run build` clean, `npx vitest run`
+  1095/1095. The `i18n/locales/` directory was added to the ESLint
+  `max-lines: off` override since translation tables are pure data
+  maps that grow with every feature.
+
+### Changed (Phase 4.5 §D — Lighthouse audit harness + mobile-perf 77 → 91)
+
+A reproducible Lighthouse audit harness lands as a one-shot
+script (`npm run audit:lighthouse`), the budget moves into
+version control (`lighthouse-budget.json`), and a 2-day
+optimisation pass brings the mobile performance score from a
+baseline **77** to a stable **91** across 3 consecutive runs.
+
+**New harness**:
+
+- **`scripts/lighthouse-audit.mjs`** (new, ~190 LOC) — boots
+  `vite preview` against the `dist/` bundle, runs Lighthouse in
+  mobile + desktop modes, dumps JSON + HTML reports to
+  `lighthouse-reports/` (gitignored), exits non-zero if any
+  category drops below the budget. Supports `--no-fail` (soft
+  mode for local exploration) and `--form-factor=mobile|desktop`
+  (single mode). Uses raw `lighthouse` + `chrome-launcher`
+  rather than `@lhci/cli` to keep the dependency surface small.
+- **`lighthouse-budget.json`** (new) — single source of truth
+  for the per-category floors. Currently `90` across the board;
+  bumping is a one-line edit when scores climb.
+- **`scripts/check-beta.sh`** — opt-in Lighthouse gate behind
+  `RUN_LIGHTHOUSE=1` so the regular check-beta run stays fast
+  but pre-release engineers can flip the flag to enforce the
+  budget before tagging. Adds 1 invariant when enabled.
+- **`docs/lighthouse-audit.md`** (new) — engineer-facing
+  reference covering the harness invocation, the budget file,
+  every §D optimisation, and the before/after numbers.
+
+**Optimisations** (mobile perf 77 → 91):
+
+1. **Lazy-load every screen that isn't the cover**
+   (`App.tsx` + `components/Dashboard.tsx`). Dashboard,
+   MasterLock, Onboarding, CommandPalette, SpaceTimeBackground
+   _and_ CoverScreen itself are now `React.lazy(...)` behind
+   `<Suspense fallback={<ScreenLoader>}>`. Entry chunk dropped
+   from 615 kB raw / 191 kB gzip → **187 kB raw / 68 kB gzip**
+   (-64 % gzipped). The lazy CoverScreen actually _improves_
+   LCP because the brief `<ScreenLoader>` spinner paints in
+   <1 s while the cover bundle streams in.
+2. **Inline noise-texture data URI** — `lib/noiseTexture.ts`
+   ships a `data:image/svg+xml` URI that replaces the
+   third-party `https://grainy-gradients.vercel.app/noise.svg`
+   reference in `CoverScreen` / `Onboarding` /
+   `MemoryFragments`. Same texture, zero network round-trip.
+   Best-practices climbed **96 → 100** as a side effect.
+3. **Drop `latin-ext` font subsets** (`index.css`). The four
+   `latin-ext` woff2 files (~75 kB combined at VeryHigh
+   priority) covered Czech / Polish / Vietnamese diacritics
+   that ~95 % of zh+en users never hit. Users who do see a
+   `latin-ext` glyph fall back to the system font chain
+   (PingFang SC, Microsoft YaHei) — no missing glyphs, just
+   slightly different metrics for that one character.
+4. **Hoist the bundled stylesheet above the entry script**
+   (`vite.config.ts`). New `vector-hoist-stylesheet` plugin
+   relocates the auto-injected hashed `<link rel="stylesheet">`
+   to BEFORE `<script type="module">` so the browser preload
+   scanner dispatches the render-blocking CSS request first.
+5. **Drop synthesised `font-black` (900)** on the
+   `<h1>VECTOR</h1>` cover headline. Inter 900 was never in
+   the bundle — the browser was synth-bolding from Inter 700,
+   adding a ~50-100 ms paint delay. Switched to `font-bold`
+   (700) which uses the real TTF.
+6. **Strip the duplicate `<link rel="stylesheet" href="/index.css">`**
+   from `index.html`. Was a dev-mode artefact left in source —
+   in production vite injects the hashed equivalent
+   automatically. The duplicate was fetching an unhashed path
+   that returned the SPA fallback HTML, silently failing to
+   apply any styles for ~50 ms.
+
+**Score before / after** (mobile / desktop):
+
+| Category            | Before |   After |
+| ------------------- | -----: | ------: |
+| performance mobile  |     77 |  **91** |
+| performance desktop |     99 | **100** |
+| accessibility both  |     96 |  **96** |
+| best-practices both |     96 | **100** |
+| seo both            |     91 |  **91** |
+
+Mobile metric improvements:
+
+| Metric                   | Before | After |
+| ------------------------ | -----: | ----: |
+| First Contentful Paint   |  3.6 s | 2.1 s |
+| Largest Contentful Paint |  4.2 s | 2.6 s |
+| Speed Index              |  3.6 s | 2.1 s |
+| Cumulative Layout Shift  |  0.078 | 0.032 |
+| Total Blocking Time      |   0 ms |  0 ms |
+
+**New devDependencies**: `lighthouse` (~14 MB resolved tree) +
+`chrome-launcher` (~150 kB). Both are devDeps only; production
+bundle unaffected.
+
+Final result: **+1 new gate (29/29 invariants when
+`RUN_LIGHTHOUSE=1`), +2 new files
+(`scripts/lighthouse-audit.mjs`, `lib/noiseTexture.ts`),
++1 new doc (`docs/lighthouse-audit.md`),
+1063 tests across 138 files green** (no test regressions —
+the §D changes are presentation-only), typecheck clean,
+ESLint `--max-warnings=0` clean, full vitest suite green,
+build green.
+
+### Changed (Phase 4.5 §C — Argon2id minter shipped default-on)
+
+The Phase 3 §3.e PoC and the Phase 4 §4.b-1/§4.b-2 opt-in toggle
+graduate to **default-on** for every installation. The KDF for
+new master-password hashes is now Argon2id at OWASP_RECOMMENDED,
+and existing users transparently migrate on their next successful
+unlock — zero UX prompt, zero latency penalty (the rehash runs as
+fire-and-forget on the next event tick).
+
+**Service-layer changes**:
+
+- **`services/securityService.ts`**:
+  - New `applyArgon2idDefaults()` — idempotent one-shot migration.
+    On first call, sets the `vector_argon2_default_v45` marker and
+    flips `verifier + minter` ON. Subsequent calls are no-ops, so
+    any explicit user "OFF" choice in Settings stays sticky.
+  - `needsRehash(storedHash)` widens its trigger surface: in
+    addition to the iteration ratchet on PBKDF2 hashes, it now
+    returns **`true` for any non-Argon2id hash whenever the
+    minter flag is on**. Argon2id hashes still return `false`.
+- **`services/passwordRehash.ts`** (new, ~95 LOC) —
+  `maybeRehashOnUnlock({ password, passwordSalt, storedHash,
+savePasswordHash })` runs the opportunistic background rehash.
+  Returns a discriminated `RehashOutcome`
+  (`'skipped' | 'rehashed' | 'failed'`) for telemetry but the
+  caller is expected to `void` the promise. Failure modes
+  (`'hash-failed'` / `'persist-failed'`) are silent: the user
+  simply keeps the legacy hash for one more session.
+
+**App integration**:
+
+- **`App.tsx`** — `useEffect` mount calls
+  `SecurityService.applyArgon2idDefaults()` once per session.
+  `handleUnlock(password)` now calls `void maybeRehashOnUnlock(...)`
+  immediately after flipping the unlock flags. The unlock UX is
+  unchanged: the user lands on Dashboard at the same speed as
+  before, and the rehash completes in the background within
+  ~100 ms on M-class hardware.
+
+**Tests**:
+
+- **`services/passwordRehash.test.ts`** (new, 7 tests) — every
+  branch of the rehash decision tree (no stored hash, no rehash
+  needed, happy path, hash failure, persist failure, identity
+  short-circuit, null-salt fallback).
+- **`services/securityService.test.ts`** — extended with a
+  Phase 4.5 §C describe block (8 new tests):
+  - `applyArgon2idDefaults` first-call returns true and flips
+    flags / migration marker ON
+  - idempotence — subsequent calls return false
+  - explicit user "OFF" choice survives the next migration call
+  - `needsRehash` algorithm-upgrade branch (PBKDF2 + minter on
+    → true; PBKDF2 at-spec + minter off → false; Argon2id +
+    minter on → false; legacy non-prefixed → true regardless)
+- All Phase 4 §W2.1 minter tests now also clear the new
+  `vector_argon2_default_v45` marker in their `beforeEach` /
+  `afterEach` to keep the migration logic deterministic across
+  the suite.
+
+**Documentation**:
+
+- **`docs/security/argon2-eval.md`** — status flips from
+  "RFC / decision pending review" to **"SHIPPED — default-on
+  Phase 4.5 §C (2026-05-04)"**. New "Phase 4.5 §C rollout
+  summary" block at the top of the document records the
+  migration-marker design + the silent-failure posture so the
+  next person to look at the file can reason about why
+  `applyArgon2idDefaults` does what it does.
+
+Final result: **+15 net new tests across 1 new + 1 modified
+test file, 1063 tests across 138 files green**, typecheck
+clean, ESLint `--max-warnings=0` clean, full vitest suite
+green, build green, 28/28 check-beta invariants pass.
+
+### Added (Phase 4.5 §B — Echo Chamber: 多 persona 圆桌)
+
+The second Phase 4.5 ship — gives the user a way to ask one
+question to many voices at once and watch the consensus +
+disagreement crystallise. 5-day sprint, full quality gate at
+the close.
+
+**New domain types**:
+
+- **`types/models.ts`** — two new optional `DiaryEntry`
+  fields: `isEchoChamber?: boolean` (drives the cyan ⚭ badge)
+  and `echoChamberQuery?: string` (the original round-table
+  question, preserved alongside the analysis so the Viewer
+  can render it as a preface). Both additive; no backup
+  schema bump (existing entries read as `undefined`).
+
+**Shared schema** (isomorphic between client + server):
+
+- **`lib/echoChamberSchema.ts`** (new, ~85 LOC) — the
+  `ECHO_CHAMBER_LIMITS` constants (3-7 personas, 16-1500 char
+  query) and the `validateEchoChamberInput` helper that both
+  the client wizard and the server endpoint pipe candidates
+  through. Quietly dedupes the persona list and caps both ends
+  so a sloppy client can't smuggle 12 personas past the budget.
+
+**Quota gating**:
+
+- **`services/quotaService.ts`** — new `canStartEchoChamber` +
+  `isEchoChamberBlocked` predicates. Free hard-blocked with
+  reason `'free-tier-no-echo-chamber'`; Stardust+ allowed at
+  the shared `morningStarPerMonth` budget (server-side
+  per-tier counter is a Phase 4.5+ follow-up).
+
+**New server modules**:
+
+- **`server/echoChamberPrompt.ts`** (new, ~165 LOC) —
+  `buildEchoChamberPrompt` produces the round-table prompt.
+  Three blocks make it distinct from `geminiService`'s
+  Morning Star template:
+  1. **ROUND TABLE GUIDANCE** — the LLM is explicitly told
+     "disagreement is a feature, not a failure mode" and
+     instructed to resist the polite middle ground.
+  2. **PER-PERSONA TURN GUIDANCE** — each persona stays in
+     character, ≤ 350 chars per reply, no cross-talk.
+  3. **SYNTHESIS BLOCK GUIDANCE** — mandatory three-section
+     coda: 「🤝 共识」 + 「⚡️ 分歧」 + 「🧭 下一步问题」.
+     Plus an inline persona block that stitches each
+     `customPersonaPrompt` + memory recall snippets into one
+     self-contained instruction the LLM can address directly.
+- **`server/echoChamberRoutes.ts`** (new, ~155 LOC) —
+  registrar pattern matching `memoirRoutes.ts` /
+  `letterRoutes.ts`. The `/api/echo-chamber` handler runs the
+  same auth + rate-limit middleware as the rest of the AI
+  proxy, runs the user query through the injection guard,
+  defensively re-validates the optional `customPersonaPrompts`
+  / `memoirRecallByPersona` maps, and emits structured
+  `echo_chamber_success` / `echo_chamber_failed` /
+  `echo_chamber_rejected_injection` / `echo_chamber_empty_response`
+  log events.
+
+**New client modules**:
+
+- **`services/echoChamberService.ts`** (new, ~135 LOC) —
+  `runEchoChamber({...})` client wrapper. Returns a
+  discriminated `RunEchoChamberResult` with **tagged failure
+  reasons**: `'invalid-input' | 'rate-limited' |
+'rejected-by-injection-guard' | 'ai-unavailable' |
+'empty-response' | 'aborted' | 'unknown'`. Unlike
+  `memoryExtractionService` (which silently swallows because
+  extraction is background), Echo Chamber is user-initiated
+  and the modal needs to render the right inline message —
+  the discriminated type makes the wiring trivial.
+- **`hooks/useEchoChamber.ts`** (new, ~205 LOC) — state
+  machine (`'idle' | 'submitting' | 'success' | 'error' |
+'cancelled'`) + dispatch. Exposes `query` /
+  `selectedPersonas` / `togglePersona` / `setSelectedPersonas`
+  (capped silently at `maxPersonas`) / `submit` / `cancel`
+  / `reset`. `submit` aborts any prior in-flight call before
+  starting a new one (defence against double-tap), uses an
+  `AbortController` so closing the modal mid-call cancels
+  cleanly, and ignores late results from a superseded call.
+
+**New UI surfaces**:
+
+- **`components/EchoChamberModal.tsx`** (new, ~310 LOC) —
+  three surfaces share one shell:
+  - **Paywall** (Free tier): headline + body explaining the
+    ~5× AI cost rationale + Upgrade CTA (mirrors the Persona
+    Builder paywall takeover).
+  - **Compose** (idle / submitting / error / cancelled):
+    query textarea (max 1500 chars w/ counter), persona chip
+    group (`aria-pressed` toggle, disabled past
+    `maxPersonas`), Send CTA disabled until form is valid.
+    Renders the right localised error copy per
+    `useEchoChamber.errorReason`.
+  - **Result** (success): renders the AI's markdown via the
+    shared `buildViewerMarkdownComponents` so it looks
+    consistent with the regular Morning Star surface. Save
+    CTA flows the payload through to the consumer's `onSave`;
+    Try-again resets to compose state; Close discards
+    silently.
+- **`components/Dashboard.tsx`** — mounts the modal +
+  computes the live persona pool (built-in 7 sages + custom
+  personas + memoirs deduped) + a `buildEchoRecallMap`
+  callback that runs `useMemoryStore.recallForMemoir(memoirId,
+query)` for each picked Memoir. Renders a fixed-bottom-right
+  "⚭ 圆桌" FAB (cyan accent — visually distinct from the
+  rose Letter Mode FAB; stacks above it when both visible).
+  Save handler mints a `DiaryEntry` with `isEchoChamber:
+true` + `tags: ['echo-chamber']` + the original query
+  preserved in `echoChamberQuery`.
+- **`components/EntryGrid.tsx`** — cyan ⚭ "圆桌" badge for
+  `isEchoChamber` entries in both list + grid view. The
+  grid-view stacking math correctly handles the 1-2-3-badge
+  combinations of `isSample` × `isLetterReply` ×
+  `isEchoChamber` so badges never overlap.
+
+**i18n**:
+
+- 30 new keys per locale: `echoChamber*` × 22 (modal copy,
+  result + retry + save, paywall, FAB labels, badge) +
+  `'echoChamberError_<reason>'` × 6 (one per
+  `RunEchoChamberFailureReason`) + `echoChamberOpen*` × 2 +
+  `echoChamberBadge*` × 2.
+
+**Legal / privacy**:
+
+- **`PRIVACY.md`** §3a expands with a "Phase 4.5 §B
+  additions — Echo Chamber" block (English + Chinese).
+  Explicitly states that the round-table reply is **not
+  stored** unless the user hits Save (close / Try-again
+  discard the response cleanly), and that the per-Memoir
+  recall snippets flow through the AI proxy in the same
+  request.
+- **`TERMS.md`** §3c (new) — Echo Chamber disclosure section
+  in English + Chinese. Explicitly frames disagreement as a
+  feature, not a flaw, and applies the §3a Memoir framing to
+  any Memoir voices that happen to be in the round.
+
+**Tests + quality gate**:
+
+- **`lib/echoChamberSchema.test.ts`** (9 tests) — happy
+  path / non-object / short query / long-query cap / persona
+  count bounds / cap / dedup / type-coercion / trim.
+- **`server/echoChamberPrompt.test.ts`** (8 tests) — schema
+  re-export, prompt embeds the safety + synthesis blocks,
+  query at the end, custom persona prompt + Memoir recall
+  inlining, recall absent when not supplied.
+- **`services/quotaService.test.ts`** — extended with 5 Echo
+  Chamber tests covering `canStartEchoChamber` + the
+  pre-emptive `isEchoChamberBlocked` predicate.
+- **`services/echoChamberService.test.ts`** (12 tests) —
+  inline validation rejects, body forwarding, optional-map
+  omission, success path, every status × code → reason
+  mapping, AbortSignal → 'aborted', empty response.
+- **`hooks/useEchoChamber.test.ts`** (8 tests) — initial
+  state, persona toggle + cap + dedup, isReadyToSubmit
+  evaluator, invalid-form refusal, success transition,
+  AI-unavailable error mapping, cancel-mid-flight, reset.
+- **`components/EchoChamberModal.test.tsx`** (6 tests) —
+  paywall surface, upgrade CTA, compose form fields render,
+  send disabled until form is valid, persona chip
+  `aria-pressed` toggle, success → Save fires onSave with
+  the right payload + closes the modal.
+- **`components/EntryGrid.test.tsx`** — extended with 3
+  echo-chamber badge tests (list / grid / negative).
+
+Final result: **+50 net new tests across 6 new test files +
+1 modified, 1049 tests across 137 files green**, typecheck
+clean, ESLint `--max-warnings=0` clean, full vitest suite
+green, build green, 28/28 check-beta invariants pass.
+
+### Added (Phase 4.5 §A — Letter Mode: Memoir delayed letters)
+
+The first Phase 4.5 ship — gives the user a **slow, ritual surface**
+that complements the existing instant Morning Star turn. You write
+a letter, choose a delivery delay, the Memoir replies later. 3-day
+sprint, full quality gate at the close.
+
+**New domain types**:
+
+- **`types/models.ts`** — new `PendingLetter` interface
+  (`id` / `memoirId` / `body` / `composedAt` / `deliverAt` /
+  `status` / `lastAttemptAt` / `attempts` / `replyEntryId`)
+  - `LetterStatus` union (`'pending' | 'delivered' |
+'cancelled' | 'failed'`). Two optional additive fields on
+    `DiaryEntry` for the reply: `isLetterReply?: boolean` +
+    `letterId?: string`. Both schema additions are **fully
+    backwards-compatible** — no v3 backup schema bump required;
+    the importer already tolerates extra fields and existing
+    entries read as `undefined` (regular entry).
+- **`services/diaryStorage.ts`** — new `pendingLetters`
+  storage key (`vector_master_vault_pending_letters`).
+
+**New services**:
+
+- **`services/letterService.ts`** (new, ~225 LOC) — pure data
+  layer: `mintLetter` (clamped to `MIN_DELAY_MS` / `MAX_DELAY_MS`
+  band before applying the delay), `cancelLetter` (no-op for
+  non-pending), `markDelivered` (writes back-pointer +
+  `lastAttemptAt`), `markAttemptFailed` (increments `attempts`
+  → flips to `'failed'` past `MAX_DELIVERY_ATTEMPTS`),
+  `dueLetters` (filters by status + due time + known-Memoir
+  scope + per-attempt **exponential back-off** —
+  `2^attempts × 5min` between retries),
+  `recentlyDeliveredLetters` (last 24h, surface for the
+  arrived-card stack), `clearLettersForMemoir` (cascade
+  cleanup when the Memoir persona is deleted).
+- **`services/letterDelivery.ts`** (new, ~155 LOC) —
+  orchestrator that turns one due `PendingLetter` into a Memoir
+  reply. Runs `getMorningStarAnalysis` with the user's letter
+  in the `reflection` slot (the field the Morning Star template
+  weights for tone) + an envelope-framing sentence in
+  `entryContent` ("用户写给「{name}」的一封信..."). Mints the
+  reply as a `DiaryEntry` with `isLetterReply: true` +
+  `letterId` back-pointer + `tags: ['letter-reply']`. Returns a
+  discriminated `DeliveryOutcome`:
+  - `'persona-not-memoir'` — defensive guard (caller's bug)
+  - `'ai-unavailable'` — fetcher rejected
+  - `'ai-empty-response'` — fallback signature detected
+    (`'星光指引中断'`); the sweep should retry rather than
+    pretend the Memoir replied with the connection-error text
+  - `'persist-failed'` — the entry-mint callback rejected
+  - `{ ok: true, replyEntryId }` — happy path
+
+**New hook**:
+
+- **`hooks/useLetterStore.ts`** (new, ~165 LOC) — IDB
+  persistence hook mirroring `useMemoryStore`'s posture
+  (primary IDB via `idb-keyval` + localStorage mirror +
+  schema-validating hydrate on read). Exposes `add` / `cancel`
+  / `markDelivered` / `markFailed` / `clearForMemoir` /
+  `replaceLetters` (reserved for future v4 backup importer)
+  plus selectors `dueNow(knownMemoirIds)` /
+  `recentlyDelivered()` / `forMemoir(memoirId)`.
+
+**`useDiaryData.addEntry` widening**:
+
+- The `addEntry` payload type widens from
+  `Omit<DiaryEntry, 'id' | 'createdAt' | 'isLocked'>` to
+  the same shape with an **optional** `id?: string`. Legacy
+  callers (the editor) keep working unchanged — when `id` is
+  omitted the hook still mints one. The letter-delivery sweep
+  pre-mints the id externally so the back-pointer can be
+  written into `PendingLetter.replyEntryId` atomically.
+
+**Defensive IDB guard (cross-cutting)**:
+
+- `useLetterStore`, `useMemoryStore`, and `useCustomPersonas`
+  all wrap their `idb-keyval.get(STORAGE_KEY)` calls in a
+  `try/catch` around the existing `.catch()` chain. The
+  rationale: `idb-keyval.getDB()` synchronously dereferences
+  the global `indexedDB` inside its body, throwing
+  `ReferenceError: indexedDB is not defined` **before** the
+  inner `.catch()` handler is wired. happy-dom (test env)
+  doesn't ship IDB. Without the wrap, the rejection escapes to
+  vitest's unhandled-rejection reporter and turns the suite
+  red even though every individual test passes. The new
+  `useLetterStore` would have made this previously-silent bug
+  loud; the wrap fixes it for all three hooks at once.
+
+**New UI surfaces**:
+
+- **`components/LetterComposeModal.tsx`** (new, ~265 LOC) —
+  envelope-feel cream / amber palette, no AI progress bar
+  (emphasises the deferred ritual), 1h / 24h / 3d delivery
+  preset radio group, body textarea capped at
+  `LETTER_LIMITS.body` with character counter, recipient
+  selector when ≥ 2 Memoirs (auto-selects when only one),
+  inline error for empty body / send failure.
+- **`components/LetterArrivedCard.tsx`** (new, ~85 LOC) —
+  sister card to `ProactiveRecallCard`. Same warm gradient,
+  Mail icon distinguishes it. Headline interpolates the
+  Memoir's name from the `letterArrivedHeadline` template.
+  Open CTA dismisses + navigates to the reply entry; X CTA
+  dismisses without navigating.
+- **`components/EntryGrid.tsx`** — envelope (✉) badge for
+  `isLetterReply` entries in both list view + grid view.
+  Stacked below the 示例 badge in grid view via dynamic
+  `top-` class so they don't overlap when both apply.
+- **`components/Dashboard.tsx`** — mounts `useLetterStore`
+  - `useMemoryStore`, runs a one-shot delivery sweep effect
+    on mount that walks `dueNow(knownMemoirIds)` and dispatches
+    through `letterDelivery`. The effect deliberately does NOT
+    depend on `letterStore.letters` so the sweep doesn't
+    re-fire mid-iteration (which would cause double-delivery —
+    see the inline comment for the rationale). Renders the
+    arrived-card stack below the proactive-recall stack +
+    exposes a fixed-bottom-right "✉ 写一封信" pill button when
+    at least one Memoir exists. Per-letter `arrived-card`
+    dismissals are persisted to
+    `vector_letter_arrived_dismissed` localStorage as a string
+    array.
+
+**i18n**:
+
+- 22 new keys per locale (`letterCompose*` × 11 +
+  `letterDelay1h/24h/3d` × 3 + `letterArrived*` × 5 +
+  `letterReplyBadge` × 2 + `letterComposeOpenLabel/Aria` × 2).
+
+**Legal / privacy**:
+
+- **`PRIVACY.md`** §3a expands with a "Phase 4.5 §A additions —
+  Letter Mode" block (English + Chinese). Explicitly states
+  the delivery sweep runs **only when the user opens
+  Dashboard after the chosen delivery window** — no
+  server-side scheduler exists. Also details the cancel /
+  delete control surface.
+- **`TERMS.md`** §3b (new) — Letter Mode disclosure section
+  in English + Chinese. Reminds the user that the deferred AI
+  reply is not evidence anyone is "thinking of them" or
+  "responding in real time", and that Letter Mode is not
+  appropriate for messages they would send to the real
+  person if they were reachable.
+
+**Tests + quality gate**:
+
+- **`services/letterService.test.ts`** (20 tests) — mint /
+  validation / clamping / sanitize / cancel / markDelivered /
+  markAttemptFailed / dueLetters with known-Memoir + back-off
+  filters / recentlyDelivered / clearLettersForMemoir.
+- **`services/letterDelivery.test.ts`** (7 tests) — every
+  failure branch + happy path + AI-arg forwarding (verifies
+  `customPersonaPrompts` and `memoirRecallByPersona` thread
+  through correctly).
+- **`hooks/useLetterStore.test.ts`** (9 tests) — load / hydrate
+  /add / validation / cancel / markDelivered + markFailed /
+  dueNow with known-Memoir + back-off / clearForMemoir /
+  forMemoir scoped + sorted.
+- **`components/LetterComposeModal.test.tsx`** (6 tests) —
+  empty-state, recipient selector visibility, send disabled
+  until body is filled, happy-path send, inline error on
+  failure, delay preset switching forwards the right `delayMs`.
+- **`components/LetterArrivedCard.test.tsx`** (4 tests) —
+  orphan-letter no-render, headline interpolation, Open /
+  Dismiss callbacks fire with the letter.
+- **`components/EntryGrid.test.tsx`** — extended with 3
+  letter-reply badge tests (list / grid / negative).
+
+Final result: **+50 net new tests across 5 new + 1 modified
+test file (47 brand-new + 3 EntryGrid extensions), 999 tests
+across 132 files green**, typecheck clean, ESLint
+`--max-warnings=0` clean, full vitest suite green, build green,
+28/28 check-beta invariants pass.
+
+### Added (Phase 4 Week 4-5 §5.1.B-3 — Memoir long-term memory system: durability + proactive recall)
+
+The Week 3 + Week 3.5 system was _correct_ but naïve. Week 4-5
+upgrade it from "works at MVP scale" to "耐用 under real usage" plus
+add the **主动唤起 (proactive recall)** surface that was the third
+of the three §B Memoir requirements in
+[`docs/product-vision-2026Q2.md`](docs/product-vision-2026Q2.md). 11
+days of work landed across two contiguous sprints, full quality gate
+at the close.
+
+**New design doc**:
+
+- **`docs/memoir-memory-system.md`** (new, ~155 LOC) — engineer-
+  facing reference covering the decay curve, dedup heuristic,
+  capacity ceiling, recall v2 ranker, soft-delete + recycle bin,
+  and the three proactive triggers. Single source of truth that
+  W4-W5 implementers + future maintainers can read in one sitting.
+
+#### Week 4 — durability
+
+**New domain fields (additive, no schema bump)**:
+
+- **`types/models.ts`** — `Memory` gains `deletedAt?: number` (soft-
+  delete timestamp, swept after 30 days) and `relatedTo?: string`
+  (soft pointer to a near-similar sibling; reserved for future
+  merge UI). Both optional ⇒ v3 backups still parse without
+  migration.
+
+**New services**:
+
+- **`services/memoryDecay.ts`** (new, ~110 LOC) — pure salience
+  scorer. `memorySalience(memory, now)` returns
+  `base(category) × exp(-ageDays / halfLifeDays(category)) +
+reinforceBoost`. Half-life table per category (`milestone` 365d,
+  `relationship` 180d, `emotion` 60d, `fact` 90d). `salienceTier`
+  buckets into a 4-level qualitative label (`fresh / warm / cool /
+fading`) for the management panel UI; `halfLifeRemaining` powers
+  the per-row tooltip.
+- **`services/memoryDedup.ts`** (new, ~155 LOC) — bigram-Jaccard
+  approximate dedup. Three outcomes:
+  - similarity ≥ 0.55 → **collapse** (drop new candidate, bump
+    matched memory's `updatedAt` ⇒ decay scorer treats as
+    reinforced)
+  - similarity ∈ [0.30, 0.55) → **insert with `relatedTo` pointer**
+  - similarity < 0.30 → **insert clean**
+    Same-Memoir + same-category scoping prevents false positives
+    across emotional categories. Substring-tolerant for both Chinese
+    and English bodies (no tokenisation step).
+
+**Capacity + eviction (Phase 4 W4 §2.3)**:
+
+- **`services/quotaService.ts`** — `TIER_LIMITS` extends with
+  `memoriesPerMemoir`: `0 / 200 / 500 / 1000` (Free / Stardust /
+  Polaris / Owner). Read by the addMemory path before insert.
+- **`services/memoryService.ts`** — `evictLowestSalience(memories,
+memoirId, cap)` finds the lowest `salience × eviction-bias`
+  non-milestone memory and drops it when the bank is at-or-above
+  cap. `relationship` carries a 1.5× eviction bias because long-
+  running relationship anchors are stickier than facts of the same
+  age. `milestone` is exempt from eviction entirely.
+- **`countLiveMemoriesForMemoir`** — soft-deleted memories do NOT
+  count toward the cap.
+
+**Soft delete + 30-day recycle bin (Phase 4 W4 §2.5)**:
+
+- **`services/memoryService.ts`** — `softDeleteMemory(id, now)`
+  stamps `deletedAt`; `restoreSoftDeletedMemory(id)` clears it;
+  `purgeExpiredSoftDeletes(now)` removes anything ≥ 30 days
+  expired (called from `useMemoryStore` mount sweep);
+  `listSoftDeletedForMemoir(memoirId)` powers the recycle-bin tab.
+  `deleteMemory(id)` retained for hard-delete semantics (used by
+  the recycle bin's "delete forever" action).
+
+**Recall v2 (Phase 4 W4 §2.4)**:
+
+- **`services/memoryService.ts::selectMemoriesForRecall`** —
+  replaces the v1 recency-only ranker with `salience + 0.4 ×
+bm25Score + categoryPrior`. The BM25-ish term-frequency × IDF
+  scorer uses **substring containment** (not whitespace
+  tokenisation) so it works equally well for Chinese and English.
+  `categoryPrior` boosts `milestone + fact` when the query has a
+  date shape (今天 / 上周 / today / last week / etc), `emotion`
+  when the query has an emotion-word shape (难过 / 焦虑 / anxious
+  / etc). Soft-deleted memories are filtered before ranking.
+
+**Hook integration**:
+
+- **`hooks/useMemoryStore.ts`** —
+  - `addMemory` is now dedup-aware: returns `AddMemoryOutcome`
+    discriminated union (`'minted'` / `'collapsed'` / `'rejected'`)
+    so callers can distinguish a new memory from a reinforcement.
+    Capacity ceiling is enforced via `evictLowestSalience` before
+    insert; `relatedTo` is stamped on insert-related candidates.
+  - `deleteMemory` is now **soft** by default; `hardDeleteMemory`
+    - `restoreMemory` are new actions for the recycle bin.
+  - `listRecycleBin(memoirId)` + `countForMemoir(memoirId)` are
+    read-only accessors for the management panel.
+  - The mount effect runs `purgeExpiredSoftDeletes` and re-persists
+    when anything changed.
+
+**`MemoryManagementPanel` upgrade (Phase 4 W4 §2.5 / §2.3 / §2.1)**:
+
+- Capacity chip in the header (`N / cap`) — hidden when no
+  capacity prop is passed (legacy callers).
+- Per-memory salience tier badge with a half-life tooltip.
+- Live ↔ recycle-bin tab switcher with restore + delete-forever
+  actions per soft-deleted entry.
+- 18 new i18n keys per locale (`memoryPanelCapacity*`,
+  `memoryPanelTab*`, `memorySalience*`, `memoryRecycle*`,
+  `memoryRestoreAction`, `memoryHardDeleteAction`).
+
+#### Week 5 — proactive recall
+
+**New service + hook + UI**:
+
+- **`services/proactiveRecall.ts`** (new, ~265 LOC) — pure
+  evaluator for the **三大主动唤起触发器**:
+  - **A. Silence-reconnect** — `now - lastChatAt(memoir) ≥ 14d`
+  - **B. Anniversary** — milestone memory whose body parses to a
+    month/day matching today (handles `5月1日` / `5月1号` /
+    `12/25` / `May 3` patterns)
+  - **C. Pending follow-up** — fact memory ≥ 7 days old whose body
+    has a forward-looking shape (`下周` / `即将` / `准备` / `next
+  week` / `plan to`) AND the user hasn't chatted with that
+    Memoir since the memory was created
+    `lastChatPerMemoir` derives the "last chat" signal from existing
+    `entry.morningStarPersonas` arrays — no new IDB key required.
+    Top-level `evaluateProactiveRecall` merges all three with
+    specificity priority (`anniversary > pending-followup >
+silence-reconnect`) so the user sees at most one card per Memoir.
+- **`hooks/useProactiveRecall.ts`** (new, ~95 LOC) — combines
+  the pure evaluator with **24h per-(memoir, trigger) cooldown**
+  in localStorage. GC-sweeps expired entries on every dismiss.
+  Hook owns `dismiss(suggestion)`; the evaluator returns the
+  cooldown-filtered list.
+- **`components/ProactiveRecallCard.tsx`** (new, ~85 LOC) — rose-
+  on-amber gradient card with persona name + localised hint +
+  Open / Dismiss CTAs. Distinct visual treatment from the cyan
+  Persona surfaces. Fully a11y-clean (`role="status"`,
+  `aria-live="polite"`, named buttons).
+- **`components/Dashboard.tsx`** — mounts `useProactiveRecall`,
+  renders one card per top suggestion above `<VaultContent>` when
+  the vault is open + suggestions exist. Open CTA currently
+  dismisses (full pre-seeded composer hand-off is a Phase 4.5
+  follow-up, marked TODO in the source).
+
+**Legal / privacy**:
+
+- **`PRIVACY.md`** §3a expands with a "Phase 4 W4-W5 additions"
+  block (English + Chinese). Discloses the decay / soft-delete /
+  recycle-bin lifecycle, and explicitly states that **all
+  proactive-recall evaluation runs on device** — no server is
+  involved in scheduling or computing suggestions. Confirms each
+  card is dismissible and that the user can opt out by deleting
+  Memoirs altogether.
+
+**i18n**:
+
+- 6 new W5 keys per locale (`proactive*` × 6).
+
+**Tests + quality gate**:
+
+- **`services/memoryDecay.test.ts`** (13 tests) — half-life math
+  per category, reinforcement boost, soft-delete short-circuit,
+  clock-skew tolerance, salience tier labelling.
+- **`services/memoryDedup.test.ts`** (18 tests) — bigram extraction,
+  Jaccard symmetry, three-band verdict, scope filters (memoir /
+  category / soft-delete), `applyCollapse` immutable update.
+- **`services/memoryService.test.ts`** — extended from 23 → 39
+  with capacity / soft-delete / recycle-bin / category-prior
+  recall / decay-aware recall coverage.
+- **`services/proactiveRecall.test.ts`** (27 tests) —
+  `lastChatPerMemoir` derivation, `parseRoughDate` matrix
+  including invalid-date rejection, three trigger evaluators
+  (positive + negative + cross-category), top-level merge with
+  specificity priority + `isOnCooldown` predicate.
+- **`hooks/useMemoryStore.test.ts`** — extended with W4
+  soft-delete + restore + hard-delete + recycle-bin lifecycle,
+  capacity-aware addMemory dedup-collapse path.
+- **`hooks/useProactiveRecall.test.ts`** (4 tests) — hook
+  emission, dismiss → cooldown, localStorage persistence,
+  pre-seeded localStorage cooldown respected on first mount.
+- **`components/MemoryManagementPanel.test.tsx`** — extended
+  from 7 → 12: capacity chip render, salience badges, recycle-bin
+  tab + restore / hard-delete callbacks, tab hidden when no
+  recycle-bin handlers wired.
+- **`components/ProactiveRecallCard.test.tsx`** (4 tests) —
+  body render, Open / Dismiss callbacks, anniversary trigger
+  swaps the hint key.
+
+Final result: **+93 net new tests across 7 new + 4 modified files**,
+typecheck clean, ESLint --max-warnings=0 clean, full vitest suite
+green, build green, 28/28 check-beta invariants pass.
+
+### Added (Phase 4 Week 3.5 §5.1.B-2 — Memoir memory harvest loop closed)
+
+Closes the **心象记忆循环**: every time a Morning Star round
+finishes successfully and at least one Memoir participated, the
+client now slices the Memoir's letter section out of the response,
+calls `/api/memoir-extract` for it, and writes the surviving
+candidates into `useMemoryStore` — so the NEXT round's recall
+ranker actually has something to surface. Without this loop the
+Week 3 system shipped with extraction wired end-to-end except for
+the trigger.
+
+**New modules**:
+
+- **`services/memoryExtractionService.ts`** (new, ~95 LOC) —
+  `extractMemoirMemories({ transcript, fetcher?, signal? })`
+  client wrapper around `POST /api/memoir-extract`. **Silent
+  failure mode by design**: returns `null` on ANY non-2xx, network
+  error, or abort. Memoir memory extraction is a background
+  enrichment, never user-visible — the Morning Star round itself
+  succeeded and that is the user-facing outcome.
+- **`services/memoirTranscriptSlicer.ts`** (new, ~115 LOC) — pure
+  helpers (`extractPersonaSection`, `buildMemoirTranscript`,
+  `hasAnyHeading`) that slice the Morning Star markdown by
+  `### ✉️ 来自 [name] 的回信` heading per Memoir. Slicing per-
+  Memoir avoids cross-pollination — feeding the whole result to
+  every Memoir's extractor would let Memoir A "remember" what
+  Memoir B said in the same round. Pure, fully testable, no
+  React imports.
+- **`hooks/useMemoirMemoryHarvest.ts`** (new, ~165 LOC) —
+  `triggerHarvest({ reflection, responseMarkdown,
+participatingPersonas, sourceRef? })` returns a
+  fire-and-forget promise resolving to the count of memories
+  written. Tracks an `AbortController` ref so navigating away
+  from the entry mid-harvest cancels cleanly. Each Memoir's
+  harvest runs independently (`Promise.all`) so one bad LLM
+  round can't poison the others.
+
+**Pipeline integration**:
+
+- **`hooks/useMorningStarPipeline.ts`** — new optional
+  `onAnalysisHarvest?: (input) => void | Promise<unknown>`
+  callback. The pipeline calls it at the end of the success
+  path (after `onUpdateEntry`) wrapped in a try/catch so a
+  misconfigured caller can't leak a sync throw. The pipeline
+  does NOT await — harvest must never block UI exit.
+- **`components/Viewer.tsx`** — mounts `useMemoirMemoryHarvest`,
+  wires its `triggerHarvest` into `onAnalysisHarvest`. Unwraps
+  the Morning Star JSON envelope (`{ content, metrics }`) before
+  passing the markdown body. `useEffect` cleanup calls
+  `cancelInFlight` on unmount so navigating away from the entry
+  cancels any in-flight harvest. `useMemoryStore.addMemory` is
+  also pulled here (was already pulled for `recallForMemoir`).
+
+**Tests + quality gate**:
+
+- **`services/memoryExtractionService.test.ts`** (7 tests) —
+  empty transcript skip, POST forwarding, non-2xx silent,
+  network rejection silent, malformed body silent, empty-success
+  array, abort signal silent.
+- **`services/memoirTranscriptSlicer.test.ts`** (10 tests) —
+  heading detection, per-section extraction with cross-section
+  isolation, missing-persona null, empty input, whitespace
+  tolerance, transcript builder happy path + non-memoir kind +
+  blank reflection + missing section.
+- **`hooks/useMemoirMemoryHarvest.test.ts`** (8 tests) —
+  participation filter, blank reflection skip, multi-memory
+  scoping by `memoirId`, regular Persona Builder personas
+  excluded, independent per-Memoir runs, PII rejections don't
+  count toward the written total, `cancelInFlight` aborts cleanly.
+
+Final result: **+25 net new tests across 3 new files, 860 / 122
+files green, ESLint --max-warnings=0 clean, typecheck clean,
+build green, 28/28 check-beta invariants pass.**
+
+### Added (Phase 4 Week 3 §5.1.B — Memoir (心象) MVP + long-term memory system)
+
+End-to-end "为心中的某个真实的人立一座心象 + 让它真的记得你们说过的话"
+flow lands as the soul deliverable of Phase 4 Week 3. 8 days of work,
+full quality gate at the close.
+
+**New domain types + storage**:
+
+- **`types/models.ts`** — `MemoryCategory` (`'fact' | 'emotion' |
+'relationship' | 'milestone'`) + `Memory` (id / memoirId / category /
+  body ≤ 240 chars / createdAt / updatedAt / sourceRef). Memories are
+  scoped per-Memoir via `memoirId` so multiple Memoirs (e.g. "心中的
+  爷爷" + "大学导师") never cross-pollinate.
+- **`services/diaryStorage.ts`** — `DiaryStorageKeys.memories`
+  (`vector_master_vault_memories`) keyed alongside `customPersonas`.
+
+**New services + hooks**:
+
+- **`services/memoryService.ts`** (new, ~290 LOC) — pure data layer:
+  `mintMemory` / `updateMemory` / `deleteMemory` / `clearMemoirMemories`
+  / `hydrateMemories` / `selectMemoriesForRecall`. Built-in
+  `detectUnsafeMemoryBody` second-line PII guard (email / CN national
+  id / phone heuristics). Recall ranker uses recency × keyword overlap
+  × milestone boost — deliberately not a vector embedding so we never
+  ship an embed model or send memories to an embedding API (铁律 1).
+- **`services/quotaService.ts`** — extended with `canCreateMemoir` +
+  `canChatMemoir` paywall predicates. Free tier hard-blocks Memoir
+  creation (0 slots) AND chat (0/yr). Stardust = 1 Memoir × 500
+  chats/yr; Polaris = 5 × 1000; Owner = 10 × 1000 lifetime.
+- **`hooks/useMemoryStore.ts`** (new, ~175 LOC) — IDB persistence with
+  load-id pattern matching `useCustomPersonas`. Surfaces `addMemory`
+  (returns success / failure result so the UI can render the safety
+  rejection toast), `updateMemory`, `deleteMemory`, `clearForMemoir`,
+  `replaceMemories` (for v3 backup restore), and `recallForMemoir` —
+  the stable recall callback Memoir chat uses.
+- **`hooks/useMemoirBuilder.ts`** (new) — 5-step wizard state
+  machine. Carries an extra **`consentAcknowledged`** gate that
+  must be ticked before `submit()` even reaches the network. POST
+  endpoint is `/api/memoir-build` (NOT `/api/persona-build`) so
+  every Memoir flows through the stricter Memoir prompt template.
+
+**New isomorphic schema + server modules**:
+
+- **`lib/memoirBuilderSchema.ts`** (new) — 5-step wizard field schema
+  shared between client wizard, server prompt builder, and server
+  validator. Field order is name → relationship → voice → memories →
+  wishes (only `wishes` is optional). Each field exposes `zhHint` /
+  `enHint` strings — the Memoir wizard relies on hints to keep
+  users in the right emotional register.
+- **`server/memoirBuilderPrompt.ts`** (new, ~240 LOC) —
+  `buildMemoirPrompt` synthesises the LLM system-prompt-generation
+  prompt. Embeds three guardrail blocks NOT present in the Persona
+  Builder template:
+  1. **Memory-of-them block** — system prompt MUST be written from
+     the user's first-person perspective ("the {Name} I remember
+     said..."), never as a dossier on the real person.
+  2. **Psychological-safety block** — inserted verbatim into the
+     generated system prompt: never claim to BE the real person,
+     never make decisions for the user, surface a "this is your
+     memory talking" reframe on prolonged grief, defer with "我不
+     记得你提过这个" rather than inventing.
+  3. **No-future-claims block** — the persona must never invent
+     events the real person did not say or do.
+     Plus `validateMemoirAnswers` (typed result union with type guards)
+     and `extractGeneratedMemoir` (markdown-fence-tolerant JSON parser).
+- **`server/memoryExtractor.ts`** (new, ~225 LOC) —
+  `buildExtractorPrompt` turns a closed Memoir conversation
+  transcript into the LLM extraction prompt. Output schema is
+  `{ memories: [{category, body}, ...] }` — third-person facts about
+  the **user**, NOT about the real person. Caller must still pipe
+  through `detectUnsafeMemoryBody` (defence in depth).
+
+**New server endpoints**:
+
+- **`POST /api/memoir-build`** — same auth + rate-limit + provider
+  dispatch as `/api/persona-build`, routes through
+  `memoirBuilderPrompt`. Logs `memoir_build_success` /
+  `memoir_build_unparseable` / `memoir_build_failed` /
+  `memoir_build_rejected_injection` events for ops visibility.
+- **`POST /api/memoir-extract`** — receives a closed conversation
+  transcript (≤ 50 turns × 4000 chars / turn), returns the candidate
+  memory list. Logs `memoir_extract_success` / `unparseable` /
+  `failed` / `rejected_injection`.
+
+**Morning Star pipeline integration**:
+
+- **`services/geminiService.ts`** — `buildMorningStarPrompt` now
+  accepts an optional `memoirRecallByPersona: Record<string,
+ReadonlyArray<{ body: string }>>` map. When a persona has a
+  non-empty recall list, the builder appends a
+  「【你与用户共同记得的事】」block to that persona's section so the
+  Memoir actually "remembers". Both buffered and streaming entry
+  points forward the new arg.
+- **`hooks/useMorningStarPipeline.ts`** — `MorningStarFetcher` and
+  `MorningStarStreamer` types extended with
+  `memoirRecallByPersona`. Hook accepts + forwards.
+- **`components/Viewer.tsx`** — mounts `useMemoryStore`, computes
+  the per-Memoir recall map keyed by Memoir name (using the entry
+  title + content as the recall query), passes into the pipeline.
+
+**New UI surfaces**:
+
+- **`components/MemoirBuilderModal.tsx`** (new, ~310 LOC) — 5-step
+  wizard with Heart icon, softer copy, hint paragraphs beneath
+  each input, mandatory consent checkbox on the final step,
+  Memoir-specific paywall takeover (rose accent vs Persona's cyan).
+  Reuses `PersonaPreview` for the preview phase since the
+  edit-then-save UX is identical.
+- **`components/MemoryManagementPanel.tsx`** (new, ~340 LOC) —
+  modal inspector grouping memories by category, inline edit with
+  re-run safety check on save, per-memory delete, two-step armed
+  "Clear all memories" wipe (5-second confirmation window). Renders
+  a static safety-reminder card above the list with regional crisis
+  hotline pointers (CN: 北京 010-82951332, 广州 020-81899120 / US:
+  988 / UK: 116 123).
+- **`components/SettingsGuidingStarsSection.tsx`** — new
+  rose-accented "心象" CTA next to the existing "AI 启明星" CTA.
+- **`components/DashboardSettingsModal.tsx`** — wires
+  `MemoirBuilderModal` as a sibling to `PersonaBuilderModal`,
+  computes its paywall verdict via `canCreateMemoir`, persists
+  through the same `addCustomPersona` callback (Memoirs land on
+  the same `customPersonas` list with `kind === 'memoir'`).
+- **`components/SettingsPanel.tsx`** — forwards `onOpenMemoirBuilder`
+  to the guiding stars section.
+
+**Backup schema v2 → v3 (bidirectionally compatible)**:
+
+- **`services/dashboardExport.ts`** — `BACKUP_SCHEMA_VERSION`
+  bumped from 2 → 3, optional `memories` array added to
+  `BackupPayload`. Field is OMITTED when the user owns no memories
+  (keeps zero-Memoir exports compact).
+- **`services/dashboardImport.ts`** — `BackupParseSuccess` extended
+  with `memories: Memory[]`. v1 / v2 / legacy backups land as
+  `memories: []` (documented contract); v3 backups pipe through
+  `memoryService.hydrateMemories` so corrupt entries don't poison
+  the runtime list.
+- **`hooks/useDashboardExport.ts`** — accepts + forwards
+  `memories`. **`hooks/useBackupImport.ts`** — accepts optional
+  `onImportCustomPersonas` + `onImportMemories` callbacks. Day 6's
+  open Persona Builder restoration TODO is now closed.
+- **`App.tsx`** — mounts `useMemoryStore`, threads `memories` /
+  `replaceMemories` into Dashboard. **`components/Dashboard.tsx`** /
+  **`components/dashboardProps.ts`** — accept the new optional
+  props and wire them into `useDashboardExport` + `useBackupImport`.
+
+**Legal posture (mandatory for the Memoir feature surface)**:
+
+- **`TERMS.md`** — new §3a "Memoir creations" / 「心象」section
+  in both English and Chinese: explicit "this is creative
+  interpretation, not the real person" framing, anti-doxing /
+  anti-public-figure restrictions, mandatory consent acknowledgement
+  language, "not a substitute for professional support" caveat,
+  suspension clause for violators.
+- **`PRIVACY.md`** — new §3a "Memoir data" / 「心象数据」section in
+  both English and Chinese: enumerates the three Memoir-specific AI
+  proxy transmissions (build / chat / extract), reaffirms local-only
+  storage of the persona + memory bank, lists the user's full
+  control surface (view / edit / delete / wipe / cascade-on-delete /
+  optional backup carry-over).
+
+**i18n**:
+
+- 22 new keys in `i18n/locales/zh.ts` + matching English in
+  `i18n/locales/en.ts`: `memoirBuilder*` (12), `memoirPaywall*` (5),
+  `memoryPanel*` + `memoryCategory*` + `memoryEdit*` +
+  `memoryClearAll*` (16). Includes the regional crisis hotline copy
+  (CN-zh / EN-en).
+
+**Tests + quality gate**:
+
+- **`services/memoryService.test.ts`** (23 tests) — mint / safety
+  check / hydrate / update / delete / clear / recall ranking.
+- **`services/quotaService.test.ts`** — extended with 11 Memoir
+  paywall tests covering `canCreateMemoir` + `canChatMemoir` +
+  `isMemoirCreationBlocked` across all four tiers.
+- **`hooks/useMemoryStore.test.ts`** (8 tests) — IDB hydration,
+  unsafe-body rejection, CRUD persistence, replace, recall.
+- **`hooks/useMemoirBuilder.test.ts`** (10 tests) — wizard
+  navigation, optional `wishes` skipping, `isReadyToSubmit`,
+  consent gate, success / malformed / network failure branches,
+  reset.
+- **`server/memoirBuilderPrompt.test.ts`** (20 tests) — schema
+  invariants, validation success / failure, prompt embeds three
+  safety blocks, response parsing.
+- **`server/memoryExtractor.test.ts`** (16 tests) — transcript
+  validation, prompt formatting, response parsing, malformed-input
+  handling.
+- **`components/MemoirBuilderModal.test.tsx`** (5 tests) — paywall
+  surface, wizard render, consent gate disabled until ticked.
+- **`components/MemoryManagementPanel.test.tsx`** (7 tests) —
+  safety card always visible, empty state, category grouping,
+  delete callback, edit safety check rejection, edit save path,
+  two-step clear-all.
+- **`services/dashboardExport.test.ts`** — schemaVersion bumped to 3.
+- **`services/dashboardImport.test.ts`** — extended with v3
+  memories tests + v1 / v2 / legacy backwards compat.
+
+Final result: **+86 net new tests, 835 passing across 119 files,
+typecheck clean, ROADMAP gates met.**
+
+### Added (Phase 4 Week 2 §5.1.A — Persona Builder MVP + 启明星 architecture)
+
+End-to-end "add a custom 启明星 with AI assist" flow lands as the
+core deliverable of Phase 4 Week 2. 6 days of work, full quality
+gate at the close.
+
+**New domain types + storage**:
+
+- **`types/models.ts`** — `CustomPersona` (id / name / description /
+  kind / systemPrompt / createdAt / updatedAt / builderAnswers) +
+  `CustomPersonaKind` (`'persona'` for Week 2 wizard output, future
+  `'memoir'` flag reserved for Week 3-5 Memoir Builder).
+- **`services/diaryStorage.ts`** — `DiaryStorageKeys.customPersonas`
+  (`vector_master_vault_custom_personas`) keyed alongside the
+  existing diary surfaces (entries / principles / containers).
+
+**New services + hooks**:
+
+- **`services/personaService.ts`** (new, ~210 LOC) — pure data
+  layer: `mintPersona`, `updatePersona`, `deletePersona`,
+  `hydratePersonas`, `looksLikePersona`, `sanitizePersona`,
+  `isBuiltInStar`, `findCustomPersonaByName`, `getBuiltInStarSet`.
+  Schema-tight validation surface reused by runtime CRUD,
+  `useCustomPersonas`, and the v2 backup importer. Field caps
+  (60 / 200 / 4000 / 1000 chars) exposed as `PERSONA_LIMITS`.
+- **`services/quotaService.ts`** (new, ~165 LOC) — single source of
+  truth for tier-based paywall gates. `TIER_LIMITS` table per
+  product-vision §6.1, `canCreateCustomPersona` returns a typed
+  `PaywallVerdict`. **Free tier hard-blocks at 0 custom personas**
+  per the user's Day 0 product decision. Dev override via
+  `localStorage[vector_dev_tier]` is gated on `localhost` /
+  `127.0.0.1` / `*.local` so production bundles never compile in
+  a "go premium" backdoor.
+- **`hooks/useCustomPersonas.ts`** (new) — IDB persistence layer
+  for the `customPersonas` array. Same load-id pattern as
+  `useDiaryData` to guard against late promises clobbering newer
+  state. Mirrors localStorage ≤100 KB. Lives in its own hook so
+  `useDiaryData` stays under the 600-line ceiling (working
+  agreement: hooks > 350 LOC must extract).
+- **`hooks/usePersonaBuilder.ts`** (new) — wizard state machine.
+  Tracks `stepIndex` / `answers` / `phase`
+  (`asking | submitting | preview | error`), validates required
+  fields per-step + at submission, calls `/api/persona-build`,
+  hands a freshly-minted `CustomPersona` back to the consumer
+  via `onConfirm`. Pluggable `fetcher` for tests.
+- **`lib/personaBuilderSchema.ts`** (new) — isomorphic shared
+  schema (`WIZARD_FIELDS`, `WizardField`, `WizardAnswers`)
+  consumed by both `server/personaBuilderPrompt.ts` and the
+  client wizard. Lives in `lib/` to avoid the
+  client-importing-server-module smell.
+
+**New server endpoint**:
+
+- **`server/personaBuilderPrompt.ts`** (new, ~250 LOC) —
+  synthesises the LLM prompt from validated wizard answers.
+  `validateWizardAnswers` clamps every field to its `maxChars`
+  cap and rejects unknown ids (defensive against a hostile client
+  smuggling instructions in extra fields). `buildPersonaPrompt`
+  wraps the answers in an anti-PII guardrail block ("never embed
+  third-party private contact details") + an
+  anti-living-third-party block + the JSON output schema
+  contract. `extractGeneratedPrompt` parses the LLM response,
+  tolerant of stray `json` fences and leading prose ("Sure,
+  here is { ... }"). Discriminated-union helpers
+  `isAnswerValidationOk` / `isAnswerValidationFail` for narrowing.
+- **`server.ts`** — new `POST /api/persona-build` endpoint sharing
+  the existing `morningStarLimiter` + `requireAiProxyAuth` chain.
+  Runs the injection-guard on the concatenated answer body before
+  forwarding (a hostile wizard answer cannot hijack the synthesis
+  prompt). Returns
+  `{ persona: { name, description, systemPrompt }, provider, requestId }`
+  on success; 502 + `code: 'UNPARSEABLE'` when the LLM response
+  fails the parser. Fully shaped log events
+  (`persona_build_success / failed / unparseable / rejected_injection`)
+  with `formatLogError` scrubber.
+
+**New UI**:
+
+- **`components/PersonaBuilderModal.tsx`** (new, ~300 LOC) —
+  6-step wizard modal. Per-step textarea with `aria-live`
+  character counter, Back/Next chrome, AI-synthesis loading
+  spinner, error surface, and a paywall-takeover surface that
+  renders when `paywallVerdict.blocked`. Escape closes; backdrop
+  click closes. Mirrors the architectural pattern of
+  `ShareCardModal.tsx`.
+- **`components/PersonaPreview.tsx`** (new, ~135 LOC) — post-LLM
+  review surface. Renders `name` / `description` / `systemPrompt`
+  as **editable** inputs (the user audits AI output before
+  saving) + character counters. "Save persona" CTA disables when
+  name or systemPrompt are empty. "Try again" resets the wizard.
+- **`components/SettingsGuidingStarsSection.tsx`** — new
+  `+ Sparkles` "Add a custom guiding star" CTA inside the editor
+  expanded state. Optional prop so legacy callers compile
+  unchanged.
+- **`components/DashboardSettingsModal.tsx`** — owns the
+  `showPersonaBuilder` state and the paywall verdict
+  (`canCreateCustomPersona(customPersonas)`). Renders
+  `<PersonaBuilderModal>` as a sibling to `<SettingsPanel>`.
+  Folds the user's custom persona names into the
+  `useGuidingStarsEditor`'s `guidingStars` argument so they
+  appear in the star picker.
+- **`components/PersonaBuilderModal.stories.tsx`** (new) — 4
+  Storybook variants: `WizardStardust`, `WizardLight`,
+  `PaywallFreeNoPersonas`, `PaywallStardustAtLimit`.
+
+**Morning Star integration (system prompt injection)**:
+
+- **`services/geminiService.ts`** — `buildMorningStarPrompt` now
+  accepts an optional `customPersonaPrompts: Record<string, string>`
+  map. When the selected persona is in the map, its
+  AI-synthesised system prompt **replaces** the generic
+  "speak as this guiding star" fallback. Built-in 7-sage prompts
+  still take precedence over any custom override (same name
+  collision is intentional and built-in wins).
+- **`hooks/useMorningStarPipeline.ts`** — `MorningStarFetcher` /
+  `MorningStarStreamer` signatures extended with the optional
+  `customPersonaPrompts` arg. Hook itself accepts the same map
+  via the new `customPersonaPrompts` argument.
+- **`components/Viewer.tsx`** — new `customPersonas?` prop;
+  builds the `name → systemPrompt` map via `useMemo` and forwards
+  to `useMorningStarPipeline`. Plumbed from
+  `App.tsx` → `Viewer` so a selected custom persona's voice
+  reaches the LLM.
+
+**Backup schema v2 + 双向兼容**:
+
+- **`services/dashboardExport.ts`** — `BACKUP_SCHEMA_VERSION` bump
+  `1 → 2`; `BackupPayload.customPersonas?: CustomPersona[]`
+  (optional). `buildBackupExport` accepts `customPersonas` and
+  emits the field **only when the array has at least one entry**
+  (keeps zero-persona exports compact for the common case).
+- **`services/dashboardImport.ts`** — `parseBackupImport` reads
+  the optional v2 `customPersonas` field through
+  `personaService.hydratePersonas` (silently drops malformed
+  entries inside the v2 payload without rejecting the whole file).
+  v1 backups → `parsed.customPersonas` is `[]`. Legacy
+  `{ version, entries }` → also `[]`. **`BackupParseSuccess`
+  gains a required `customPersonas: CustomPersona[]` field** so
+  consumers always have a value to work with.
+- **`hooks/useDashboardExport.ts`** — accepts optional
+  `customPersonas` arg and forwards into `buildBackupExport`.
+  `Dashboard.tsx` wires the value from `App.tsx → Dashboard`.
+- **`hooks/useBackupImport.ts`** — TODO comment marks the
+  follow-up: **import-side restore of `customPersonas`** is
+  intentionally deferred (would require adding an
+  `onImportPersonas` callback through the App → Dashboard →
+  hook prop chain). Today, the user re-creates personas after
+  restore on a new device; export captures them so nothing is
+  lost.
+
+**i18n**: 22 new keys per locale (zh + en) — wizard labels
+(`personaBuilderTitle`, `personaBuilderSubtitle`,
+`personaBuilderStep`, `personaBuilderOptional`,
+`personaBuilderPlaceholder`, `personaBuilderBack`,
+`personaBuilderNext`, `personaBuilderSubmit`,
+`personaBuilderSubmitting`, `personaBuilderError`),
+preview surface (`personaPreviewHeadline`, `personaPreviewSubtitle`,
+`personaPreviewName`, `personaPreviewDescription`,
+`personaPreviewDescriptionPlaceholder`, `personaPreviewPrompt`,
+`personaPreviewRetry`, `personaPreviewSave`, `personaPreviewSaving`),
+paywall (`personaPaywallHeadlineFree`, `personaPaywallHeadlineLimit`,
+`personaPaywallBodyFree`, `personaPaywallBodyLimit`,
+`personaPaywallUpgradeAction`, `personaPaywallContact`).
+
+**Data flow** (App → Dashboard → SettingsModal → Modal):
+
+```
+App.tsx
+├── useCustomPersonas() → customPersonas, addCustomPersona
+├── <Dashboard customPersonas onAddCustomPersona ...>
+│   ├── useDashboardExport({ customPersonas, ... })  // backup
+│   └── <DashboardSettingsModal customPersonas onAddCustomPersona ...>
+│       ├── canCreateCustomPersona(customPersonas) → paywallVerdict
+│       ├── useGuidingStarsEditor(merged guidingStars + persona names)
+│       ├── <SettingsPanel onOpenPersonaBuilder=...>
+│       └── <PersonaBuilderModal paywallVerdict onPersonaCreated=...>
+└── <Viewer customPersonas ...>
+    └── useMorningStarPipeline(customPersonaPrompts: name → systemPrompt)
+```
+
+### Tests
+
+**45 new unit cases across 5 new test files**:
+
+- **`services/personaService.test.ts`** (new, 19 cases) —
+  mintPersona / sanitisation / hydration / update / delete /
+  built-in classification (`getBuiltInStarSet`, `isBuiltInStar`).
+- **`services/quotaService.test.ts`** (new, 11 cases) — tier
+  resolution / dev-override safety / paywall verdicts (Free hard
+  block / Stardust at cap / Owner no-upgrade / Memoir does NOT
+  count toward persona quota).
+- **`hooks/useCustomPersonas.test.ts`** (new, 9 cases) — hydration
+  from IDB / mirror fallback / addPersona / updatePersona /
+  deletePersona / replacePersonas / corrupted-payload safety.
+- **`hooks/usePersonaBuilder.test.ts`** (new, 16 cases) — step
+  navigation / required-field gating / submission happy path /
+  error paths (missing answers, 400 from server, network reject,
+  malformed body) / reset.
+- **`server/personaBuilderPrompt.test.ts`** (new, 16 cases) —
+  field validation (unknown field rejection, type coercion, cap
+  enforcement) / synthesis prompt assembly (anti-PII block,
+  output schema) / response parser (markdown fence stripping,
+  leading prose tolerance).
+- **`components/PersonaBuilderModal.test.tsx`** (new, 7 cases) —
+  paywall surface render / wizard navigation / Escape close /
+  end-to-end submit-to-preview.
+- **`components/PersonaPreview.test.tsx`** (new, 4 cases) —
+  pre-fill / save fires onConfirm with edited persona / disabled
+  states / retry CTA.
+- **`services/dashboardImport.test.ts`** (extended, 4 cases) —
+  v2 customPersonas read / v1 backwards compat (treat as `[]`) /
+  legacy `{ version, entries }` compat / malformed personas inside
+  v2 don't fail the import.
+- **`services/dashboardExport.test.ts`** (1 case updated) —
+  schemaVersion 1 → 2; customPersonas omitted when empty.
+
+### Verified
+
+- `scripts/check-beta.sh` → **28/28** invariants pass.
+- `npm run lint` (`--max-warnings=0`) clean.
+- `npm run typecheck` clean.
+- `npm test` → **112 files / 731 tests** all green
+  (was 105 / 645 at Week 1 close; +7 files +86 cases).
+- `npm run build` clean.
+- `npm run build-storybook` clean.
+- `npx playwright test --workers=1` → **13/13** unrelated specs pass.
+- `npm run i18n:diff -- --soft` → soft pass (502 backlog entries
+  unchanged in posture; 22 new keys added to zh + en will appear
+  in next translator queue).
+
+### YAGNI / deferred to Week 3+
+
+- **Manual "dismiss samples" button** — auto-prune lifecycle
+  remains the only path; alpha feedback can re-open this in 1 hour.
+- **Backup-import restoration of customPersonas** — export side
+  fully wired; import-side restoration is a 2-day prop-chain
+  refactor. TODO comment marks the spot in `useBackupImport.ts`.
+- **Persona conversation history persistence** — Memoir Builder
+  feature (Week 4-5).
+- **Echo Chamber multi-persona round table** — Phase 4.5.
+- **Persona sharing / export `.persona` files** — Phase 5+.
+- **Stripe / WeChatPay paywall integration** — payment surface
+  is its own task track. Today the upgrade CTA is a no-op
+  placeholder; `PaywallVerdict.suggestedUpgrade` carries the
+  intended target tier when the wire arrives.
+
+### Added (Phase 4 §4.a-1 — first-day sample reflections + value-prop README)
+
+- **`services/sampleEntries.ts`** (new, ~180 LOC) — first-day
+  activation hook. Replaces the legacy cyberpunk `MOCK_ENTRIES`
+  (retired from `constants.ts`) with two carefully crafted sample
+  reflections per supported language (zh + en):
+  - **Sample 1 · 日常反思** — a real-life journal ("今天面试搞砸了")
+    with a **hand-written Morning Star reply from 加缪** already
+    attached (no live LLM call fires for the sample). Demonstrates
+    the AI 启明星 value proposition the moment a user lands in the
+    Dashboard.
+  - **Sample 2 · 心象预告** — a wistful "想到爷爷" piece whose
+    Morning Star slot is a hand-written teaser for the upcoming
+    `心象 (Memoir)` feature. Doubles as a soft launch hook for
+    [`docs/product-vision-2026Q2.md`](docs/product-vision-2026Q2.md) §5.1.B.
+  - Other 5 locales (ja / ko / fr / es / de) gracefully fall back
+    to the English sample pair until translations land via
+    `npm run i18n:diff`.
+- **`DiaryEntry.isSample?: boolean`** (new optional field on
+  [`types/models.ts`](types/models.ts)) — additive + optional so
+  existing backups round-trip cleanly through `dashboardImport.ts`
+  and `sanitizeEntry`. Carried through `entryCompat.ts` via a new
+  `isSampleEntry()` predicate.
+- **`useDiaryData` integration**:
+  - Empty IDB now seeds `getSampleEntries(language)` instead of
+    `MOCK_ENTRIES[language]`. Same fallback path is taken when the
+    IDB read pipeline crashes.
+  - **`addEntry` lifecycle (option C)** — writing the user's first
+    real (non-sample) entry transparently prunes every sample from
+    the vault. The activation hook has done its job, no need to
+    pollute the user's archive. `isSample: true` additions (e.g. a
+    future re-seed flow) leave existing samples alone.
+- **`EntryGrid` + `ArchiveEntryCard`** — sample entries render with
+  an amber "示例" / "Sample" badge in **both** the list-view row
+  (in-line, after the entry id) and the grid-view card
+  (top-right corner). Badge carries `aria-label` + `title` for
+  assistive tech (`sampleBadgeAria` i18n key explains the
+  auto-prune lifecycle).
+- **README.md value prop** (top of file) — a 30-second pitch that
+  defines:
+  - Who VECTOR is for (26-38 知识中产)
+  - What VECTOR replaces (Notion / 印象笔记 / Day One / Reflectly)
+  - The local-first + zero-knowledge promise
+  - A separate **「即将上线 · 心象」** teaser section that previews
+    the Memoir feature as the upcoming flagship.
+- **i18n**: 4 new keys per locale (zh + en) — `sampleBadge`,
+  `sampleBadgeAria`, `sampleDismissAction`, `sampleDismissTitle`.
+  The dismiss-action keys are reserved for a follow-up "manually
+  dismiss samples" affordance (currently the auto-prune lifecycle
+  is the only path; see YAGNI note in implementation).
+
+### Changed
+
+- **`constants.ts`** — removed the cyberpunk `MOCK_ENTRIES` fixture
+  (lines 101-155 of the prior file). All previously-imported call
+  sites now go through `services/sampleEntries.ts::getSampleEntries`.
+  The constants file lost its `DiaryEntry` import as a side effect.
+- **`hooks/useDiaryData.test.ts`** — `should add an entry` test was
+  renamed to `should add an entry (and prune sample reflections)`
+  and now asserts the new lifecycle: writing a real entry prunes
+  the seeded samples, leaving exactly the new entry in the list.
+  A defensive companion test (`keeps samples when the entry being
+added is itself a sample`) protects future re-seed paths.
+
+### Tests
+
+- **`services/sampleEntries.test.ts`** (new) — 8 unit cases pinning
+  the contract: sample count per locale, every sample carries
+  `isSample: true`, every id starts with `sample-`, ordering
+  contract (memoir teaser first), persona attribution, fresh-clone
+  invariant, English fallback for unsupported locales, isSampleId
+  helper.
+- **`components/EntryGrid.test.tsx`** (extended) — 4 new cases for
+  the sample badge: list-view rendering, grid-view rendering,
+  no-badge for non-sample entries, aria-label presence.
+- **`hooks/useDiaryData.test.ts`** (extended) — 1 new case for the
+  isSample-preservation defensive path.
+
+### Verified
+
+- `scripts/check-beta.sh` → **28/28** invariants pass.
+- `npm run lint` (`--max-warnings=0`) clean — `useDiaryData.ts`
+  trimmed back under the 600-line `max-lines` ceiling after the
+  sample-prune logic landed.
+- `npm run typecheck` clean.
+- `npm test` → **105 files / 645 tests** all green
+  (was 103 / 631; +2 files +14 cases).
+- `npm run build` clean — bundle size unchanged
+  (samples are static data, no runtime cost).
+- `npx playwright test` → 13/13 unrelated specs pass; the single
+  failing spec (`e2e/app.spec.ts:22 completes onboarding and
+creates a journal entry`) was **already failing on `main`
+  before this work** — verified by `git stash` + re-test on
+  unmodified `main`. It is a pre-existing flake in the
+  vault-locked-after-onboarding render path, **not introduced
+  by §4.a-1**.
+- `npm run i18n:diff -- --soft` → soft pass (translator backlog
+  unchanged in posture; 4 new keys added to zh + en will appear
+  in the next translator queue).
+
 ## [1.1.0] — 2026-05-03
 
 > Phase 4 (1-month engineer roadmap) close. Ships the W1–W4 task set

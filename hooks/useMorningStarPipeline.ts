@@ -14,11 +14,18 @@ export interface ParsedMorningStarAnalysis {
   metrics: Record<string, number>;
 }
 
-/** Signature compatible with `services/geminiService.getMorningStarAnalysis`. */
+/** Signature compatible with `services/geminiService.getMorningStarAnalysis`.
+ *  The trailing `customPersonaPrompts` arg (Phase 4 §5.1.A) carries the
+ *  user-created persona's `name → systemPrompt` map; defaults to {}.
+ *  Phase 4 §5.1.B adds `memoirRecallByPersona` for per-Memoir long-term
+ *  memory recall — same key (persona name), value is the top-N memory
+ *  bodies that the parent's `useMemoryStore.recallForMemoir(...)` produced. */
 export type MorningStarFetcher = (
   decryptedContent: string,
   reflectionText: string,
   personas: string[],
+  customPersonaPrompts?: Record<string, string>,
+  memoirRecallByPersona?: Record<string, ReadonlyArray<{ body: string }>>,
 ) => Promise<string>;
 
 /**
@@ -26,6 +33,12 @@ export type MorningStarFetcher = (
  * `services/geminiService.streamMorningStarAnalysis`. Each chunk fires
  * with `(delta, accumulated)` so a UI preview can show the running
  * text without rebuilding the string itself.
+ *
+ * `customPersonaPrompts` (Phase 4 §5.1.A) is optional and carries the
+ * user-created persona's `name → systemPrompt` map.
+ *
+ * `memoirRecallByPersona` (Phase 4 §5.1.B) is the per-Memoir recall
+ * map; identical key shape to `customPersonaPrompts`.
  */
 export type MorningStarStreamer = (
   decryptedContent: string,
@@ -33,6 +46,8 @@ export type MorningStarStreamer = (
   personas: string[],
   onChunk: MorningStarChunkHandler,
   signal?: AbortSignal,
+  customPersonaPrompts?: Record<string, string>,
+  memoirRecallByPersona?: Record<string, ReadonlyArray<{ body: string }>>,
 ) => Promise<string>;
 
 export interface UseMorningStarPipelineArgs {
@@ -43,6 +58,27 @@ export interface UseMorningStarPipelineArgs {
   language: 'zh' | 'en' | 'ja' | 'ko' | 'fr' | 'es' | 'de';
   /** Persist updates back to useDiaryData. */
   onUpdateEntry: (updated: DiaryEntry) => void;
+  /** Phase 4 §5.1.A — `name → systemPrompt` map for user-created
+   *  custom 启明星. Optional; absent map keeps the legacy "speak as
+   *  this guiding star" fallback for any selected persona. */
+  customPersonaPrompts?: Record<string, string>;
+  /** Phase 4 §5.1.B — `name → top-N memory bodies` map for Memoir
+   *  personas. The Viewer is responsible for calling
+   *  `useMemoryStore.recallForMemoir(memoirId, query)` and forwarding
+   *  the result keyed by the Memoir's name. Absent map keeps the
+   *  Memoir on its baseline systemPrompt without any recall context. */
+  memoirRecallByPersona?: Record<string, ReadonlyArray<{ body: string }>>;
+  /** Phase 4 Week 3.5 — fire-and-forget hook that runs after a
+   *  successful Morning Star round. Owned by the Viewer (which
+   *  also owns `useMemoryStore`); the pipeline only knows it should
+   *  call this with the just-saved reflection + the raw response.
+   *  Returning a promise is fine but the pipeline does not await
+   *  it — the harvest must never block UI exit. */
+  onAnalysisHarvest?: (input: {
+    reflection: string;
+    rawResponse: string;
+    participatingPersonas: readonly string[];
+  }) => void | Promise<unknown>;
   /**
    * Override the buffered Morning Star call; defaults to the proxy in
    * `services/geminiService`. Useful for tests and for swapping providers
@@ -128,6 +164,9 @@ export const useMorningStarPipeline = ({
   decryptedContent,
   language,
   onUpdateEntry,
+  customPersonaPrompts,
+  memoirRecallByPersona,
+  onAnalysisHarvest,
   fetcher = defaultMorningStarFetcher,
   streamer = defaultMorningStarStreamer,
   streamingEnabled,
@@ -193,16 +232,44 @@ export const useMorningStarPipeline = ({
       // hook only sees a single "result" string.
       const useStreaming = streamingEnabled ?? isStreamingEnabledFromStorage();
       const result = useStreaming
-        ? await streamer(contentToAnalyze, reflectionText, personas, (_delta, accumulated) =>
-            setStreamingPreview(accumulated),
+        ? await streamer(
+            contentToAnalyze,
+            reflectionText,
+            personas,
+            (_delta, accumulated) => setStreamingPreview(accumulated),
+            undefined,
+            customPersonaPrompts,
+            memoirRecallByPersona,
           )
-        : await fetcher(contentToAnalyze, reflectionText, personas);
+        : await fetcher(
+            contentToAnalyze,
+            reflectionText,
+            personas,
+            customPersonaPrompts,
+            memoirRecallByPersona,
+          );
       onUpdateEntry({
         ...entry,
         morningStarAnalysis: result,
         morningStarPersonas: personas,
         reflection: reflectionText,
       });
+      // Phase 4 Week 3.5 — fire-and-forget Memoir memory harvest.
+      // The harvest hook itself swallows errors (extraction is a
+      // background enrichment, not a user-visible step); we wrap
+      // in try/catch as a belt-and-braces guard against a
+      // misconfigured caller leaking a sync throw.
+      if (onAnalysisHarvest) {
+        try {
+          void onAnalysisHarvest({
+            reflection: reflectionText,
+            rawResponse: result,
+            participatingPersonas: personas,
+          });
+        } catch (harvestError) {
+          console.warn('Memoir memory harvest dispatch failed:', harvestError);
+        }
+      }
     } catch (err) {
       console.error('Morning Star Analysis failed:', err);
       setError(
@@ -215,6 +282,9 @@ export const useMorningStarPipeline = ({
       setStreamingPreview('');
     }
   }, [
+    customPersonaPrompts,
+    memoirRecallByPersona,
+    onAnalysisHarvest,
     decryptedContent,
     entry,
     fetcher,

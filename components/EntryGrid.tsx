@@ -316,6 +316,36 @@ export const EntryGrid: React.FC<EntryGridProps> = ({
                   >
                     ID:{entry.id.slice(0, 4)}
                   </div>
+                  {entry.isSample && (
+                    <span
+                      data-testid="sample-badge"
+                      title={t.sampleBadgeAria}
+                      aria-label={t.sampleBadgeAria}
+                      className={`shrink-0 text-[8px] font-mono uppercase tracking-[0.3em] px-2 py-0.5 border rounded-sm ${theme === 'light' ? 'border-amber-300 text-amber-700 bg-amber-50/80' : 'border-amber-500/50 text-amber-300 bg-amber-500/10'}`}
+                    >
+                      {t.sampleBadge}
+                    </span>
+                  )}
+                  {entry.isLetterReply && (
+                    <span
+                      data-testid="letter-reply-badge"
+                      title={(t.letterReplyBadgeAria as string) ?? 'Memoir letter reply'}
+                      aria-label={(t.letterReplyBadgeAria as string) ?? 'Memoir letter reply'}
+                      className={`shrink-0 text-[8px] font-mono uppercase tracking-[0.3em] px-2 py-0.5 border rounded-sm ${theme === 'light' ? 'border-rose-300 text-rose-700 bg-rose-50/80' : 'border-rose-500/40 text-rose-300 bg-rose-500/10'}`}
+                    >
+                      ✉ {(t.letterReplyBadge as string) ?? 'Letter'}
+                    </span>
+                  )}
+                  {entry.isEchoChamber && (
+                    <span
+                      data-testid="echo-chamber-badge"
+                      title={(t.echoChamberBadgeAria as string) ?? 'Round-table reply'}
+                      aria-label={(t.echoChamberBadgeAria as string) ?? 'Round-table reply'}
+                      className={`shrink-0 text-[8px] font-mono uppercase tracking-[0.3em] px-2 py-0.5 border rounded-sm ${theme === 'light' ? 'border-cyan-300 text-cyan-700 bg-cyan-50/80' : 'border-cyan-500/40 text-cyan-300 bg-cyan-500/10'}`}
+                    >
+                      ⚭ {(t.echoChamberBadge as string) ?? 'Round'}
+                    </span>
+                  )}
                   <div className="flex-1 truncate tracking-[0.2em] flex items-center gap-3">
                     <span className="opacity-20 text-cyan-700 font-black">{'>>'}</span>
                     <span
@@ -432,6 +462,36 @@ export const EntryGrid: React.FC<EntryGridProps> = ({
                     {entry.title.slice(0, 1)}
                   </div>
 
+                  {entry.isSample && (
+                    <span
+                      data-testid="sample-badge-grid"
+                      title={t.sampleBadgeAria}
+                      aria-label={t.sampleBadgeAria}
+                      className={`absolute top-3 right-3 z-20 text-[8px] font-mono uppercase tracking-[0.3em] px-2 py-0.5 border rounded-sm ${theme === 'light' ? 'border-amber-300 text-amber-700 bg-amber-50/80' : 'border-amber-500/50 text-amber-300 bg-amber-500/10'}`}
+                    >
+                      {t.sampleBadge}
+                    </span>
+                  )}
+                  {entry.isLetterReply && (
+                    <span
+                      data-testid="letter-reply-badge-grid"
+                      title={(t.letterReplyBadgeAria as string) ?? 'Memoir letter reply'}
+                      aria-label={(t.letterReplyBadgeAria as string) ?? 'Memoir letter reply'}
+                      className={`absolute ${entry.isSample ? 'top-10' : 'top-3'} right-3 z-20 text-[8px] font-mono uppercase tracking-[0.3em] px-2 py-0.5 border rounded-sm ${theme === 'light' ? 'border-rose-300 text-rose-700 bg-rose-50/80' : 'border-rose-500/40 text-rose-300 bg-rose-500/10'}`}
+                    >
+                      ✉ {(t.letterReplyBadge as string) ?? 'Letter'}
+                    </span>
+                  )}
+                  {entry.isEchoChamber && (
+                    <span
+                      data-testid="echo-chamber-badge-grid"
+                      title={(t.echoChamberBadgeAria as string) ?? 'Round-table reply'}
+                      aria-label={(t.echoChamberBadgeAria as string) ?? 'Round-table reply'}
+                      className={`absolute ${entry.isSample ? (entry.isLetterReply ? 'top-[68px]' : 'top-10') : entry.isLetterReply ? 'top-10' : 'top-3'} right-3 z-20 text-[8px] font-mono uppercase tracking-[0.3em] px-2 py-0.5 border rounded-sm ${theme === 'light' ? 'border-cyan-300 text-cyan-700 bg-cyan-50/80' : 'border-cyan-500/40 text-cyan-300 bg-cyan-500/10'}`}
+                    >
+                      ⚭ {(t.echoChamberBadge as string) ?? 'Round'}
+                    </span>
+                  )}
                   <div className="flex flex-col gap-1 relative z-10">
                     <span
                       className={`text-[9px] font-mono tracking-[0.4em] uppercase ${theme === 'light' ? 'text-slate-300' : 'text-slate-700'}`}

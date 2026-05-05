@@ -296,6 +296,29 @@ export const ViewerReadingPanel: React.FC<ViewerReadingPanelProps> = ({
       </div>
 
       <div className="relative z-10">
+        {/* Phase 4.5 follow-ups (F3) — Echo Chamber preface.
+            When the user opens an entry that captured a round-table
+            session (`entry.isEchoChamber === true`), surface the
+            **original question** they asked at the very top so the
+            consensus / divergence body has its anchor. The block
+            uses a quiet bordered card to read as "context", not
+            content. */}
+        {entry.isEchoChamber && entry.echoChamberQuery && decrypted && (
+          <div
+            className={`mb-6 p-4 rounded-md border-l-4 ${theme === 'light' ? 'bg-vector-cyan-brand/5 border-vector-cyan-brand/40 text-vector-slate-soft' : 'bg-cyan-500/5 border-cyan-500/40 text-cyan-200/80'}`}
+            data-testid="viewer-echo-preface"
+          >
+            <p
+              className={`text-[10px] uppercase tracking-widest mb-1 font-bold ${theme === 'light' ? 'text-vector-cyan-brand' : 'text-cyan-300'}`}
+            >
+              {(t.echoChamberPrefaceLabel as string) ?? 'Round-table prompt'}
+            </p>
+            <p className="text-[13px] italic leading-relaxed whitespace-pre-wrap">
+              {entry.echoChamberQuery}
+            </p>
+          </div>
+        )}
+
         {decrypted ? (
           <div className="space-y-6">
             <div

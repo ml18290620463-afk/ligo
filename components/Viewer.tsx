@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence } from 'motion/react';
-import { DiaryEntry, Language, Theme, Container } from '../types';
+import { CustomPersona, DiaryEntry, Language, Theme, Container } from '../types';
 import { AppStorageKeys } from '../services/appSettings';
 import { getStoredString } from '../services/browserStorage';
 import { downloadTextFile } from '../services/fileDownload';
@@ -10,6 +10,8 @@ import { ViewerSealedPanel } from './ViewerSealedPanel';
 import { ViewerReadingPanel } from './ViewerReadingPanel';
 import { useViewerAccess } from '../hooks/useViewerAccess';
 import { useMorningStarPipeline } from '../hooks/useMorningStarPipeline';
+import { useMemoryStore } from '../hooks/useMemoryStore';
+import { useMemoirMemoryHarvest } from '../hooks/useMemoirMemoryHarvest';
 import { TRANSLATIONS } from '../constants';
 import { ViewerStarfield } from './ViewerStarfield';
 import { buildViewerMarkdownComponents } from './viewerMarkdown';
@@ -22,6 +24,10 @@ interface ViewerProps {
   currentUser: string | null;
   masterPassword: string | null;
   guidingStars: string[];
+  /** Phase 4 §5.1.A — user-created custom 启明星. Optional: when
+   *  absent (legacy callers), Morning Star uses the generic fallback
+   *  for any unknown persona name. */
+  customPersonas?: CustomPersona[];
   onBack: () => void;
   onGoHome?: () => void;
   onUpdateEntry: (updatedEntry: DiaryEntry) => void;
@@ -42,6 +48,7 @@ export const Viewer: React.FC<ViewerProps> = ({
   currentUser,
   masterPassword,
   guidingStars,
+  customPersonas,
   onBack,
   onGoHome,
   onUpdateEntry,
@@ -99,12 +106,108 @@ export const Viewer: React.FC<ViewerProps> = ({
   } = access;
   const { lockoutUntil } = lockout;
 
+  // Phase 4 §5.1.A — build the `name → systemPrompt` lookup table once
+  // per render so it's stable across the pipeline's deps. Memoised on
+  // the customPersonas reference (parent already stable across
+  // renders thanks to `useCustomPersonas`).
+  const customPersonaPrompts = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const persona of customPersonas ?? []) {
+      map[persona.name] = persona.systemPrompt;
+    }
+    return map;
+  }, [customPersonas]);
+
+  // Phase 4 §5.1.B — Memoir long-term memory recall.
+  //
+  // For every Memoir-kind persona present in `customPersonas`, look
+  // up the top-N relevant memories (recency × keyword query) and key
+  // them by the Memoir's name so the Morning Star prompt builder
+  // can append the recall block to that persona's section.
+  //
+  // Why call `recallForMemoir` per-persona inside a `useMemo` instead
+  // of per-render: the recall ranker is pure and reads the live
+  // memory ref, so the only cost is the O(M·log M) sort per Memoir.
+  // For typical M ≤ 200 memories per Memoir × ≤ 5 Memoirs = trivial.
+  //
+  // The `entry.title + entry.content` snippet is used as the recall
+  // query so the recall is biased toward memories that overlap with
+  // the current journal entry's themes — same intuition as the
+  // entry-aware suggestions in the Persona Builder discussion.
+  const { recallForMemoir, addMemory } = useMemoryStore();
+
+  // Phase 4 Week 3.5 — Memoir memory harvest hook. Closes the
+  // 心象 long-term memory loop: every successful Morning Star round
+  // that included a Memoir persona triggers a background extractor
+  // call → the surviving candidates land in `useMemoryStore` and
+  // become recall context on the NEXT round.
+  //
+  // The hook owns its own AbortController so navigating away from
+  // the entry mid-harvest cancels cleanly. Errors are silenced
+  // by the underlying service (extraction is a background
+  // enrichment, not a user-visible step).
+  const { triggerHarvest, cancelInFlight: cancelHarvest } = useMemoirMemoryHarvest({
+    customPersonas: customPersonas ?? [],
+    addMemory,
+  });
+
+  // Cancel any in-flight harvest when the user navigates away.
+  useEffect(
+    () => () => {
+      cancelHarvest();
+    },
+    [cancelHarvest],
+  );
+
+  // Stable handler the pipeline calls after a successful round.
+  // Wrapping in a useCallback keeps the pipeline's deps from
+  // churning every render.
+  const handleAnalysisHarvest = useCallback(
+    (input: {
+      reflection: string;
+      rawResponse: string;
+      participatingPersonas: readonly string[];
+    }) => {
+      // The Morning Star result is wrapped in a JSON envelope —
+      // unwrap to the markdown body before slicing per Memoir.
+      let markdown = input.rawResponse;
+      try {
+        const parsed = JSON.parse(input.rawResponse);
+        if (parsed && typeof parsed === 'object' && typeof parsed.content === 'string') {
+          markdown = parsed.content;
+        }
+      } catch {
+        // raw is not JSON — fall back to using it as-is.
+      }
+      void triggerHarvest({
+        reflection: input.reflection,
+        responseMarkdown: markdown,
+        participatingPersonas: input.participatingPersonas,
+        sourceRef: `entry-${entry.id}`,
+      });
+    },
+    [entry.id, triggerHarvest],
+  );
+  const memoirRecallByPersona = useMemo(() => {
+    const map: Record<string, ReadonlyArray<{ body: string }>> = {};
+    const query = `${entry.title ?? ''} ${decryptedContent || entry.content || ''}`.slice(0, 400);
+    for (const persona of customPersonas ?? []) {
+      if (persona.kind !== 'memoir') continue;
+      const recall = recallForMemoir(persona.id, query);
+      if (recall.length > 0) map[persona.name] = recall;
+    }
+    return map;
+  }, [customPersonas, entry.title, entry.content, decryptedContent, recallForMemoir]);
+
   const morningStar = useMorningStarPipeline({
     entry,
     guidingStars,
     decryptedContent,
     language,
     onUpdateEntry,
+    customPersonaPrompts,
+    memoirRecallByPersona,
+    onAnalysisHarvest: handleAnalysisHarvest,
   });
   const {
     personas: morningStarPersonas,

@@ -137,6 +137,15 @@ export const ArchiveEntryCard: React.FC<ArchiveEntryCardProps> = ({
             >
               {entry.title}
             </span>
+            {entry.isSample && (
+              <span
+                data-testid="archive-sample-badge"
+                title={t.sampleBadgeAria ?? 'Sample reflection'}
+                className={`shrink-0 text-[7px] font-mono uppercase tracking-[0.3em] px-1.5 py-0.5 border rounded-sm ${theme === 'light' ? 'border-amber-300 text-amber-700 bg-amber-50/80' : 'border-amber-500/50 text-amber-300 bg-amber-500/10'}`}
+              >
+                {t.sampleBadge ?? 'Sample'}
+              </span>
+            )}
           </div>
 
           <div className="shrink-0 opacity-60 hidden md:block text-cyan-900 text-[10px]">
@@ -223,6 +232,16 @@ export const ArchiveEntryCard: React.FC<ArchiveEntryCardProps> = ({
       <div
         className={`absolute bottom-0 right-0 w-3 h-3 border-b border-r transition-all duration-300 ${theme === 'light' ? 'border-slate-100 group-hover/item:border-cyan-200' : 'border-cyan-900 group-hover/item:border-cyan-900'}`}
       />
+
+      {entry.isSample && (
+        <span
+          data-testid="archive-sample-badge-grid"
+          title={t.sampleBadgeAria ?? 'Sample reflection'}
+          className={`absolute top-2 right-2 z-20 text-[7px] font-mono uppercase tracking-[0.3em] px-1.5 py-0.5 border rounded-sm ${theme === 'light' ? 'border-amber-300 text-amber-700 bg-amber-50/80' : 'border-amber-500/50 text-amber-300 bg-amber-500/10'}`}
+        >
+          {t.sampleBadge ?? 'Sample'}
+        </span>
+      )}
 
       <div
         className={`absolute top-0 right-10 text-[8px] font-mono opacity-20 group-hover/item:opacity-40 transition-opacity p-1 border-x border-b tracking-tighter ${theme === 'light' ? 'text-slate-500 border-slate-200' : 'text-green-700 border-green-900'}`}
