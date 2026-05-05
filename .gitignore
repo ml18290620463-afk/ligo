@@ -17,6 +17,7 @@ coverage/
 test-results/
 playwright-report/
 storybook-static/
+lighthouse-reports/
 
 # Editor directories and files
 .vscode/*

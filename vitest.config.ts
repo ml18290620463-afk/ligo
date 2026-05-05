@@ -14,6 +14,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'happy-dom',
+    setupFiles: ['./test-setup/indexeddb.ts'],
     exclude: ['node_modules', 'dist', 'coverage', 'e2e'],
     env: {
       NODE_ENV: 'test',
