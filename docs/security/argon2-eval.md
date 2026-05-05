@@ -1,10 +1,39 @@
 # Argon2id Evaluation — Phase 3 §3.e
 
-> **Status:** RFC / decision pending review.
+> **Status:** **SHIPPED — default-on Phase 4.5 §C (2026-05-04)**.
 > **Author:** vector-life-design-guide security WG
-> **Date:** 2026-05-02 (last bench run)
+> **Date:** 2026-05-02 (last bench run); 2026-05-04 (default-on rollout).
 > **Verdict:** ✅ **GO — adopt Argon2id at OWASP_RECOMMENDED for new
 > hashes; keep PBKDF2 verifier in place forever.**
+>
+> ## Phase 4.5 §C rollout summary
+>
+> The Phase 3 PoC + Phase 4 §4.b-1/§4.b-2 toggle have now been
+> promoted to **default-on for all installations**. Concretely:
+>
+> - `SecurityService.applyArgon2idDefaults` runs once on App
+>   mount and (a) sets the `vector_argon2_default_v45` migration
+>   marker and (b) flips the verifier + minter flags ON when
+>   they have never been touched. The marker prevents repeated
+>   auto-enabling on subsequent mounts so an explicit user
+>   "OFF" choice in Settings stays sticky.
+> - `SecurityService.needsRehash` now returns `true` for any
+>   non-Argon2id hash whenever the minter flag is on — i.e.
+>   the legacy PBKDF2 hash on every existing install gets
+>   flagged as needing migration as soon as §C ships.
+> - `services/passwordRehash.ts::maybeRehashOnUnlock` runs as
+>   fire-and-forget on the next event tick after every
+>   successful unlock. When `needsRehash` is true, it
+>   re-derives the hash via `SecurityService.hashPassword` (now
+>   defaults to Argon2id) and persists via the supplied
+>   `savePasswordHash` callback. Failures are silent: the user
+>   just keeps the legacy hash for one more session.
+>
+> **Net effect**: every existing user transparently migrates from
+> PBKDF2 → Argon2id on their next unlock without any UI prompt or
+> latency penalty (the unlock UX returns immediately; the rehash
+> runs in the background). Bundle cost remains zero until the
+> rehash actually fires (`hash-wasm` is lazy-imported).
 
 ---
 
